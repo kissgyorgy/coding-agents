@@ -38,7 +38,7 @@ let
 
     outputHashMode = "recursive";
     outputHashAlgo = "sha256";
-    outputHash = "sha256-by2khuZd4ihK3k6127R84syg2OI/sJJERw55YqJFMIg=";
+    outputHash = "sha256-4mwK3ieeOoSNbcvibFetDb0RojY2+ILb6QYBhSigR50=";
   };
 
 in
