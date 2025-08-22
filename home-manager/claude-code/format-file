@@ -1,0 +1,63 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+is_python_file() {
+    local file_path="$1"
+    [[ "$file_path" == *.py ]]
+}
+
+is_yaml_file() {
+    local file_path="$1"
+    [[ "$file_path" == *.yaml ]] || [[ "$file_path" == *.yml ]]
+}
+
+is_shell_script() {
+    local file_path="$1"
+
+    if [[ "$file_path" == *.sh ]]; then
+        return 0
+    fi
+
+    local first_line
+    first_line=$(head -n1 "$file_path" 2>/dev/null || echo "")
+    if [[ "$first_line" == "#!/usr/bin/env"* ]]; then
+        return 0
+    fi
+
+    return 1
+}
+
+is_nix_file() {
+    local file_path="$1"
+    [[ "$file_path" == *.nix ]]
+}
+
+format_file() {
+    local file_path="$1"
+
+    if is_python_file "$file_path"; then
+        ruff format "$file_path"
+        echo "Formatted Python file: $file_path"
+    elif is_yaml_file "$file_path"; then
+        prettier --write "$file_path"
+        echo "Formatted YAML file: $file_path"
+    elif is_shell_script "$file_path"; then
+        shfmt -w "$file_path"
+        echo "Formatted shell script: $file_path"
+    elif is_nix_file "$file_path"; then
+        nixfmt "$file_path"
+        echo "Formatted Nix file: $file_path"
+    else
+        echo "Skipping unsupported file: $file_path"
+    fi
+}
+
+# Read JSON from stdin and extract file_path
+file_path=$(jq -r '.tool_input.file_path // empty')
+
+if [[ ! -f "$file_path" ]]; then
+    echo "Error: File '$file_path' does not exist" >&2
+    exit 2
+fi
+
+format_file "$file_path"
