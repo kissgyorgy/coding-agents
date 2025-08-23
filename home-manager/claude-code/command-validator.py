@@ -3,6 +3,7 @@ import json
 import os
 import re
 import sys
+from pathlib import Path
 from typing import Literal, NoReturn
 
 
@@ -69,16 +70,24 @@ def load_json_input() -> dict | NoReturn:
 
 def get_command(input: dict) -> str | NoReturn:
     tool_name = input.get("tool_name")
-    command = input.get("tool_input", {}).get("command")
-    if tool_name == "Bash" and command:
-        return command
-
-    stop(
-        f"""Command validator hook is configured incorrectly.
+    tool_input = input.get("tool_input", {})
+    command = tool_input.get("command")
+    if tool_name != "Bash" or not command:
+        stop(
+            f"""Command validator hook is configured incorrectly.
             Hook Event: {input["hook_event_name"]}
             Tool name: {tool_name}
         """
-    )
+        )
+
+    cwd = Path(input["cwd"]).resolve()
+    project_root = Path(os.environ.get("CLAUDE_PROJECT_DIR", Path.cwd())).resolve()
+    if not cwd.is_relative_to(project_root):
+        stop(
+            f"Current working directory {cwd} is outside of project root {project_root}"
+        )
+
+    return command
 
 
 def stop(reason: str) -> NoReturn:
