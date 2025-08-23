@@ -1,0 +1,98 @@
+#!/usr/bin/env bash
+# Run claude-code in an isolated systemd-nspawn container
+set -euo pipefail
+
+if [[ ! $(git status) ]]; then
+    exit 1
+fi
+
+function cleanup() {
+    echo Removing worktree $WORKSPACE
+    git worktree remove "$WORKSPACE"
+
+    # be extra careful about possibly empty variables
+    if [[ -z "$MACHINE_NAME" || -z "$CLAUDE_ROOT" ]]; then
+        echo "ROOT variable is empty, not removing $CLAUDE_ROOT"
+        exit 1
+    else
+        rm -r /run/claude-code/$MACHINE_NAME
+    fi
+}
+trap 'cleanup' EXIT
+
+BRANCH=${1:-}
+if [[ -n "$BRANCH" ]]; then
+    shift
+fi
+
+CURRENT_BRANCH=$(git branch --show-current)
+DIRNAME=$(basename "$PWD")
+MACHINE_NAME=claude-code-$DIRNAME-${BRANCH:-$(date +%H%M%S)}
+CLAUDE_ROOT="/run/claude-code/$MACHINE_NAME"
+MACHINE_HOME="${CLAUDE_ROOT}${HOME}"
+GIT_BRANCH_NAME=${BRANCH:-$MACHINE_NAME}
+
+echo "Root directory: $CLAUDE_ROOT"
+
+RO_BINDS=(
+    /nix/store
+    /bin
+    /usr/bin/env
+    /etc
+    /run/current-system/sw
+    $HOME/.config
+    $HOME/nixconf
+    $HOME/.zlogin
+    $HOME/.zlogout
+    $HOME/.zshenv
+    $HOME/.zsh_history
+    $HOME/.zshrc
+    $HOME/.zpreztorc
+    $HOME/.sqliterc
+    $HOME/.pgclirc
+    $HOME/.pypirc
+    $HOME/.psqlrc
+)
+
+RO_BIND_ARGS=()
+for bind in "${RO_BINDS[@]}"; do
+    if [[ -e "$bind" ]]; then
+        RO_BIND_ARGS+=("--bind-ro=$bind")
+    else
+        echo "Warning: $bind does not exist, skipping bind"
+    fi
+done
+
+mkdir -p "$CLAUDE_ROOT/var/lib/private"
+chmod 0755 "$CLAUDE_ROOT/var/lib"
+chmod 0700 "$CLAUDE_ROOT/var/lib/private"
+
+if [[ "$CURRENT_BRANCH" != "$GIT_BRANCH_NAME" ]]; then
+    WORKSPACE="$CLAUDE_ROOT/workspace"
+    echo "Creating git worktree $WORKSPACE"
+    git worktree add -b $GIT_BRANCH_NAME "$WORKSPACE"
+    WORKSPACE_BIND_ARG='--bind="$PWD"'
+else
+    WORKSPACE="$PWD"
+    WORKSPACE_BIND_ARG=''
+    echo "Using current branch \"$CURRENT_BRANCH\" directly from $WORKSPACE"
+fi
+
+sudo systemd-nspawn \
+    --machine=$MACHINE_NAME \
+    --directory=$CLAUDE_ROOT \
+    "${RO_BIND_ARGS[@]}" \
+    --bind="$HOME/.claude.json" \
+    --bind="$HOME/.claude" \
+    --bind="$WORKSPACE:/workspace" \
+    --private-users=no \
+    --chdir=/workspace \
+    --ephemeral \
+    --as-pid2 \
+    --user=$USER \
+    --console=interactive \
+    --background="" \
+    --setenv PATH \
+    --setenv LOCALE_ARCHIVE \
+    --setenv LOCALE_ARCHIVE_2_27 \
+    zsh -c "direnv allow && exec claude --dangerously-skip-permissions \"$@\""
