@@ -1,3 +1,10 @@
+# Tool usage
+
+- Always use `rg` (ripgrep) instead of `grep`
+- Never use the `find` command
+- Use the Search tool instead of `find`
+
+
 # devenv
 
 - devenv is a Declarative, Reproducible and Composable Developer Environments using Nix.

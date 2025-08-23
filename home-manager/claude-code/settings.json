@@ -1,30 +1,4 @@
 {
-  "permissions": {
-    "allow": [
-      "Bash(pytest:*)",
-      "Bash(cat:*)",
-      "Bash(rg:*)",
-      "Bash(git add:*)",
-      "Bash(git commit:*)",
-      "Bash(bfs:*)",
-      "Bash(ls:*)",
-      "Bash(uv:*)",
-      "Bash(ruff:*)",
-      "Bash(nixfmt:*)",
-      "Read",
-      "Write",
-      "Search",
-      "Fetch",
-      "WebFetch",
-      "Edit",
-      "mcp__context7"
-    ],
-    "deny": [
-      "Bash(rm:*)",
-      "Bash(grep:*)",
-      "Bash(sudo:*)"
-    ]
-  },
   "model": "opusplan",
   "statusLine": {
     "type": "command",
