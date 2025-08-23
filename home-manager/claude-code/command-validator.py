@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import json
+import os
 import re
 import sys
 from typing import Literal, NoReturn
@@ -14,6 +15,9 @@ def decision(decision: Literal["deny", "ask"], reason=None) -> dict:
         output["permissionDecisionReason"] = reason
     return {"hookSpecificOutput": output}
 
+
+_aliases = os.environ.get("SHELL_ALIASES", "")
+SHELL_ALIASES = r"|".join(rf"(\b{a}\b)" for a in _aliases.split(","))
 
 VALIDATION_RULES = [
     (
@@ -40,7 +44,7 @@ VALIDATION_RULES = [
         decision("ask"),
     ),
     (
-        r"\balias\b",
+        r"(\balias\b)|" + SHELL_ALIASES,
         decision("deny", reason="Don't use aliases, use the command directly"),
     ),
 ]

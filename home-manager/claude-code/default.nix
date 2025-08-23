@@ -4,7 +4,7 @@
     ".claude/CLAUDE.md".source = file.mkOutOfStoreSymlink ./CLAUDE.md;
     ".claude/settings.json".source = file.mkOutOfStoreSymlink ./settings.json;
     ".claude/scripts/statusline".source = ./statusline.sh;
-    ".claude/scripts/command-validator.py".source = ./command-validator.py;
+    ".claude/scripts/command-validator.py".source = file.mkOutOfStoreSymlink ./command-validator.py;
   };
 
   home.packages = with pkgs; [
