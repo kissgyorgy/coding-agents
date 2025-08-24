@@ -3,7 +3,7 @@
   home.file = with config.lib; {
     ".claude/CLAUDE.md".source = file.mkOutOfStoreSymlink ./CLAUDE.md;
     ".claude/settings.json".source = file.mkOutOfStoreSymlink ./settings.json;
-    ".claude/scripts/statusline".source = ./statusline.sh;
+    ".claude/scripts/statusline.sh".source = ./statusline.sh;
     ".claude/scripts/command-validator.py".source = file.mkOutOfStoreSymlink ./command-validator.py;
   };
 
