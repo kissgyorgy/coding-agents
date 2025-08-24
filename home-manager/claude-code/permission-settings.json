@@ -8,7 +8,6 @@
       "Bash(ls:*)",
       "Bash(uv:*)",
       "Bash(ruff:*)",
-      "Bash(nixfmt:*)",
       "Read",
       "Write",
       "Search",

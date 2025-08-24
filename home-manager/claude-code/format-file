@@ -45,7 +45,7 @@ format_file() {
         shfmt -w "$file_path"
         echo "Formatted shell script: $file_path"
     elif is_nix_file "$file_path"; then
-        nixfmt "$file_path"
+        nixpkgs-fmt "$file_path"
         echo "Formatted Nix file: $file_path"
     else
         echo "Skipping unsupported file: $file_path"
