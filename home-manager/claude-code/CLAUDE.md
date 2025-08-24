@@ -1,3 +1,10 @@
+# Tool usage
+
+IMPORTANT: NEVER use `grep` command, use the Grep or Glob tools for simple pattern search,
+or `rg` (ripgrep) for more complex searches (e.g. in a shell pipe) instead.
+IMPORTANT: NEVER use the `find` command, use the Glob/Grep/LS Tools or ripgrep instead.
+
+
 # Tone and style
 
 DO NOT use filler words and phrases like `modularize`, `maintainable`, `maintainability`,
@@ -5,7 +12,7 @@ DO NOT use filler words and phrases like `modularize`, `maintainable`, `maintain
 DO NOT add generalities or ego boosting phrases to commit messages about improving 
 the code quality (like "improves maintainability"), as these are not objective facts.
 
-Use these rules everywhere (replies, git commit messages, summary, task planning, todo tasks, etc.).
+Use this style everywhere (replies, git commit messages, summary, task planning, todo tasks, etc.).
 
 
 # devenv
