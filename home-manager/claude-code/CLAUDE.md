@@ -18,9 +18,6 @@ ALWAYS test devenv builds correctly after modifying `devenv.nix` with `devenv bu
 
 # git commit messages
 
-NEVER mention yourself as co-author or include any links to claude.ai
-NEVER list which files you changed.
-
 Explain *what* was done in the in the first line of commit message.
 Explain *why* the change was made in the commit message's body, the motivation
 behind the change, if it can be inferred from either the changes or from the
@@ -30,6 +27,8 @@ Be succinct and information dense, use adjectives sparingly, as those are often
 subjective, don't repeat simple changes trivially visible in the code.
 
 Limit the subject line to 50 characters, wrap message body around 72 characters.
+
+NEVER list which files you changed.
 
 
 # Python
