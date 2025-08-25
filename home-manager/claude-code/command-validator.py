@@ -17,9 +17,6 @@ def decision(decision: Literal["deny", "ask"], reason=None) -> dict:
     return {"hookSpecificOutput": output}
 
 
-_aliases = os.environ.get("SHELL_ALIASES", "")
-SHELL_ALIASES = r"|".join(rf"(\b{a}\b)" for a in _aliases.split(","))
-
 VALIDATION_RULES = [
     (
         r"\bgrep\b",
@@ -45,7 +42,7 @@ VALIDATION_RULES = [
         decision("ask"),
     ),
     (
-        r"(\balias\b)|" + SHELL_ALIASES,
+        r"\balias\b",
         decision("deny", reason="Don't use aliases, use the command directly"),
     ),
 ]
