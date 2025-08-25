@@ -44,7 +44,7 @@ NEVER list which files you changed.
 NEVER make up or guess methods, variables class names, functions, modules or any
 API. Only use those which you already read or know they exists for sure.
 
-Don't comment code at all, don't write docstrings or doctests either.
+IMPORTANT: NEVER comment code at all, don't write docstrings or doctests either.
 
 When using `datetime`, import it like this: `import datetime as dt`
 Use the new pipe operator for `Optional` variables like this: `value | None`
@@ -60,6 +60,7 @@ ALWAYS assert on whole ouptut in tests, not just tiny parts
 For mocking, use pytest `monkeypatch` fixture, NEVER `unittest.mock` and NEVER
 any of the `Mock` classes or `patch` function
 IMPORTANT: NEVER import from `conftest.py`
+ALWAYS type hint test case parameters correctly.
 
 
 # Temporary files
