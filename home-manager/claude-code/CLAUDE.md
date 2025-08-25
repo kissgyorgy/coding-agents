@@ -60,7 +60,8 @@ ALWAYS assert on whole ouptut in tests, not just tiny parts
 For mocking, use pytest `monkeypatch` fixture, NEVER `unittest.mock` and NEVER
 any of the `Mock` classes or `patch` function
 IMPORTANT: NEVER import from `conftest.py`
-ALWAYS type hint test case parameters correctly.
+ALWAYS type hint test function parameters correctly.
+Don't make a test class with only one function, a module-level test function is enough in that case.
 
 
 # Temporary files
