@@ -1,9 +1,6 @@
 {
-  "model": "opusplan",
-  "statusLine": {
-    "type": "command",
-    "command": "~/.claude/scripts/statusline.sh"
-  },
+  "includeCoAuthoredBy": false,
+  "model": "opus",
   "hooks": {
     "PostToolUse": [
       {
@@ -17,5 +14,8 @@
       }
     ]
   },
-  "includeCoAuthoredBy": false
+  "statusLine": {
+    "type": "command",
+    "command": "~/.claude/scripts/statusline.sh"
+  }
 }
