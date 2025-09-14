@@ -19,15 +19,19 @@ def decision(decision: Literal["deny", "ask"], reason=None) -> dict:
 
 VALIDATION_RULES = [
     (
-        r"\bgrep\b",
+        r"\bfind\b",
         decision(
             "deny",
-            reason="Use 'rg' (ripgrep) instead of 'grep' for better performance and features",
+            reason="NEVER use find, use bfs instead. It's mostly compatible with find, just change the command, keep the options.",
         ),
     ),
     (
-        r"\b(find|bfs)\b",
-        decision("deny", reason="Use the Search or Glob tool instead of 'find'."),
+        r"\bbfs.*-exec",
+        decision("deny", reason="NEVER run commands with bfs"),
+    ),
+    (
+        r"\bbfs.*-delete",
+        decision("deny", reason="NEVER delete files with bfs."),
     ),
     (
         r"\bsudo\b",
@@ -38,12 +42,8 @@ VALIDATION_RULES = [
         decision("deny"),
     ),
     (
-        r"\brm\s*(-[rRf]+)|(--recursive)|(--force)",
+        r"\brm.*(-[rRf]+|--recursive|--force)",
         decision("ask"),
-    ),
-    (
-        r"\balias\b",
-        decision("deny", reason="Don't use aliases, use the command directly"),
     ),
 ]
 

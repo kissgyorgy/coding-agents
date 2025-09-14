@@ -1,11 +1,23 @@
 # Tool usage
 
-IMPORTANT: NEVER use `grep` command, use the Grep or Glob tools for simple pattern search,
-or `rg` (ripgrep) for more complex searches (e.g. in a shell pipe) instead.
-IMPORTANT: NEVER use the `find` command, use the Glob/Grep/LS Tools or ripgrep instead.
+## Use bfs instead of find
+IMPORTANT: NEVER use the `find` command, use `bfs` command instead.
+`bfs` is mostly compatible with `find`, you can use the same options.
+<example>
+Instead of: `find -name "*.toml"`
+Do this: `bfs -name "*.toml"`
+</example>
+
+# Use rigrep instead of grep
+Never use the `grep` command, use the Grep tool or Glob tool for simple pattern search.
+Use `rg` (ripgrep) command for complex searches (e.g. in a shell pipe)
+<example>
+Instead of: `cat file.txt | grep "search phrase"`
+Do this: `cat file.txt | rg "search phrase"`
+</example>
 
 
-# Tone and style
+# Message Tone and style
 
 DO NOT use filler words and phrases like `modularize`, `maintainable`, `maintainability`,
  `testable`, `testability`, `focused`, `reusing`, `debugging`, `code organization`.
@@ -19,8 +31,8 @@ Use this style everywhere (replies, git commit messages, summary, task planning,
 
 devenv is a Declarative, Reproducible and Composable Developer Environments using Nix.
 Look up devenv documentation before making changes with the `context7` MCP tool (`/cachix/devenv`)
-Initialize devenv with the `devenv init` command if necessary
-ALWAYS test devenv builds correctly after modifying `devenv.nix` with `devenv build` command
+Initialize devenv with the `devenv init` command if necessary.
+ALWAYS test devenv builds correctly after modifying `devenv.nix` with `devenv build` command.
 
 
 # git commit messages
@@ -41,34 +53,32 @@ NEVER list which files you changed.
 # Python
 
 ## Coding Style
-NEVER make up or guess methods, variables class names, functions, modules or any
-API. Only use those which you already read or know they exists for sure.
-
-IMPORTANT: NEVER comment code at all, don't write docstrings or doctests either.
-
-When using `datetime`, import it like this: `import datetime as dt`
-Use the new pipe operator for `Optional` variables like this: `value | None`
+- IMPORTANT: NEVER comment code at all, don't write docstrings or doctests either.
+- NEVER make up or guess methods, variables class names, functions, modules or any API.
+- Only use APIs, class names, variables or objects which you already read or 
+  know exist for sure.
+- When using `datetime`, import it like this: `import datetime as dt`
+- Use the new pipe operator for `Optional` variables like this: `value | None`
 
 ## Managing dependencies
-Us the `uv` package manager for every dependency related task instead of editing files directly.
-Use `uv add` for adding dependencies, never directly edit `pyproject.toml` files.
-ALWAYS use `click` library instead of `argparse`, add it to dependencies if necessary.
+- Use `uv add` for adding dependencies, never directly edit `pyproject.toml` files.
+- ALWAYS use `click` library instead of `argparse`, add it to dependencies if necessary.
 
 ## Tests
-ALWAYS use `pytest` for all tests
-ALWAYS assert on whole ouptut in tests, not just tiny parts
-For mocking, use pytest `monkeypatch` fixture, NEVER `unittest.mock` and NEVER
-any of the `Mock` classes or `patch` function
-IMPORTANT: NEVER import from `conftest.py`
-ALWAYS type hint test function parameters correctly.
-Don't make a test class with only one function, a module-level test function is enough in that case.
+- ALWAYS use `pytest` for all tests
+- ALWAYS assert on whole ouptut in tests, not just tiny parts
+- For mocking, use pytest `monkeypatch` fixture, NEVER `unittest.mock` and NEVER
+  any of the `Mock` classes or `patch` function
+- IMPORTANT: NEVER import from `conftest.py`
+- ALWAYS type hint test function parameters correctly.
+- Don't make a test class with only one function, a module-level test function is enough
 
 
 # Temporary files
 
 When creating scripts, data, or temporary files for experiments, debugging or
-checking output, put those in $PROJECT_ROOT/claudetmp directory.
-Never delete anything from claudetmp/
+checking output, put those in `$PROJECT_ROOT/claudetmp` directory.
+Never delete anything from `claudetmp/`
 
 
 # Project scripts and commands
