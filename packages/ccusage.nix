@@ -1,68 +1,29 @@
 { lib
 , stdenv
-, bun
+, fetchzip
+, nodejs_20
 , makeBinaryWrapper
 ,
 }:
 
-let
-  npins = import ../npins;
-
+stdenv.mkDerivation rec {
   pname = "ccusage";
-  version = npins.ccusage.version;
-  src = npins.ccusage;
+  version = "17.0.2";
 
-  # Create node_modules with bun install
-  node_modules = stdenv.mkDerivation {
-    name = "${pname}-${version}-node_modules";
-    inherit src;
-
-    nativeBuildInputs = [ bun ];
-
-    buildPhase = ''
-      bun install --frozen-lockfile --no-progress --ignore-scripts
-    '';
-
-    installPhase = ''
-      mkdir -p $out
-      cp -r node_modules $out/
-
-      # Remove bun cache directory and all broken symlinks except .bin
-      rm -rf $out/node_modules/.cache || true
-      find $out -type l ! -exec test -e {} \; -not -path "*/.bin/*" -delete || true
-    '';
-
-    # Disable automatic fixup to prevent store path references
-    dontPatchShebangs = true;
-    dontStrip = true;
-
-    outputHashMode = "recursive";
-    outputHashAlgo = "sha256";
-    outputHash = "sha256-0PpuMJjP9eIrHRcQK3yz7szoYLfc8c8rrBxU2R2OOrY=";
+  src = fetchzip {
+    url = "https://registry.npmjs.org/ccusage/-/ccusage-${version}.tgz";
+    hash = "sha256-/ZR+YeGAKHMfsLFPBzhMje9btsnoMotx8DB/YPztopw=";
   };
 
-in
-stdenv.mkDerivation {
-  inherit pname version src;
-
-  nativeBuildInputs = [
-    bun
-    makeBinaryWrapper
-  ];
-
-  dontBuild = true;
+  nativeBuildInputs = [ makeBinaryWrapper ];
 
   installPhase = ''
-    mkdir -p $out/lib/${pname}
+    mkdir -p $out/lib/ccusage
+    cp -r * $out/lib/ccusage/
 
-    # Copy source files and dependencies
-    cp -r src package.json tsconfig.json $out/lib/${pname}/
-    cp -r ${node_modules}/node_modules $out/lib/${pname}/
-
-    # Create binary wrapper that runs the TypeScript source directly with bun
     mkdir -p $out/bin
-    makeBinaryWrapper ${bun}/bin/bun $out/bin/ccusage \
-      --add-flags "--prefer-offline --no-install --cwd $out/lib/${pname} src/index.ts"
+    makeBinaryWrapper ${nodejs_20}/bin/node $out/bin/ccusage \
+      --add-flags "$out/lib/ccusage/dist/index.js"
   '';
 
   meta = with lib; {
