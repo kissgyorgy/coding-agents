@@ -14,18 +14,6 @@ debug_log() {
 	fi
 }
 
-# Check if jq is available
-if ! command -v jq >/dev/null 2>&1; then
-	echo "zenix | Sonnet 4 | No cost data | nixconf"
-	exit 0
-fi
-
-# Check if input is valid JSON
-if ! echo "$input" | jq . >/dev/null 2>&1; then
-	echo "zenix | Sonnet 4 | No cost data | nixconf"
-	exit 0
-fi
-
 # Extract basic information
 model_name=$(echo "$input" | jq -r '.model.display_name // "Claude"')
 current_dir=$(echo "$input" | jq -r '.workspace.current_dir // "."')
