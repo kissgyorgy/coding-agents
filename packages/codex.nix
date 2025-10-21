@@ -4,12 +4,8 @@
 , autoPatchelfHook
 , openssl
 , gcc-unwrapped
+, version
 }:
-
-let
-  npins = import ../npins;
-  version = npins.codex.version;
-in
 stdenv.mkDerivation rec {
   pname = "codex";
   inherit version;
