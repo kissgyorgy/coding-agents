@@ -7,6 +7,9 @@
   home.packages = with pkgs; [
     claude-code
     ccusage
+    # these are required for sandboxing
+    socat
+    bubblewrap
   ];
 
   programs.zsh.shellAliases =
