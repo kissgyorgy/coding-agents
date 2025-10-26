@@ -12,7 +12,7 @@ stdenv.mkDerivation rec {
 
   src = fetchurl {
     url = "https://github.com/openai/codex/releases/download/${version}/codex-x86_64-unknown-linux-gnu.tar.gz";
-    hash = "sha256-iWlKk0f8ittyNkW61c0lpq/jk8solvN6i+qllEEkY/I=";
+    hash = "sha256-pZX6wv1ZM57lZhypxP+qYkcfZX90iM/+eh4mn7Tlvnk=";
   };
 
   nativeBuildInputs = [ autoPatchelfHook ];
