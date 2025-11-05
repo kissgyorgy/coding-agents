@@ -21,18 +21,10 @@ Do this: `cat file.txt | rg "search phrase"`
 
 DO NOT use filler words and phrases like `modularize`, `maintainable`, `maintainability`,
  `testable`, `testability`, `focused`, `reusing`, `debugging`, `code organization`.
-DO NOT add generalities or ego boosting phrases to commit messages about improving 
+DO NOT add generalities or ego boosting phrases to commit messages about improving
 the code quality (like "improves maintainability"), as these are not objective facts.
 
 Use this style everywhere (replies, git commit messages, summary, task planning, todo tasks, etc.).
-
-
-# devenv
-
-devenv is a Declarative, Reproducible and Composable Developer Environments using Nix.
-Look up devenv documentation before making changes with the `context7` MCP tool (`/cachix/devenv`)
-Initialize devenv with the `devenv init` command if necessary.
-ALWAYS test devenv builds correctly after modifying `devenv.nix` with `devenv build` command.
 
 
 # git commit messages
@@ -55,7 +47,7 @@ NEVER list which files you changed.
 ## Coding Style
 - IMPORTANT: NEVER comment code at all, don't write docstrings or doctests either.
 - NEVER make up or guess methods, variables class names, functions, modules or any API.
-- Only use APIs, class names, variables or objects which you already read or 
+- Only use APIs, class names, variables or objects which you already read or
   know exist for sure.
 - When using `datetime`, import it like this: `import datetime as dt`
 - Use the new pipe operator for `Optional` variables like this: `value | None`

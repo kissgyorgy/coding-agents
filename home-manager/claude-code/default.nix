@@ -1,7 +1,10 @@
 { pkgs, config, lib, ... }:
+
+with config.lib;
 {
-  home.file = with config.lib; {
+  home.file = {
     ".claude/CLAUDE.md".source = file.mkOutOfStoreSymlink ./CLAUDE.md;
+    ".claude/skills".source = file.mkOutOfStoreSymlink ./skills;
   };
 
   home.packages = with pkgs; [
