@@ -1,19 +1,14 @@
 { lib
 , stdenv
-, fetchzip
+, src
 , nodejs_20
 , makeBinaryWrapper
-,
 }:
 
 stdenv.mkDerivation rec {
   pname = "ccusage";
   version = "17.0.2";
-
-  src = fetchzip {
-    url = "https://registry.npmjs.org/ccusage/-/ccusage-${version}.tgz";
-    hash = "sha256-/ZR+YeGAKHMfsLFPBzhMje9btsnoMotx8DB/YPztopw=";
-  };
+  inherit src;
 
   nativeBuildInputs = [ makeBinaryWrapper ];
 

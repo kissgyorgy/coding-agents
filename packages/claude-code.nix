@@ -1,6 +1,6 @@
 { lib
 , stdenv
-, fetchzip
+, src
 , nodejs_20
 , makeBinaryWrapper
 }:
@@ -8,11 +8,7 @@
 stdenv.mkDerivation rec {
   pname = "claude-code";
   version = "2.0.55";
-
-  src = fetchzip {
-    url = "https://registry.npmjs.org/@anthropic-ai/claude-code/-/claude-code-${version}.tgz";
-    hash = "sha256-wsjOkNxuBLMYprjaZQyUZHiqWl8UG7cZ1njkyKZpRYg=";
-  };
+  inherit src;
 
   nativeBuildInputs = [ makeBinaryWrapper ];
 

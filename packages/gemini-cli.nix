@@ -1,19 +1,14 @@
 { lib
 , stdenv
-, fetchurl
+, src
 , nodejs_20
 , makeBinaryWrapper
-, version
 }:
 
 stdenv.mkDerivation rec {
   pname = "gemini-cli";
-  inherit version;
-
-  src = fetchurl {
-    url = "https://github.com/google-gemini/gemini-cli/releases/download/v${version}/gemini.js";
-    hash = "sha256-hKtmIGysnJ2zlpfpd6W2yA2OqPwQW2xdaND6jMe7lgs=";
-  };
+  version = "0.18.4";
+  inherit src;
 
   dontUnpack = true;
   nativeBuildInputs = [ makeBinaryWrapper ];

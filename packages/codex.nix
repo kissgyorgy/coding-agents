@@ -1,30 +1,25 @@
 { lib
 , stdenv
-, fetchurl
+, src
 , autoPatchelfHook
 , openssl
 , gcc-unwrapped
-, version
 }:
 stdenv.mkDerivation rec {
   pname = "codex";
-  inherit version;
-
-  src = fetchurl {
-    url = "https://github.com/openai/codex/releases/download/${version}/codex-x86_64-unknown-linux-gnu.tar.gz";
-    hash = "sha256-15CH4Bit+i7TZgPPCq5WdqT/rVuHGcYi27FbNKfJZ2s=";
-  };
+  version = "rust-v0.63.0";
+  inherit src;
 
   nativeBuildInputs = [ autoPatchelfHook ];
 
   buildInputs = [ openssl gcc-unwrapped.lib ];
 
-  sourceRoot = ".";
+  dontUnpack = true;
 
   installPhase = ''
     runHook preInstall
 
-    install -Dm755 codex-x86_64-unknown-linux-gnu $out/bin/codex
+    install -Dm755 $src/codex-x86_64-unknown-linux-gnu $out/bin/codex
 
     runHook postInstall
   '';
