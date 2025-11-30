@@ -1,5 +1,7 @@
-{ pkgs, config, lib, ... }:
-
+{ pkgs, config, ... }:
+let
+  apiKeyRef = "op://Secrets/anthropic-api-key/credential";
+in
 with config.lib;
 {
   home.file = {
@@ -17,13 +19,17 @@ with config.lib;
 
   programs.zsh.shellAliases =
     let
-      settings = lib.pipe ./settings.nix [
-        import
-        builtins.toJSON
-        (builtins.toFile "claude-settings.json")
-      ];
+      settings = import ./settings.nix;
+      makeJSON = fname: json: pkgs.writeText fname (builtins.toJSON json);
+      settingsJSON = makeJSON "claude-settings.json" settings;
+      apiSettingsJSON = makeJSON "api-settings.json" (settings // {
+        apiKeyHelper = "${pkgs.writeShellScript "get-api-key" "op read ${apiKeyRef}"}";
+        forceLoginMethod = "console";
+      });
+      claude-cli = "${pkgs.claude-code}/bin/claude --dangerously-skip-permissions";
     in
     {
-      claude = "claude --dangerously-skip-permissions --settings ${settings}";
+      claude = "${claude-cli} --settings ${settingsJSON}";
+      claude-api = "${claude-cli} --settings ${apiSettingsJSON}";
     };
 }
