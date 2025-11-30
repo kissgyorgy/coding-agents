@@ -1,14 +1,14 @@
 { lib
 , stdenv
 , src
+, version
 , nodejs_20
 , makeBinaryWrapper
 }:
 
-stdenv.mkDerivation rec {
+stdenv.mkDerivation {
   pname = "claude-code";
-  version = "2.0.55";
-  inherit src;
+  inherit src version;
 
   nativeBuildInputs = [ makeBinaryWrapper ];
 

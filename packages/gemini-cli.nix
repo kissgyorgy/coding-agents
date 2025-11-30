@@ -1,14 +1,14 @@
 { lib
 , stdenv
 , src
+, version
 , nodejs_20
 , makeBinaryWrapper
 }:
 
 stdenv.mkDerivation rec {
   pname = "gemini-cli";
-  version = "0.18.4";
-  inherit src;
+  inherit src version;
 
   dontUnpack = true;
   nativeBuildInputs = [ makeBinaryWrapper ];

@@ -1,14 +1,14 @@
 { lib
 , stdenv
 , src
+, version
 , autoPatchelfHook
 , openssl
 , gcc-unwrapped
 }:
 stdenv.mkDerivation rec {
   pname = "codex";
-  version = "rust-v0.63.0";
-  inherit src;
+  inherit src version;
 
   nativeBuildInputs = [ autoPatchelfHook ];
 
