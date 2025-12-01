@@ -13,12 +13,12 @@ stdenv.mkDerivation rec {
 
   buildInputs = [ openssl gcc-unwrapped.lib ];
 
-  dontUnpack = true;
+  sourceRoot = ".";
 
   installPhase = ''
     runHook preInstall
 
-    install -Dm755 $src/codex-x86_64-unknown-linux-gnu $out/bin/codex
+    install -Dm755 codex-x86_64-unknown-linux-gnu $out/bin/codex
 
     runHook postInstall
   '';
