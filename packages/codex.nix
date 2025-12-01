@@ -1,14 +1,8 @@
-{ lib
-, stdenv
-, fetchurl
-, autoPatchelfHook
-, openssl
-, gcc-unwrapped
-, version
-}:
+{ lib, stdenv, fetchurl, autoPatchelfHook, openssl, gcc-unwrapped }:
+
 stdenv.mkDerivation rec {
   pname = "codex";
-  inherit version;
+  version = "rust-v0.63.0";
 
   src = fetchurl {
     url = "https://github.com/openai/codex/releases/download/${version}/codex-x86_64-unknown-linux-gnu.tar.gz";
