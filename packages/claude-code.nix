@@ -1,14 +1,13 @@
-{ lib
-, stdenv
-, src
-, version
-, nodejs_20
-, makeBinaryWrapper
-}:
+{ lib, stdenv, fetchurl, nodejs_20, makeBinaryWrapper }:
 
-stdenv.mkDerivation {
+stdenv.mkDerivation rec {
   pname = "claude-code";
-  inherit src version;
+  version = "2.0.55";
+
+  src = fetchurl {
+    url = "https://registry.npmjs.org/@anthropic-ai/claude-code/-/claude-code-${version}.tgz";
+    hash = "sha256-XK+B3oGrcnAi19a7Ttgv2Zpx0+M/nDQenhHQWESumZE=";
+  };
 
   nativeBuildInputs = [ makeBinaryWrapper ];
 

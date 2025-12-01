@@ -1,14 +1,13 @@
-{ lib
-, stdenv
-, src
-, version
-, nodejs_20
-, makeBinaryWrapper
-}:
+{ lib, stdenv, fetchurl, nodejs_20, makeBinaryWrapper }:
 
-stdenv.mkDerivation {
+stdenv.mkDerivation rec {
   pname = "ccusage";
-  inherit src version;
+  version = "17.0.2";
+
+  src = fetchurl {
+    url = "https://registry.npmjs.org/ccusage/-/ccusage-${version}.tgz";
+    hash = "sha256-TWuBDOFetMz80TFicfKZJ90AB3R/wAgG6fezgOBuz+c=";
+  };
 
   nativeBuildInputs = [ makeBinaryWrapper ];
 
