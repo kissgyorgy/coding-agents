@@ -49,5 +49,10 @@
     ];
   };
 
+  statusLine = {
+    type = "command";
+    command = "${./statusline.sh}";
+  };
+
   includeCoAuthoredBy = false;
 }
