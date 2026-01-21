@@ -5,8 +5,8 @@ in
 with config.lib;
 {
   home.file = {
-    ".claude/CLAUDE.md".source = file.mkOutOfStoreSymlink ./CLAUDE.md;
-    ".claude/skills".source = file.mkOutOfStoreSymlink ./skills;
+    ".claude/CLAUDE.md".source = file.mkOutOfStoreSymlink "/home/walkman/nixconf/home/claude-code/CLAUDE.md";
+    ".claude/skills".source = file.mkOutOfStoreSymlink "/home/walkman/nixconf/home/claude-code/skills";
   };
 
   home.packages = with pkgs; [
