@@ -1,15 +1,7 @@
 # Tool usage
 
-## Use bfs instead of find
-IMPORTANT: NEVER use the `find` command, use `bfs` command instead.
-`bfs` is mostly compatible with `find`, you can use the same options.
-<example>
-Instead of: `find -name "*.toml"`
-Do this: `bfs -name "*.toml"`
-</example>
-
 # Use rigrep instead of grep
-Never use the `grep` command, use the Grep tool or Glob tool for simple pattern search.
+Never use the `grep` command, use the Grep, Glob or Search tool for simple pattern search.
 Use `rg` (ripgrep) command for complex searches (e.g. in a shell pipe)
 <example>
 Instead of: `cat file.txt | grep "search phrase"`
