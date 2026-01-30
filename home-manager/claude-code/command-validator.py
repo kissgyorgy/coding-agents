@@ -19,19 +19,12 @@ def decision(decision: Literal["deny", "ask"], reason=None) -> dict:
 
 VALIDATION_RULES = [
     (
-        r"\bfind\b",
-        decision(
-            "deny",
-            reason="NEVER use find, use bfs instead. It's mostly compatible with find, just change the command, keep the options.",
-        ),
+        r"\b(bfs|find).*-exec",
+        decision("deny", reason="NEVER run commands with find"),
     ),
     (
-        r"\bbfs.*-exec",
-        decision("deny", reason="NEVER run commands with bfs"),
-    ),
-    (
-        r"\bbfs.*-delete",
-        decision("deny", reason="NEVER delete files with bfs."),
+        r"\b(bfs|find).*-delete",
+        decision("deny", reason="NEVER delete files with find."),
     ),
     (
         r"\bsudo\b",
