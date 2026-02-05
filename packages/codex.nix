@@ -1,17 +1,17 @@
-{ lib, stdenv, fetchurl, autoPatchelfHook, openssl, gcc-unwrapped }:
+{ lib, stdenv, fetchurl, autoPatchelfHook, openssl, gcc-unwrapped, libcap }:
 
 stdenv.mkDerivation rec {
   pname = "codex";
-  version = "rust-v0.94.0";
+  version = "rust-v0.97.0";
 
   src = fetchurl {
     url = "https://github.com/openai/codex/releases/download/${version}/codex-x86_64-unknown-linux-gnu.tar.gz";
-    hash = "sha256-KvBfA8CTRg6gtpEordPd69SDFYM7kdPSQBequ4Xl3eI=";
+    hash = "sha256-Zjainw46BWCesPTQ+OelXdt+7BahaEC3Mtqj+z8gsJ0=";
   };
 
   nativeBuildInputs = [ autoPatchelfHook ];
 
-  buildInputs = [ openssl gcc-unwrapped.lib ];
+  buildInputs = [ libcap openssl gcc-unwrapped.lib ];
 
   sourceRoot = ".";
 
