@@ -1,11 +1,12 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { homedir } from "node:os";
 import { join } from "node:path";
 import type { AgentMessage } from "@mariozechner/pi-agent-core";
 import { complete, getModel } from "@mariozechner/pi-ai";
 import type { AssistantMessage, TextContent } from "@mariozechner/pi-ai";
-import { CustomEditor, type ExtensionAPI, type ExtensionContext } from "@mariozechner/pi-coding-agent";
-import { Key, matchesKey, truncateToWidth } from "@mariozechner/pi-tui";
-import { extractTodoItems, isSafeCommand, markCompletedSteps, type TodoItem } from "./utils.js";
+import { CustomEditor, DynamicBorder, type ExtensionAPI, type ExtensionContext } from "@mariozechner/pi-coding-agent";
+import { Container, Key, type SelectItem, SelectList, Text, matchesKey, truncateToWidth } from "@mariozechner/pi-tui";
+import { extractTodoItems, isSafeCommand, markCompletedSteps, parsePlanSections, type TodoItem } from "./utils.js";
 
 const PLAN_MODE_TOOLS = ["read", "bash", "grep", "find", "ls", "questionnaire"];
 const NORMAL_MODE_TOOLS = ["read", "bash", "edit", "write"];
@@ -21,12 +22,43 @@ function getTextContent(message: AssistantMessage): string {
 		.join("\n");
 }
 
+interface ModelRef {
+	provider: string;
+	id: string;
+}
+
+interface PlanModeSettings {
+	slugModel?: ModelRef;
+	executionModel?: ModelRef;
+}
+
+const SETTINGS_PATH = join(homedir(), ".pi", "agent", "plan-mode.json");
+
+function loadSettings(): PlanModeSettings {
+	try {
+		if (existsSync(SETTINGS_PATH)) {
+			return JSON.parse(readFileSync(SETTINGS_PATH, "utf-8"));
+		}
+	} catch {
+		/* ignore */
+	}
+	return {};
+}
+
+function saveSettings(settings: PlanModeSettings): void {
+	const dir = join(homedir(), ".pi", "agent");
+	mkdirSync(dir, { recursive: true });
+	writeFileSync(SETTINGS_PATH, JSON.stringify(settings, null, 2) + "\n");
+}
+
 export default function planModeExtension(pi: ExtensionAPI): void {
 	let planModeEnabled = false;
 	let executionMode = false;
 	let todoItems: TodoItem[] = [];
 	let planFilePath: string | null = null;
 	let planFullText: string | null = null;
+	let settings: PlanModeSettings = {};
+	let preExecutionModel: { provider: string; id: string } | null = null;
 
 	const PLAN_TEMPLATE = `# Overview
 
@@ -53,10 +85,17 @@ export default function planModeExtension(pi: ExtensionAPI): void {
 		const date = localDateSlug();
 		const todoList = items.map((t) => `${t.step}. ${t.text}`).join("\n");
 
+		// Parse sections from fullText if it already has structured headers (avoids duplicating them)
+		const parsed = fullText ? parsePlanSections(fullText) : null;
+		const implementationText = parsed?.implementation ?? fullText;
+
 		let slug = "";
 		let overview = "";
 		try {
-			const model = getModel("anthropic", "claude-haiku-4-5");
+			const slugProvider = settings.slugModel?.provider ?? "anthropic";
+			const slugModelId = settings.slugModel?.id ?? "claude-haiku-4-5";
+			const model = ctx.modelRegistry.find(slugProvider, slugModelId)
+				?? getModel("anthropic", "claude-haiku-4-5");
 			const apiKey = model ? await ctx.modelRegistry.getApiKey(model) : undefined;
 			if (model && apiKey) {
 				const response = await complete(
@@ -74,7 +113,7 @@ Add a Ctrl+G keyboard shortcut to the plan mode extension that opens the plan fi
 plan-editor-shortcut
 
 Plan:
-${fullText || todoList}` }],
+${implementationText || todoList}` }],
 							timestamp: Date.now(),
 						}],
 					},
@@ -99,15 +138,18 @@ ${fullText || todoList}` }],
 			}
 		} catch { /* fall back to date-only */ }
 
+		// Prefer overview extracted from structured text over Haiku-generated one
+		if (parsed?.overview) overview = parsed.overview;
+
 		const filename = slug ? `plan-${date}-${slug}.md` : `plan-${date}.md`;
 		const filePath = join(plansDir, filename);
 
-		const files = fullText ? extractFileReferences(fullText) : "";
+		const files = parsed?.files || (implementationText ? extractFileReferences(implementationText) : "");
 
 		const content = `# Overview
 ${overview ? `\n${overview}\n` : "\n"}
 # Implementation plan
-${fullText ? `\n${fullText}\n` : "\n"}
+${implementationText ? `\n${implementationText}\n` : "\n"}
 # Files to modify
 ${files ? `\n${files}\n` : "\n"}
 # Todo items
@@ -129,6 +171,39 @@ ${todoList}
 			}
 		}
 		return files.join("\n");
+	}
+
+	/** Rewrite an existing plan file in-place with updated content (no slug generation). */
+	function updatePlanFileInPlace(filePath: string, items: TodoItem[], fullText: string | null): void {
+		const todoList = items.map((t) => `${t.step}. ${t.text}`).join("\n");
+
+		// Parse sections from fullText if it already has structured headers (avoids duplicating them)
+		const parsed = fullText ? parsePlanSections(fullText) : null;
+		const implementationText = parsed?.implementation ?? fullText;
+		const files = parsed?.files || (implementationText ? extractFileReferences(implementationText) : "");
+
+		// Prefer parsed overview, then fall back to existing file overview
+		let overview = parsed?.overview || "";
+		if (!overview) {
+			try {
+				const existing = readFileSync(filePath, "utf-8");
+				const overviewMatch = existing.match(/^# Overview\n\n([\s\S]*?)\n\n# Implementation plan/m);
+				if (overviewMatch) {
+					overview = overviewMatch[1].trim();
+				}
+			} catch { /* ignore */ }
+		}
+
+		const content = `# Overview
+${overview ? `\n${overview}\n` : "\n"}
+# Implementation plan
+${implementationText ? `\n${implementationText}\n` : "\n"}
+# Files to modify
+${files ? `\n${files}\n` : "\n"}
+# Todo items
+${todoList}
+`;
+		writeFileSync(filePath, content);
 	}
 
 	pi.registerFlag("plan", {
@@ -168,8 +243,8 @@ ${todoList}
 		planModeEnabled = !planModeEnabled;
 		executionMode = false;
 		todoItems = [];
-		planFilePath = null;
-		planFullText = null;
+		// Preserve planFilePath and planFullText so the plan file reference
+		// survives toggling off/on (avoids creating duplicate files).
 
 		if (planModeEnabled) {
 			pi.setActiveTools(PLAN_MODE_TOOLS);
@@ -179,6 +254,7 @@ ${todoList}
 			ctx.ui.notify("Plan mode disabled. Full access restored.");
 		}
 		updateStatus(ctx);
+		persistState();
 	}
 
 	async function startExecution(ctx: ExtensionContext): Promise<void> {
@@ -188,6 +264,33 @@ ${todoList}
 			planFilePath = await writePlanFile(todoItems, planFullText, ctx.cwd, ctx);
 		}
 		pi.setActiveTools(NORMAL_MODE_TOOLS);
+
+		// Switch to execution model if configured
+		if (settings.executionModel) {
+			// Save current model for restoration
+			if (ctx.model) {
+				preExecutionModel = { provider: ctx.model.provider, id: ctx.model.id };
+			}
+			const execModel = ctx.modelRegistry.find(
+				settings.executionModel.provider,
+				settings.executionModel.id,
+			);
+			if (execModel) {
+				const success = await pi.setModel(execModel);
+				if (!success) {
+					ctx.ui.notify(
+						`Plan execution model ${settings.executionModel.provider}/${settings.executionModel.id}: no API key`,
+						"warning",
+					);
+				}
+			} else {
+				ctx.ui.notify(
+					`Plan execution model ${settings.executionModel.provider}/${settings.executionModel.id} not found`,
+					"warning",
+				);
+			}
+		}
+
 		updateStatus(ctx);
 		persistState();
 
@@ -276,6 +379,119 @@ Start with step 1.`,
 		},
 	});
 
+	pi.registerCommand("plan:model", {
+		description: "Configure models for plan slug generation and execution",
+		handler: async (_args, ctx) => {
+			// First: pick which setting to change
+			const setting = await ctx.ui.custom<string | null>((tui, theme, _kb, done) => {
+				const slugCurrent = settings.slugModel
+					? `${settings.slugModel.provider}/${settings.slugModel.id}`
+					: "anthropic/claude-haiku-4-5 (default)";
+				const execCurrent = settings.executionModel
+					? `${settings.executionModel.provider}/${settings.executionModel.id}`
+					: "(keep current model)";
+
+				const items: SelectItem[] = [
+					{ value: "slug", label: "Slug/Overview model", description: slugCurrent },
+					{ value: "execution", label: "Execution model", description: execCurrent },
+				];
+
+				const container = new Container();
+				container.addChild(new DynamicBorder((str) => theme.fg("accent", str)));
+				container.addChild(new Text(theme.fg("accent", theme.bold(" Plan Mode Models")), 0, 0));
+
+				const selectList = new SelectList(items, 4, {
+					selectedPrefix: (text) => theme.fg("accent", text),
+					selectedText: (text) => theme.fg("accent", text),
+					description: (text) => theme.fg("muted", text),
+					scrollInfo: (text) => theme.fg("dim", text),
+					noMatch: (text) => theme.fg("warning", text),
+				});
+				selectList.onSelect = (item) => done(item.value);
+				selectList.onCancel = () => done(null);
+				container.addChild(selectList);
+				container.addChild(new Text(theme.fg("dim", " ↑↓ navigate • enter select • esc cancel")));
+				container.addChild(new DynamicBorder((str) => theme.fg("accent", str)));
+
+				return {
+					render: (w: number) => container.render(w),
+					invalidate: () => container.invalidate(),
+					handleInput: (data: string) => {
+						selectList.handleInput(data);
+						tui.requestRender();
+					},
+				};
+			});
+
+			if (!setting) return;
+
+			// Second: pick model
+			const available = await ctx.modelRegistry.getAvailable();
+			const modelItems: SelectItem[] = available.map((m) => ({
+				value: `${m.provider}/${m.id}`,
+				label: `${m.provider}/${m.id}`,
+				description: m.name ?? "",
+			}));
+
+			if (setting === "execution") {
+				modelItems.unshift({
+					value: "(keep-current)",
+					label: "(keep current model)",
+					description: "Don't switch model when executing",
+				});
+			}
+
+			const modelChoice = await ctx.ui.custom<string | null>((tui, theme, _kb, done) => {
+				const title = setting === "slug" ? "Slug/Overview Model" : "Execution Model";
+				const container = new Container();
+				container.addChild(new DynamicBorder((str) => theme.fg("accent", str)));
+				container.addChild(new Text(theme.fg("accent", theme.bold(` ${title}`)), 0, 0));
+
+				const selectList = new SelectList(modelItems, Math.min(modelItems.length, 15), {
+					selectedPrefix: (text) => theme.fg("accent", text),
+					selectedText: (text) => theme.fg("accent", text),
+					description: (text) => theme.fg("muted", text),
+					scrollInfo: (text) => theme.fg("dim", text),
+					noMatch: (text) => theme.fg("warning", text),
+				});
+				selectList.onSelect = (item) => done(item.value);
+				selectList.onCancel = () => done(null);
+				container.addChild(selectList);
+				container.addChild(new Text(theme.fg("dim", " ↑↓ navigate • enter select • type to filter • esc cancel")));
+				container.addChild(new DynamicBorder((str) => theme.fg("accent", str)));
+
+				return {
+					render: (w: number) => container.render(w),
+					invalidate: () => container.invalidate(),
+					handleInput: (data: string) => {
+						selectList.handleInput(data);
+						tui.requestRender();
+					},
+				};
+			});
+
+			if (!modelChoice) return;
+
+			if (setting === "slug") {
+				const [provider, ...idParts] = modelChoice.split("/");
+				settings.slugModel = { provider, id: idParts.join("/") };
+				saveSettings(settings);
+				ctx.ui.notify(`Plan slug model: ${modelChoice}`, "info");
+			} else {
+				if (modelChoice === "(keep-current)") {
+					delete settings.executionModel;
+					saveSettings(settings);
+					ctx.ui.notify("Execution model: keep current", "info");
+				} else {
+					const [provider, ...idParts] = modelChoice.split("/");
+					settings.executionModel = { provider, id: idParts.join("/") };
+					saveSettings(settings);
+					ctx.ui.notify(`Execution model: ${modelChoice}`, "info");
+				}
+			}
+		},
+	});
+
 	pi.registerShortcut(Key.ctrlAlt("p"), {
 		description: "Toggle plan mode",
 		handler: async (ctx) => togglePlanMode(ctx),
@@ -326,6 +542,7 @@ Start with step 1.`,
 			messages: event.messages.filter((m) => {
 				const msg = m as AgentMessage & { customType?: string };
 				if (msg.customType === "plan-mode-context") return false;
+				if (msg.customType === "plan-execution-context") return false;
 				if (msg.role !== "user") return true;
 
 				const content = msg.content;
@@ -381,7 +598,24 @@ Do NOT attempt to make changes - just describe what you would do.`,
 			};
 		}
 
+		// Inject remaining steps on each agent run during execution to keep it going
+		if (executionMode && todoItems.length > 0) {
+			const remaining = todoItems.filter((t) => !t.completed);
+			const todoList = remaining.map((t) => `${t.step}. ${t.text}`).join("\n");
+			return {
+				message: {
+					customType: "plan-execution-context",
+					content: `[EXECUTING PLAN - Full tool access enabled]
 
+Remaining steps:
+${todoList}
+
+Execute each step in order.
+After completing a step, include a [DONE:n] tag in your response.`,
+					display: false,
+				},
+			};
+		}
 	});
 
 	// Track [DONE:n] progress after each turn
@@ -406,6 +640,13 @@ Do NOT attempt to make changes - just describe what you would do.`,
 					{ customType: "plan-complete", content: `**Plan Complete!** ✓\n\n${completedList}`, display: true },
 					{ triggerTurn: false },
 				);
+				// Restore pre-execution model
+				if (preExecutionModel) {
+					const prevModel = ctx.modelRegistry.find(preExecutionModel.provider, preExecutionModel.id);
+					if (prevModel) await pi.setModel(prevModel);
+					preExecutionModel = null;
+				}
+
 				executionMode = false;
 				todoItems = [];
 				planFilePath = null;
@@ -430,9 +671,15 @@ Do NOT attempt to make changes - just describe what you would do.`,
 			}
 		}
 
-		// Write plan file to disk before showing the dialog
+		// Write plan file to disk before showing the dialog.
+		// If a plan file already exists on disk, update it in-place (preserve slug/path).
+		// Only create a brand new file (with Haiku slug) when no file exists yet.
 		if (todoItems.length > 0) {
-			planFilePath = await writePlanFile(todoItems, planFullText, ctx.cwd, ctx);
+			if (planFilePath && existsSync(planFilePath)) {
+				updatePlanFileInPlace(planFilePath, todoItems, planFullText);
+			} else {
+				planFilePath = await writePlanFile(todoItems, planFullText, ctx.cwd, ctx);
+			}
 		}
 
 		// Show plan steps and prompt for next action
@@ -600,6 +847,8 @@ Do NOT attempt to make changes - just describe what you would do.`,
 
 	// Restore state on session start/resume
 	pi.on("session_start", async (_event, ctx) => {
+		settings = loadSettings();
+
 		// Register plan-aware editor for Ctrl+G interception
 		editorCtx = ctx;
 		ctx.ui.setEditorComponent((tui, theme, kb) => new PlanEditor(tui, theme, kb));

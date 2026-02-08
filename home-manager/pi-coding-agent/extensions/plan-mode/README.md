@@ -24,6 +24,7 @@ Read-only exploration mode for safe code analysis.
 | `/plan` | Toggle plan mode (read-only exploration) |
 | `/plan:execute` | Execute the current plan |
 | `/plan:edit` | Edit the current plan file (inline editor) |
+| `/plan:model` | Configure models for slug generation and execution |
 | `/todos` | Show current plan progress |
 | `Ctrl+Alt+P` | Toggle plan mode |
 | `Ctrl+Alt+E` | Execute the current plan |
@@ -98,6 +99,21 @@ Detailed analysis and approach.
   # Todo items
   1.
   ```
+
+### Model Settings
+
+Configurable via `/plan:model` command. Settings are persisted in `~/.pi/agent/plan-mode.json`.
+
+```json
+{
+  "slugModel": { "provider": "anthropic", "id": "claude-haiku-4-5" },
+  "executionModel": { "provider": "anthropic", "id": "claude-sonnet-4-5" }
+}
+```
+
+**Slug/Overview model** (`slugModel`): Used for generating the plan file slug and overview summary. This is a quick, cheap API call. Defaults to `anthropic/claude-haiku-4-5` if not configured.
+
+**Execution model** (`executionModel`): The model switched to via `pi.setModel()` when entering execution mode. When not configured, the current model is kept (no switch). The previous model is automatically restored when the plan completes.
 
 ### Command Allowlist
 

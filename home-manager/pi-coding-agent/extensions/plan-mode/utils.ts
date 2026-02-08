@@ -165,3 +165,40 @@ export function markCompletedSteps(text: string, items: TodoItem[]): number {
 	}
 	return doneSteps.length;
 }
+
+export interface PlanSections {
+	overview: string;
+	implementation: string;
+	files: string;
+	todos: string;
+}
+
+/** Parse structured plan text into sections. Returns null if text doesn't contain section headers. */
+export function parsePlanSections(text: string): PlanSections | null {
+	if (!/^#+\s+(Overview|Implementation plan|Todo items)/mi.test(text)) return null;
+
+	const buffers: Record<keyof PlanSections, string[]> = { overview: [], implementation: [], files: [], todos: [] };
+	const lines = text.split("\n");
+	let currentKey: keyof PlanSections | null = null;
+
+	for (const line of lines) {
+		const m = line.match(/^#+\s+(Overview|Implementation plan|Files to modify|Todo items)\s*$/i);
+		if (m) {
+			const name = m[1].toLowerCase();
+			if (name === "overview") currentKey = "overview";
+			else if (name === "implementation plan") currentKey = "implementation";
+			else if (name === "files to modify") currentKey = "files";
+			else if (name === "todo items") currentKey = "todos";
+			continue;
+		}
+		if (currentKey) {
+			buffers[currentKey].push(line);
+		}
+	}
+
+	const sections: PlanSections = { overview: "", implementation: "", files: "", todos: "" };
+	for (const key of Object.keys(buffers) as (keyof PlanSections)[]) {
+		sections[key] = buffers[key].join("\n").trim();
+	}
+	return sections;
+}
