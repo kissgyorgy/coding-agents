@@ -19,9 +19,12 @@
   };
 
   env = {
+    CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS = "1";
     CLAUDE_CODE_DISABLE_FEEDBACK_SURVEY = "1";
     DISABLE_AUTOUPDATER = "1";
   };
+
+  teammateMode = "tmux";
 
   hooks = {
     PreToolUse = [
