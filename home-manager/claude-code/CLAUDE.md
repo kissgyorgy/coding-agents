@@ -1,3 +1,11 @@
+# General
+
+- CRITICAL: **Never guess names.** Always verify function names, config options, module
+  paths, variable names, CLI flags, and API fields against actual source code or
+  documentation before using them. A framework exposing a generic passthrough does not
+  mean the downstream tool supports the key.
+
+
 # Tool usage
 
 # Use rigrep instead of grep
