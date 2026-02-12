@@ -154,7 +154,19 @@ files. This keeps the filesystem clean and scopes state to the tmux session.
 | `PI_MIRROR_PANE`  | Pane ID for cross-restart reuse             |
 | `PI_LAST_RC`      | `<seq> <exit_code>` written by precmd hook  |
 
+### Diff Viewer Pane
+
+A read-only pane below the command pane shows `git diff --color=always` output.
+It auto-refreshes after each agent bash command via `tmux wait-for` signaling.
+The user can scroll with tmux copy mode (`prefix + [`).
+
 Debug log: `/tmp/pi-mirror-debug.log` (activity loop, temporary).
+
+## Testing
+
+This line was added to test the diff viewer pane.
+And this is a second change to see the diff grow.
+Third change — testing the less-based diff viewer with native scrolling.
 
 ## Implementation Notes
 
