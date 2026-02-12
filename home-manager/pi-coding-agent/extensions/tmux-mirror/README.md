@@ -167,6 +167,10 @@ Debug log: `/tmp/pi-mirror-debug.log` (activity loop, temporary).
 This line was added to test the diff viewer pane.
 And this is a second change to see the diff grow.
 Third change — testing the less-based diff viewer with native scrolling.
+Fourth change — now using direct command injection instead of a loop.
+Fifth change — verifying the diff viewer updates after Edit tool changes.
+Sixth change — testing with multiple file edits in one turn.
+Seventh change — another round.
 
 ## Implementation Notes
 

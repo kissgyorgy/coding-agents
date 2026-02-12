@@ -38,7 +38,7 @@ const ENV_DIFF_PANE_ID = "PI_DIFF_PANE";
 const ENV_LAST_RC = "PI_LAST_RC";
 
 export default function (pi: ExtensionAPI) {
-  // Bail out if not inside tmux — no tools registered, no handlers
+  // Bail out early if not inside tmux — no tools registered, no handlers
   if (!process.env.TMUX) return;
 
   let target = process.env.TMUX_MIRROR_TARGET || "";
@@ -555,6 +555,8 @@ export default function (pi: ExtensionAPI) {
             { deliverAs: "followUp", triggerTurn: false },
           );
 
+          refreshDiff().catch(() => {});
+
           // Wait for agent to finish, then check for missed activity.
           // Signals sent during agent execution are lost (nobody listening),
           // so we must actively check instead of waiting for the next signal.
@@ -584,6 +586,7 @@ export default function (pi: ExtensionAPI) {
                   },
                   { deliverAs: "followUp", triggerTurn: false },
                 );
+                refreshDiff().catch(() => {});
               }
             }
           }
