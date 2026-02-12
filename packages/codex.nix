@@ -1,4 +1,4 @@
-{ lib, stdenv, fetchurl, autoPatchelfHook, openssl, gcc-unwrapped, libcap }:
+{ lib, stdenv, fetchurl, autoPatchelfHook, openssl, gcc-unwrapped, libcap, zlib }:
 
 stdenv.mkDerivation rec {
   pname = "codex";
@@ -11,7 +11,7 @@ stdenv.mkDerivation rec {
 
   nativeBuildInputs = [ autoPatchelfHook ];
 
-  buildInputs = [ libcap openssl gcc-unwrapped.lib ];
+  buildInputs = [ libcap openssl gcc-unwrapped.lib zlib ];
 
   sourceRoot = ".";
 
