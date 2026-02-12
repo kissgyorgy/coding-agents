@@ -211,7 +211,7 @@ export default function (pi: ExtensionAPI) {
       `git ls-files --others --exclude-standard 2>/dev/null | while IFS= read -r f; do git --no-pager diff --color=always --no-index /dev/null "$f" 2>/dev/null; done`,
     ].join("; ");
     const cmd = `{ ${diffScript}; } | less -Rc`;
-    await tmuxExec("send-keys", "-t", diffPaneId, "-l", cmd);
+    await tmuxExec("send-keys", "-t", diffPaneId, "-l", ` ${cmd}`);
     await tmuxExec("send-keys", "-t", diffPaneId, "Enter");
   }
 
@@ -248,7 +248,7 @@ export default function (pi: ExtensionAPI) {
       await tmuxUnsetEnv(ENV_LAST_RC).catch(() => {});
 
       // Send the hook inline — no temp file needed
-      await tmuxExec("send-keys", "-t", target, "-l", `${hook} && clear`);
+      await tmuxExec("send-keys", "-t", target, "-l", ` ${hook} && clear`);
       await tmuxExec("send-keys", "-t", target, "Enter");
 
       // Wait for the hook to prove it works — use wait-for with a timeout
@@ -436,7 +436,7 @@ export default function (pi: ExtensionAPI) {
       sendCmd = `{\n${sendCmd}\n}`;
     }
 
-    await tmuxExec("send-keys", "-t", target, "-l", sendCmd);
+    await tmuxExec("send-keys", "-t", target, "-l", ` ${sendCmd}`);
     await tmuxExec("send-keys", "-t", target, "Enter");
 
     // Wait for prompt signal — blocks until precmd fires or timeout
