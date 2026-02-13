@@ -34,7 +34,6 @@ const WAIT_CHANNEL = "pi-prompt";
 
 // Tmux session environment variable names
 const ENV_PANE_ID = "PI_MIRROR_PANE";
-const ENV_DIFF_PANE_ID = "PI_DIFF_PANE";
 const ENV_LAST_RC = "PI_LAST_RC";
 
 export default function (pi: ExtensionAPI) {
@@ -162,57 +161,6 @@ export default function (pi: ExtensionAPI) {
     return (
       await tmuxExec("display-message", "-t", target, "-p", "#{pane_current_path}")
     ).stdout.trim();
-  }
-
-  // ── diff viewer pane ─────────────────────────────────────
-
-  let diffPaneId = "";
-
-  async function ensureDiffPane(): Promise<boolean> {
-    // Check if saved pane is alive
-    if (!diffPaneId) {
-      const savedId = await tmuxGetEnv(ENV_DIFF_PANE_ID);
-      if (savedId && (await paneAlive(savedId))) {
-        diffPaneId = savedId;
-      }
-    }
-
-    if (diffPaneId && (await paneAlive(diffPaneId))) return true;
-
-    // Create a new pane below the command pane
-    if (!target) return false;
-    const split = await tmuxExec(
-      "split-window", "-v", "-d", "-t", target,
-      "-l", "30%",
-      "-P", "-F", "#{pane_id}",
-    );
-    if (split.code !== 0) return false;
-
-    diffPaneId = split.stdout.trim();
-    await tmuxSetEnv(ENV_DIFF_PANE_ID, diffPaneId);
-    await sleep(500);
-    return true;
-  }
-
-  /** Refresh the diff viewer: kill whatever is running, send new diff command. */
-  async function refreshDiff(): Promise<void> {
-    if (!diffPaneId || !(await paneAlive(diffPaneId))) return;
-
-    // q quits less if running (or types 'q' into shell).
-    // C-c clears any partial input at shell prompt.
-    await tmuxExec("send-keys", "-t", diffPaneId, "q");
-    await sleep(100);
-    await tmuxExec("send-keys", "-t", diffPaneId, "C-c");
-    await sleep(100);
-
-    const diffScript = [
-      `printf '\\033[1;34m── git diff ──\\033[0m\\n\\n'`,
-      `git --no-pager diff --color=always 2>/dev/null`,
-      `git ls-files --others --exclude-standard 2>/dev/null | while IFS= read -r f; do git --no-pager diff --color=always --no-index /dev/null "$f" 2>/dev/null; done`,
-    ].join("; ");
-    const cmd = `{ ${diffScript}; } | less -Rc`;
-    await tmuxExec("send-keys", "-t", diffPaneId, "-l", ` ${cmd}`);
-    await tmuxExec("send-keys", "-t", diffPaneId, "Enter");
   }
 
   // ── shell hook ───────────────────────────────────────────
@@ -555,8 +503,6 @@ export default function (pi: ExtensionAPI) {
             { deliverAs: "followUp", triggerTurn: false },
           );
 
-          refreshDiff().catch(() => {});
-
           // Wait for agent to finish, then check for missed activity.
           // Signals sent during agent execution are lost (nobody listening),
           // so we must actively check instead of waiting for the next signal.
@@ -586,7 +532,7 @@ export default function (pi: ExtensionAPI) {
                   },
                   { deliverAs: "followUp", triggerTurn: false },
                 );
-                refreshDiff().catch(() => {});
+
               }
             }
           }
@@ -642,9 +588,6 @@ export default function (pi: ExtensionAPI) {
         if (paneReady) {
           lastSnapshot = (await capturePane(200)).trim();
         }
-
-        // Refresh diff viewer after each command
-        refreshDiff().catch(() => {});
 
         const t = truncateTail(output, {
           maxLines: DEFAULT_MAX_LINES,
@@ -715,8 +658,6 @@ export default function (pi: ExtensionAPI) {
     // to catch commands the user typed during the agent's turn.
     // The bash tool already updates lastSnapshot after each command.
 
-    // Refresh diff viewer — catches changes from Edit/Write tools too.
-    refreshDiff().catch(() => {});
   });
 
   pi.on("session_start", async (_event, ctx) => {
@@ -725,8 +666,6 @@ export default function (pi: ExtensionAPI) {
       await installHook();
       lastSnapshot = (await capturePane(200)).trim();
       startActivityLoop();
-      await ensureDiffPane();
-      await refreshDiff();
       ctx.ui.notify(`Shared tmux pane → ${target}`, "info");
     }
   });
