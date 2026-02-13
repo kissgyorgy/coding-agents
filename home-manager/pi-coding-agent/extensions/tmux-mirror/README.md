@@ -1,12 +1,18 @@
 # tmux-mirror
 
 A [pi-coding-agent](https://github.com/nichochar/pi-coding-agent) extension
-that redirects all agent commands to a shared tmux split pane, giving both the
+that redirects all agent commands to a shared terminal split, giving both the
 agent and the user full bidirectional visibility of the same terminal.
+
+Supports two backends:
+- **tmux** — detected via `$TMUX`, uses tmux split panes and `tmux wait-for`
+  for instant signaling.
+- **kitty** — detected via `$KITTY_PID` (when not inside tmux), uses kitty's
+  remote control protocol (`kitty @`) and file-based polling for signaling.
 
 ## Features
 
-- **Shared terminal** — agent commands run in a visible tmux split pane instead
+- **Shared terminal** — agent commands run in a visible terminal split instead
   of a hidden subprocess. The user sees every command as it executes.
 - **Bidirectional** — when the user types commands in the pane, the agent is
   notified instantly and can respond to the output.
@@ -39,6 +45,7 @@ agent and the user full bidirectional visibility of the same terminal.
 
 ### Architecture
 
+**tmux backend:**
 ```
 ┌─────────────────────┐  ┌──────────────────────┐
 │  pi (agent pane)    │  │  shared pane (%N)     │
@@ -50,6 +57,22 @@ agent and the user full bidirectional visibility of the same terminal.
 └─────────────────────┘  └──────────────────────┘
          │                          │
          └── tmux wait-for ─────────┘  (event-driven, zero CPU)
+```
+
+**kitty backend:**
+```
+┌─────────────────────┐  ┌──────────────────────┐
+│  pi (agent window)  │  │  shared vsplit (id:N) │
+│                     │  │                       │
+│  tmux-mirror ext    │──│  zsh/bash + hook      │
+│  ├─ bash tool       │  │  └─ precmd writes RC  │
+│  ├─ read_terminal   │  │      to temp file     │
+│  └─ activity loop   │  │                       │
+└─────────────────────┘  └──────────────────────┘
+         │                          │
+         ├── kitty @ send-text ─────┘  (remote control via socket)
+         ├── kitty @ get-text
+         └── polls RC temp file        (200ms interval)
 ```
 
 ### Shell Hook
@@ -141,18 +164,35 @@ Reads recent content from the shared tmux pane scrollback.
 
 ## Requirements
 
+**tmux backend:**
 - Must run pi inside a tmux session.
 - The shell in the split pane must be zsh or bash.
 
-## Tmux Session State
+**kitty backend:**
+- Must run pi inside kitty (detected via `$KITTY_PID`).
+- Remote control must be enabled in kitty.conf:
+  ```
+  allow_remote_control socket-only
+  listen_on unix:/tmp/kitty-{kitty_pid}
+  ```
+- The `splits` layout must be enabled (e.g., `enabled_layouts splits`).
+- The shell must be zsh or bash.
 
-All persistent state is stored in tmux session environment variables, not temp
-files. This keeps the filesystem clean and scopes state to the tmux session.
+## State Storage
+
+**tmux backend** — all state in tmux session environment variables (no temp files):
 
 | Variable          | Purpose                                     |
 |-------------------|---------------------------------------------|
 | `PI_MIRROR_PANE`  | Pane ID for cross-restart reuse             |
 | `PI_LAST_RC`      | `<seq> <exit_code>` written by precmd hook  |
+
+**kitty backend** — state in temp files (scoped to kitty/pi process):
+
+| File                               | Purpose                                     |
+|------------------------------------|---------------------------------------------|
+| `/tmp/pi-mirror-pane-<KITTY_PID>`  | Window ID for cross-restart reuse           |
+| `/tmp/pi-mirror-rc-<PI_PID>`       | `<seq> <exit_code>` written by precmd hook  |
 
 ### Diff Viewer Pane
 

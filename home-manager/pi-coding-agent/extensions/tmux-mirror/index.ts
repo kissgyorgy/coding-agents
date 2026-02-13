@@ -1,21 +1,24 @@
 /**
- * Tmux Shared Terminal Extension
+ * Shared Terminal Extension (tmux + kitty)
  *
- * Overrides the built-in bash tool to run commands in a shared tmux pane.
+ * Overrides the built-in bash tool to run commands in a shared terminal split.
+ * Supports two backends:
+ *   - tmux: splits via tmux, signals via `tmux wait-for`
+ *   - kitty: splits via `kitty @` remote control, signals via file polling
+ *
  * The actual command text is sent directly — no wrappers, no markers.
  *
  * Completion and exit code are detected via a shell hook (precmd for zsh,
- * PROMPT_COMMAND for bash) that stores a sequence number + $? in a tmux
- * session environment variable and signals `tmux wait-for -S pi-prompt`.
- * This gives instant, zero-CPU notification instead of polling.
+ * PROMPT_COMMAND for bash). The hook writes a sequence number + $? and
+ * signals completion (tmux wait-for or temp file for kitty).
  *
- * All state is stored in tmux session environment variables — no temp files.
+ * The user can also type commands in the pane. A background loop detects
+ * new activity when the agent is idle and injects it into the conversation.
  *
- * The user can also type commands in the pane. A background `wait-for`
- * loop detects new activity when the agent is idle and injects it into
- * the conversation.
- *
- * Setup: run pi inside tmux. A split pane is auto-created.
+ * Setup:
+ *   - tmux: run pi inside tmux. A split pane is auto-created.
+ *   - kitty: run pi inside kitty with remote control enabled
+ *     (allow_remote_control=socket-only in kitty.conf). A vsplit is auto-created.
  *
  * Environment variables:
  *   TMUX_MIRROR_TARGET  - tmux target pane (default: auto-created split)
@@ -28,7 +31,7 @@ import {
   formatSize,
 } from "@mariozechner/pi-coding-agent";
 import { Type } from "@sinclair/typebox";
-import { writeFileSync } from "node:fs";
+import { writeFileSync, readFileSync, unlinkSync } from "node:fs";
 
 const WAIT_CHANNEL = "pi-prompt";
 
@@ -36,91 +39,185 @@ const WAIT_CHANNEL = "pi-prompt";
 const ENV_PANE_ID = "PI_MIRROR_PANE";
 const ENV_LAST_RC = "PI_LAST_RC";
 
+type Backend = "tmux" | "kitty";
+
 export default function (pi: ExtensionAPI) {
-  // Bail out early if not inside tmux — no tools registered, no handlers
-  if (!process.env.TMUX) return;
+  // ── backend detection ────────────────────────────────────
+
+  let backend: Backend;
+  if (process.env.TMUX) {
+    backend = "tmux";
+  } else if (process.env.KITTY_PID) {
+    backend = "kitty";
+  } else {
+    return; // No supported terminal — bail out
+  }
+
+  // ── shared state ─────────────────────────────────────────
 
   let target = process.env.TMUX_MIRROR_TARGET || "";
-
+  let kittyWindowId = 0;
   let paneReady = false;
   let hookInstalled = false;
   let promptHeight = 2;
-  let promptSymbol = "$ ";  // detected from pane after clear
+  let promptSymbol = "$ ";
   let agentRunning = false;
   let activityLoopRunning = false;
   let activityAbort: AbortController | null = null;
   let lastSnapshot = "";
 
-  // ── helpers ──────────────────────────────────────────────
+  // Kitty-specific paths
+  const kittyPaneIdFile = `/tmp/pi-mirror-pane-${process.env.KITTY_PID || "unknown"}`;
+  const kittyRcFile = `/tmp/pi-mirror-rc-${process.pid}`;
+  const myKittyWindowId = parseInt(process.env.KITTY_WINDOW_ID || "0", 10);
+
+  // ── common helpers ───────────────────────────────────────
 
   const sq = (s: string) => `'${s.replace(/'/g, "'\\''")}'`;
   const sleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
+
+  // ── tmux helpers ─────────────────────────────────────────
 
   async function tmuxExec(...args: string[]): Promise<{ stdout: string; code: number }> {
     const r = await pi.exec("tmux", args, { timeout: 5000 });
     return { stdout: r.stdout, code: r.code ?? 1 };
   }
 
-  /** Read a tmux session environment variable. Returns "" if unset. */
   async function tmuxGetEnv(name: string): Promise<string> {
     const r = await tmuxExec("show-environment", name);
     if (r.code !== 0) return "";
-    // Output format: "NAME=value\n" or "-NAME\n" (if unset)
     const line = r.stdout.trim();
     if (line.startsWith("-")) return "";
     const eq = line.indexOf("=");
     return eq >= 0 ? line.slice(eq + 1) : "";
   }
 
-  /** Set a tmux session environment variable. */
   async function tmuxSetEnv(name: string, value: string): Promise<void> {
     await tmuxExec("set-environment", name, value);
   }
 
-  /** Unset a tmux session environment variable. */
   async function tmuxUnsetEnv(name: string): Promise<void> {
     await tmuxExec("set-environment", "-u", name);
   }
 
-  // ── pane lifecycle ───────────────────────────────────────
+  // ── kitty helpers ────────────────────────────────────────
 
-  async function resetState() {
-    paneReady = false;
-    hookInstalled = false;
-    target = process.env.TMUX_MIRROR_TARGET || "";
-    await tmuxUnsetEnv(ENV_LAST_RC).catch(() => {});
+  async function kittyExec(...args: string[]): Promise<{ stdout: string; code: number }> {
+    const r = await pi.exec("kitty", ["@", ...args], { timeout: 5000 });
+    return { stdout: r.stdout, code: r.code ?? 1 };
   }
 
-  async function paneAlive(id: string): Promise<boolean> {
-    if (!id) return false;
+  /** Find a kitty window by ID in the `kitty @ ls` output. */
+  async function kittyGetWindow(id: number): Promise<any | null> {
+    const r = await kittyExec("ls");
+    if (r.code !== 0) return null;
     try {
-      const r = await pi.exec("tmux", ["list-panes", "-F", "#{pane_id}"], { timeout: 2000 });
-      return r.stdout.trim().split("\n").includes(id);
+      const data = JSON.parse(r.stdout);
+      for (const osWin of data) {
+        for (const tab of osWin.tabs) {
+          for (const win of tab.windows) {
+            if (win.id === id) return win;
+          }
+        }
+      }
+    } catch {}
+    return null;
+  }
+
+  async function kittySendText(text: string): Promise<void> {
+    await pi.exec(
+      "bash",
+      ["-c", `printf '%s' ${sq(text)} | kitty @ send-text --match id:${kittyWindowId} --stdin`],
+      { timeout: 5000 },
+    );
+  }
+
+  async function kittySendEnter(): Promise<void> {
+    await kittyExec("send-key", "--match", `id:${kittyWindowId}`, "Return");
+  }
+
+  async function kittySendCtrlC(): Promise<void> {
+    await kittyExec("send-key", "--match", `id:${kittyWindowId}`, "ctrl+c");
+  }
+
+  function readRcKitty(): { seq: number; rc: number } {
+    try {
+      const val = readFileSync(kittyRcFile, "utf-8").trim();
+      if (!val) return { seq: 0, rc: 0 };
+      const [s, r] = val.split(" ");
+      return { seq: parseInt(s, 10) || 0, rc: parseInt(r, 10) || 0 };
     } catch {
-      return false;
+      return { seq: 0, rc: 0 };
+    }
+  }
+
+  // ── dispatch: pane lifecycle ─────────────────────────────
+
+  async function resetState(): Promise<void> {
+    paneReady = false;
+    hookInstalled = false;
+    if (backend === "tmux") {
+      target = process.env.TMUX_MIRROR_TARGET || "";
+      await tmuxUnsetEnv(ENV_LAST_RC).catch(() => {});
+    } else {
+      kittyWindowId = 0;
+      try { unlinkSync(kittyRcFile); } catch {}
+    }
+  }
+
+  async function paneAlive(id?: string | number): Promise<boolean> {
+    if (backend === "tmux") {
+      const paneId = (id as string) || target;
+      if (!paneId) return false;
+      try {
+        const r = await pi.exec("tmux", ["list-panes", "-F", "#{pane_id}"], { timeout: 2000 });
+        return r.stdout.trim().split("\n").includes(paneId);
+      } catch {
+        return false;
+      }
+    } else {
+      const winId = (id as number) || kittyWindowId;
+      if (!winId) return false;
+      return (await kittyGetWindow(winId)) !== null;
     }
   }
 
   async function waitForShell(timeoutMs = 10000): Promise<boolean> {
     const deadline = Date.now() + timeoutMs;
     while (Date.now() < deadline) {
-      const cmd = (
-        await tmuxExec("display-message", "-t", target, "-p", "#{pane_current_command}")
-      ).stdout.trim();
-      if (cmd && /sh$/.test(cmd)) return true;
+      if (backend === "tmux") {
+        const cmd = (
+          await tmuxExec("display-message", "-t", target, "-p", "#{pane_current_command}")
+        ).stdout.trim();
+        if (cmd && /sh$/.test(cmd)) return true;
+      } else {
+        const win = await kittyGetWindow(kittyWindowId);
+        if (win) {
+          const cmdline = win.foreground_processes?.[0]?.cmdline?.[0] || "";
+          if (/sh$/.test(cmdline)) return true;
+        }
+      }
       await sleep(500);
     }
     return false;
   }
 
   async function ensurePane(): Promise<boolean> {
-    if (paneReady && (await paneAlive(target))) return true;
+    if (paneReady && (await paneAlive())) return true;
 
     if (paneReady) {
       await resetState();
       await sleep(500);
     }
 
+    if (backend === "tmux") {
+      return ensurePaneTmux();
+    } else {
+      return ensurePaneKitty();
+    }
+  }
+
+  async function ensurePaneTmux(): Promise<boolean> {
     if ((await tmuxExec("has-session")).code !== 0) return false;
 
     if (target) {
@@ -128,7 +225,6 @@ export default function (pi: ExtensionAPI) {
       return false;
     }
 
-    // Check if a pane ID was saved in the tmux session from a previous run
     const savedId = await tmuxGetEnv(ENV_PANE_ID);
     if (savedId && (await paneAlive(savedId))) {
       target = savedId;
@@ -152,74 +248,224 @@ export default function (pi: ExtensionAPI) {
     return true;
   }
 
+  async function ensurePaneKitty(): Promise<boolean> {
+    // Check saved pane ID from a previous pi run
+    try {
+      const saved = readFileSync(kittyPaneIdFile, "utf-8").trim();
+      const id = parseInt(saved, 10);
+      if (id > 0 && (await paneAlive(id))) {
+        kittyWindowId = id;
+        paneReady = true;
+        return true;
+      }
+    } catch {}
+
+    // Create a new vsplit
+    const r = await kittyExec("launch", "--location=vsplit", "--cwd=current");
+    if (r.code !== 0) return false;
+
+    const newId = parseInt(r.stdout.trim(), 10);
+    if (isNaN(newId) || newId <= 0) {
+      // --dont-take-focus may suppress ID output in older kitty versions.
+      // Fallback: find the newest non-self window via kitty @ ls.
+      const fallbackId = await kittyFindNewestWindow();
+      if (!fallbackId) return false;
+      kittyWindowId = fallbackId;
+    } else {
+      kittyWindowId = newId;
+    }
+
+    // Focus back to our window
+    if (myKittyWindowId > 0) {
+      await kittyExec("focus-window", "--match", `id:${myKittyWindowId}`);
+    }
+
+    writeFileSync(kittyPaneIdFile, String(kittyWindowId));
+
+    if (!(await waitForShell())) {
+      await kittyExec("close-window", "--match", `id:${kittyWindowId}`);
+      kittyWindowId = 0;
+      return false;
+    }
+
+    paneReady = true;
+    return true;
+  }
+
+  /** Fallback: find the newest window that isn't ours. */
+  async function kittyFindNewestWindow(): Promise<number | null> {
+    const r = await kittyExec("ls");
+    if (r.code !== 0) return null;
+    try {
+      const data = JSON.parse(r.stdout);
+      let newest: { id: number; at: number } | null = null;
+      for (const osWin of data) {
+        for (const tab of osWin.tabs) {
+          for (const win of tab.windows) {
+            if (win.id !== myKittyWindowId) {
+              // Use the highest ID as a proxy for "newest"
+              if (!newest || win.id > newest.id) {
+                newest = { id: win.id, at: win.id };
+              }
+            }
+          }
+        }
+      }
+      return newest?.id ?? null;
+    } catch {
+      return null;
+    }
+  }
+
+  // ── dispatch: capture & cwd ──────────────────────────────
+
   async function capturePane(lines = 2000): Promise<string> {
-    // -J joins wrapped lines into logical lines
-    return (await tmuxExec("capture-pane", "-p", "-J", "-t", target, "-S", `-${lines}`)).stdout;
+    if (backend === "tmux") {
+      return (await tmuxExec("capture-pane", "-p", "-J", "-t", target, "-S", `-${lines}`)).stdout;
+    } else {
+      const r = await kittyExec("get-text", "--match", `id:${kittyWindowId}`, "--extent", "all");
+      if (r.code !== 0) return "";
+      const allLines = r.stdout.split("\n");
+      if (allLines.length <= lines) return r.stdout;
+      return allLines.slice(-lines).join("\n");
+    }
   }
 
   async function getPaneCwd(): Promise<string> {
-    return (
-      await tmuxExec("display-message", "-t", target, "-p", "#{pane_current_path}")
-    ).stdout.trim();
+    if (backend === "tmux") {
+      return (
+        await tmuxExec("display-message", "-t", target, "-p", "#{pane_current_path}")
+      ).stdout.trim();
+    } else {
+      const win = await kittyGetWindow(kittyWindowId);
+      if (!win) return process.cwd();
+      // foreground_processes[0].cwd is the most accurate (reflects cd)
+      return win.foreground_processes?.[0]?.cwd || win.cwd || process.cwd();
+    }
   }
 
-  // ── shell hook ───────────────────────────────────────────
+  // ── dispatch: send keys ──────────────────────────────────
+
+  async function sendText(text: string): Promise<void> {
+    if (backend === "tmux") {
+      await tmuxExec("send-keys", "-t", target, "-l", text);
+    } else {
+      await kittySendText(text);
+    }
+  }
+
+  async function sendEnter(): Promise<void> {
+    if (backend === "tmux") {
+      await tmuxExec("send-keys", "-t", target, "Enter");
+    } else {
+      await kittySendEnter();
+    }
+  }
+
+  async function sendCtrlC(): Promise<void> {
+    if (backend === "tmux") {
+      await tmuxExec("send-keys", "-t", target, "C-c");
+    } else {
+      await kittySendCtrlC();
+    }
+  }
+
+  // ── dispatch: shell hook ─────────────────────────────────
+
+  async function getShellName(): Promise<string> {
+    if (backend === "tmux") {
+      return (
+        await tmuxExec("display-message", "-t", target, "-p", "#{pane_current_command}")
+      ).stdout.trim();
+    } else {
+      const win = await kittyGetWindow(kittyWindowId);
+      if (!win) return "";
+      return win.foreground_processes?.[0]?.cmdline?.[0] || "";
+    }
+  }
 
   async function installHook(): Promise<boolean> {
     if (hookInstalled) return true;
 
-    const shell = (
-      await tmuxExec("display-message", "-t", target, "-p", "#{pane_current_command}")
-    ).stdout.trim();
-
+    const shell = await getShellName();
     const envSetup = `export PAGER=cat GIT_PAGER=cat`;
 
-    // The hook stores "<seq> <exit_code>" in a tmux env var, then signals wait-for.
     let hook: string;
     if (shell.includes("zsh")) {
-      hook = [
-        envSetup,
-        `typeset -gi __pi_seq=0`,
-        `__pi_precmd() { local rc=$?; tmux set-environment ${ENV_LAST_RC} "$((++__pi_seq)) $rc"; tmux wait-for -S ${WAIT_CHANNEL} 2>/dev/null; return $rc; }`,
-        `precmd_functions=(__pi_precmd $precmd_functions)`,
-      ].join("; ");
+      if (backend === "tmux") {
+        hook = [
+          envSetup,
+          `typeset -gi __pi_seq=0`,
+          `__pi_precmd() { local rc=$?; tmux set-environment ${ENV_LAST_RC} "$((++__pi_seq)) $rc"; tmux wait-for -S ${WAIT_CHANNEL} 2>/dev/null; return $rc; }`,
+          `precmd_functions=(__pi_precmd $precmd_functions)`,
+        ].join("; ");
+      } else {
+        hook = [
+          envSetup,
+          `typeset -gi __pi_seq=0`,
+          `__pi_precmd() { local rc=$?; echo "$((++__pi_seq)) $rc" > ${kittyRcFile}; return $rc; }`,
+          `precmd_functions=(__pi_precmd $precmd_functions)`,
+        ].join("; ");
+      }
     } else {
-      hook = [
-        envSetup,
-        `__pi_seq=0`,
-        `__pi_pcmd() { local rc=$?; tmux set-environment ${ENV_LAST_RC} "$((++__pi_seq)) $rc"; tmux wait-for -S ${WAIT_CHANNEL} 2>/dev/null; return $rc; }`,
-        `PROMPT_COMMAND="__pi_pcmd;\${PROMPT_COMMAND}"`,
-      ].join("; ");
+      if (backend === "tmux") {
+        hook = [
+          envSetup,
+          `__pi_seq=0`,
+          `__pi_pcmd() { local rc=$?; tmux set-environment ${ENV_LAST_RC} "$((++__pi_seq)) $rc"; tmux wait-for -S ${WAIT_CHANNEL} 2>/dev/null; return $rc; }`,
+          `PROMPT_COMMAND="__pi_pcmd;\${PROMPT_COMMAND}"`,
+        ].join("; ");
+      } else {
+        hook = [
+          envSetup,
+          `__pi_seq=0`,
+          `__pi_pcmd() { local rc=$?; echo "$((++__pi_seq)) $rc" > ${kittyRcFile}; return $rc; }`,
+          `PROMPT_COMMAND="__pi_pcmd;\${PROMPT_COMMAND}"`,
+        ].join("; ");
+      }
     }
 
     for (let attempt = 0; attempt < 3; attempt++) {
-      await tmuxUnsetEnv(ENV_LAST_RC).catch(() => {});
+      // Clear RC state
+      if (backend === "tmux") {
+        await tmuxUnsetEnv(ENV_LAST_RC).catch(() => {});
+      } else {
+        try { unlinkSync(kittyRcFile); } catch {}
+      }
 
-      // Send the hook inline — no temp file needed
-      await tmuxExec("send-keys", "-t", target, "-l", ` ${hook} && clear`);
-      await tmuxExec("send-keys", "-t", target, "Enter");
+      // Send the hook inline
+      await sendText(` ${hook} && clear`);
+      await sendEnter();
 
-      // Wait for the hook to prove it works — use wait-for with a timeout
-      const result = await pi.exec(
-        "tmux", ["wait-for", WAIT_CHANNEL],
-        { timeout: 5000 },
-      );
+      // Wait for the hook to prove it works
+      let hookFired = false;
+      if (backend === "tmux") {
+        const result = await pi.exec("tmux", ["wait-for", WAIT_CHANNEL], { timeout: 5000 });
+        const { seq } = await readRc();
+        hookFired = seq > 0 || result.code === 0;
+      } else {
+        // Poll for RC file to appear
+        const deadline = Date.now() + 5000;
+        while (Date.now() < deadline) {
+          await sleep(300);
+          const { seq } = readRcKitty();
+          if (seq > 0) { hookFired = true; break; }
+        }
+      }
 
-      const { seq } = await readRc();
-      if (seq > 0 || result.code === 0) {
-        // Wait for the prompt to finish rendering (precmd fires before prompt draws)
+      if (hookFired) {
+        // Wait for the prompt to finish rendering
         await sleep(500);
         const pane = (await capturePane(50)).trimEnd();
         const paneLines = pane.split("\n");
-        // Detect prompt height (trailing non-empty lines = the prompt)
+        // Detect prompt height (trailing non-empty lines)
         let h = 0;
         for (let i = paneLines.length - 1; i >= 0; i--) {
           if (paneLines[i].trim()) h++;
           else break;
         }
         promptHeight = Math.max(1, h);
-        // Detect prompt symbol from the last line (the input line)
-        // Only take the first non-space token (avoids RPROMPT/timestamp/padding)
+        // Detect prompt symbol from the last line
         const lastLine = paneLines[paneLines.length - 1].trim();
         const sym = lastLine.match(/^\S+/);
         if (sym) promptSymbol = sym[0];
@@ -233,53 +479,57 @@ export default function (pi: ExtensionAPI) {
     return false;
   }
 
+  // ── dispatch: read RC & wait for prompt ──────────────────
+
   async function readRc(): Promise<{ seq: number; rc: number }> {
-    try {
-      const val = await tmuxGetEnv(ENV_LAST_RC);
-      if (!val) return { seq: 0, rc: 0 };
-      const [s, r] = val.split(" ");
-      return { seq: parseInt(s, 10) || 0, rc: parseInt(r, 10) || 0 };
-    } catch {
-      return { seq: 0, rc: 0 };
+    if (backend === "tmux") {
+      try {
+        const val = await tmuxGetEnv(ENV_LAST_RC);
+        if (!val) return { seq: 0, rc: 0 };
+        const [s, r] = val.split(" ");
+        return { seq: parseInt(s, 10) || 0, rc: parseInt(r, 10) || 0 };
+      } catch {
+        return { seq: 0, rc: 0 };
+      }
+    } else {
+      return readRcKitty();
     }
   }
 
-  // ── wait-for based prompt signal ─────────────────────────
-
-  /**
-   * Block until the next prompt signal (precmd fires in the pane).
-   * Returns true if signaled, false on timeout or pane death.
-   */
   async function waitForPrompt(timeoutMs: number): Promise<boolean> {
-    try {
-      const r = await pi.exec("tmux", ["wait-for", WAIT_CHANNEL], { timeout: timeoutMs });
-      return r.code === 0;
-    } catch {
+    if (backend === "tmux") {
+      try {
+        const r = await pi.exec("tmux", ["wait-for", WAIT_CHANNEL], { timeout: timeoutMs });
+        return r.code === 0;
+      } catch {
+        return false;
+      }
+    } else {
+      // Poll the RC file for changes
+      const { seq: seqBefore } = readRcKitty();
+      const deadline = Date.now() + timeoutMs;
+      while (Date.now() < deadline) {
+        await sleep(200);
+        const { seq } = readRcKitty();
+        if (seq > seqBefore) return true;
+      }
       return false;
     }
   }
 
-  // ── output extraction ────────────────────────────────────
+  // ── output extraction (shared) ───────────────────────────
 
-  /** Check if a line is a prompt input line (contains the prompt symbol). */
   function isPromptLine(line: string): boolean {
     return line.trim().startsWith(promptSymbol);
   }
 
-  /**
-   * Extract command output from a pane diff.
-   * Finds the last prompt line with a command, collects everything after it
-   * until the next prompt block. Same logic as formatActivity.
-   */
   function extractOutput(before: string, after: string): string {
-    // Diff to get only new content
     const bLines = before.split("\n");
     const aLines = after.split("\n");
     let d = 0;
     while (d < bLines.length && d < aLines.length && bLines[d] === aLines[d]) d++;
     const lines = aLines.slice(d);
 
-    // Find the last prompt line with a command
     let lastCmdIdx = -1;
     for (let i = 0; i < lines.length; i++) {
       if (isPromptLine(lines[i]) && extractCommand(lines[i])) {
@@ -289,7 +539,6 @@ export default function (pi: ExtensionAPI) {
 
     if (lastCmdIdx === -1) return lines.join("\n").trim();
 
-    // Collect output after the command line until the next prompt block
     const out: string[] = [];
     for (let i = lastCmdIdx + 1; i < lines.length; i++) {
       if (isPromptLine(lines[i])) break;
@@ -301,25 +550,15 @@ export default function (pi: ExtensionAPI) {
     return out.join("\n");
   }
 
-  /**
-   * Extract command text from a prompt input line.
-   * Strips the prompt symbol and any trailing timestamp like [HH:MM:SS].
-   */
   function extractCommand(line: string): string {
     let cmd = line.trim().slice(promptSymbol.length).trim();
-    // Strip trailing right-prompt / timestamp (with or without leading spaces)
     cmd = cmd.replace(/\s*\[[\d:]+\]\s*$/, "").trim();
     return cmd;
   }
 
-  /**
-   * Parse a pane diff to extract the last command, its output, and exit code.
-   * Returns null if no actual commands were found.
-   */
   async function formatActivity(diff: string, exitCode: number): Promise<string | null> {
     const lines = diff.split("\n");
 
-    // Find ALL prompt lines with commands — we want the last one
     let lastCmdIdx = -1;
     let lastCmd = "";
     for (let i = 0; i < lines.length; i++) {
@@ -334,11 +573,9 @@ export default function (pi: ExtensionAPI) {
 
     if (lastCmdIdx === -1) return null;
 
-    // Collect output: everything after the last command line that isn't a prompt
     const out: string[] = [];
     for (let i = lastCmdIdx + 1; i < lines.length; i++) {
       if (isPromptLine(lines[i])) break;
-      // Skip prompt info lines that precede a prompt (look ahead)
       if (i + promptHeight - 1 < lines.length && isPromptLine(lines[i + promptHeight - 1])) break;
       out.push(lines[i]);
     }
@@ -356,7 +593,7 @@ export default function (pi: ExtensionAPI) {
 
   // ── run a command in the pane ────────────────────────────
 
-  async function runInTmux(
+  async function runCommand(
     command: string,
     cwd: string,
     timeoutMs?: number,
@@ -376,18 +613,13 @@ export default function (pi: ExtensionAPI) {
     const needsCd = paneCwd !== cwd;
     let sendCmd = needsCd ? `cd ${sq(cwd)} && ${command}` : command;
 
-    // Wrap multi-line commands in { } so the shell treats them as a single
-    // compound command. Without this, each newline triggers a separate
-    // precmd/PROMPT_COMMAND, and the agent's wait-for catches the first
-    // signal before the remaining commands have executed.
     if (sendCmd.includes("\n")) {
       sendCmd = `{\n${sendCmd}\n}`;
     }
 
-    await tmuxExec("send-keys", "-t", target, "-l", ` ${sendCmd}`);
-    await tmuxExec("send-keys", "-t", target, "Enter");
+    await sendText(` ${sendCmd}`);
+    await sendEnter();
 
-    // Wait for prompt signal — blocks until precmd fires or timeout
     const timeout = timeoutMs || 120_000;
     const deadline = Date.now() + timeout;
     let exitCode = 0;
@@ -395,11 +627,10 @@ export default function (pi: ExtensionAPI) {
 
     while (Date.now() < deadline) {
       if (signal?.aborted) {
-        await tmuxExec("send-keys", "-t", target, "C-c");
+        await sendCtrlC();
         return { output: "Cancelled", exitCode: 130 };
       }
 
-      // Block on wait-for with a short timeout so we can check signal/pane
       const remaining = Math.min(deadline - Date.now(), 5000);
       if (remaining <= 0) break;
 
@@ -412,18 +643,16 @@ export default function (pi: ExtensionAPI) {
           completed = true;
           break;
         }
-        // Signal was from something else (e.g. stale) — loop again
       }
 
-      // Check pane is still alive
-      if (!(await paneAlive(target))) {
+      if (!(await paneAlive())) {
         await resetState();
-        return { output: "Tmux pane was closed during execution.", exitCode: 1 };
+        return { output: "Terminal pane was closed during execution.", exitCode: 1 };
       }
     }
 
     if (!completed) {
-      await tmuxExec("send-keys", "-t", target, "C-c");
+      await sendCtrlC();
       await sleep(500);
     }
 
@@ -451,18 +680,22 @@ export default function (pi: ExtensionAPI) {
           continue;
         }
 
-        // Block until next prompt signal (zero CPU)
-        const signaled = await waitForPrompt(30000);
-        if (signal.aborted || !paneReady) break;
-        if (agentRunning) continue;  // agent triggered the signal, not the user
-
-        if (!signaled) {
-          // Timeout — check pane is alive, then loop
-          if (!(await paneAlive(target))) { await resetState(); break; }
-          continue;
+        if (backend === "tmux") {
+          // Block on tmux wait-for (zero CPU)
+          const signaled = await waitForPrompt(30000);
+          if (signal.aborted || !paneReady) break;
+          if (agentRunning) continue;
+          if (!signaled) {
+            if (!(await paneAlive())) { await resetState(); break; }
+            continue;
+          }
+        } else {
+          // Poll for kitty (check every 1s)
+          await sleep(1000);
+          if (signal.aborted || !paneReady) break;
+          if (agentRunning) continue;
         }
 
-        // A prompt appeared — check if this is user activity (not agent)
         if (agentRunning) continue;
 
         try {
@@ -474,7 +707,7 @@ export default function (pi: ExtensionAPI) {
 
           const current = (await capturePane(200)).trim();
           if (current === lastSnapshot) {
-            dbg(`skip: same snapshot (len=${current.length}, last3lines=${JSON.stringify(current.split("\n").slice(-3))})`);
+            dbg(`skip: same snapshot`);
             continue;
           }
 
@@ -485,7 +718,7 @@ export default function (pi: ExtensionAPI) {
           const diff = aLines.slice(i).join("\n").trim();
 
           lastSnapshot = current;
-          if (diff.length < 5) { dbg(`skip: diff too short (${diff.length}): ${JSON.stringify(diff)}`); continue; }
+          if (diff.length < 5) { dbg(`skip: diff too short (${diff.length})`); continue; }
 
           dbg(`diff (${diff.length} chars): ${JSON.stringify(diff.slice(0, 500))}`);
 
@@ -503,15 +736,9 @@ export default function (pi: ExtensionAPI) {
             { deliverAs: "followUp", triggerTurn: false },
           );
 
-          // Wait for agent to finish, then check for missed activity.
-          // Signals sent during agent execution are lost (nobody listening),
-          // so we must actively check instead of waiting for the next signal.
           while (agentRunning && !signal.aborted) await sleep(500);
           if (signal.aborted || !paneReady) break;
 
-          // The bash tool updates lastSnapshot after each agent command,
-          // so any diff here is purely user activity that happened during
-          // the agent's turn.
           const postAgent = (await capturePane(200)).trim();
           if (postAgent !== lastSnapshot) {
             const pb = lastSnapshot.split("\n");
@@ -532,7 +759,6 @@ export default function (pi: ExtensionAPI) {
                   },
                   { deliverAs: "followUp", triggerTurn: false },
                 );
-
               }
             }
           }
@@ -549,17 +775,20 @@ export default function (pi: ExtensionAPI) {
       activityAbort.abort();
       activityAbort = null;
     }
-    // Unblock any pending wait-for by sending a signal
-    tmuxExec("wait-for", "-S", WAIT_CHANNEL).catch(() => {});
+    if (backend === "tmux") {
+      tmuxExec("wait-for", "-S", WAIT_CHANNEL).catch(() => {});
+    }
   }
 
   // ── bash tool override ───────────────────────────────────
 
+  const backendLabel = backend === "tmux" ? "tmux" : "kitty";
+
   pi.registerTool({
     name: "bash",
-    label: "Bash (tmux)",
+    label: `Bash (${backendLabel})`,
     description:
-      "Execute a bash command in a shared tmux terminal. The terminal is " +
+      "Execute a bash command in a shared terminal split. The terminal is " +
       "shared with the user — they may also run commands there. Use " +
       "read_terminal to see recent terminal activity including user commands.",
     parameters: Type.Object({
@@ -571,19 +800,23 @@ export default function (pi: ExtensionAPI) {
     async execute(_id, params, signal, onUpdate, ctx) {
       try {
         if (!(await ensurePane())) {
+          const hint = backend === "tmux"
+            ? "Are you inside tmux?"
+            : "Is kitty remote control enabled? (allow_remote_control in kitty.conf)";
           return {
-            content: [{ type: "text", text: "Error: could not create tmux pane. Are you inside tmux?" }],
+            content: [{ type: "text", text: `Error: could not create terminal pane. ${hint}` }],
             details: { command: params.command, exitCode: 1, cwd: ctx.cwd },
             isError: true,
           };
         }
 
+        const displayTarget = backend === "tmux" ? target : `kitty:${kittyWindowId}`;
         onUpdate?.({
-          content: [{ type: "text", text: `Running in tmux → ${target}…` }],
+          content: [{ type: "text", text: `Running in ${backendLabel} → ${displayTarget}…` }],
         });
 
         const ms = params.timeout ? params.timeout * 1000 : undefined;
-        const { output, exitCode } = await runInTmux(params.command, ctx.cwd, ms, signal);
+        const { output, exitCode } = await runCommand(params.command, ctx.cwd, ms, signal);
 
         if (paneReady) {
           lastSnapshot = (await capturePane(200)).trim();
@@ -624,7 +857,7 @@ export default function (pi: ExtensionAPI) {
     name: "read_terminal",
     label: "Read Terminal",
     description:
-      "Read recent content from the shared tmux terminal. Shows output " +
+      "Read recent content from the shared terminal split. Shows output " +
       "from both agent and user commands.",
     parameters: Type.Object({
       lines: Type.Optional(
@@ -634,7 +867,7 @@ export default function (pi: ExtensionAPI) {
     async execute(_id, params) {
       if (!(await ensurePane())) {
         return {
-          content: [{ type: "text", text: "Error: tmux pane not available" }],
+          content: [{ type: "text", text: "Error: terminal pane not available" }],
           isError: true,
         };
       }
@@ -654,10 +887,6 @@ export default function (pi: ExtensionAPI) {
 
   pi.on("agent_end", () => {
     agentRunning = false;
-    // Don't update lastSnapshot here — let the activity loop diff first
-    // to catch commands the user typed during the agent's turn.
-    // The bash tool already updates lastSnapshot after each command.
-
   });
 
   pi.on("session_start", async (_event, ctx) => {
@@ -666,9 +895,16 @@ export default function (pi: ExtensionAPI) {
       await installHook();
       lastSnapshot = (await capturePane(200)).trim();
       startActivityLoop();
-      ctx.ui.notify(`Shared tmux pane → ${target}`, "info");
+      const displayTarget = backend === "tmux" ? target : `kitty:${kittyWindowId}`;
+      ctx.ui.notify(`Shared ${backendLabel} pane → ${displayTarget}`, "info");
     }
   });
 
-  pi.on("session_shutdown", () => stopActivityLoop());
+  pi.on("session_shutdown", () => {
+    stopActivityLoop();
+    // Clean up kitty temp files
+    if (backend === "kitty") {
+      try { unlinkSync(kittyRcFile); } catch {}
+    }
+  });
 }
