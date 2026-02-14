@@ -24,13 +24,18 @@
         codex = import ./home-manager/codex;
         gemini-cli = import ./home-manager/gemini-cli;
         pi-coding-agent = import ./home-manager/pi-coding-agent;
-        default = {
+        default = { lib, ... }: {
           imports = [
             self.homeManagerModules.claude-code
             self.homeManagerModules.codex
             self.homeManagerModules.gemini-cli
             self.homeManagerModules.pi-coding-agent
           ];
+          options.coding-agents.skillsDir = lib.mkOption {
+            type = lib.types.path;
+            default = ./skills;
+            description = "Source for skills directory shared by all coding agents";
+          };
         };
       };
     };

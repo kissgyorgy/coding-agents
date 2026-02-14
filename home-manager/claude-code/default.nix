@@ -6,12 +6,17 @@ in
 {
   options.coding-agents.claude-code = {
     enable = lib.mkEnableOption "Claude Code AI coding assistant";
+    claudeMdPath = lib.mkOption {
+      type = lib.types.path;
+      default = ./CLAUDE.md;
+      description = "Source for CLAUDE.md config file";
+    };
   };
 
   config = lib.mkIf cfg.enable {
     home.file = {
-      ".claude/CLAUDE.md".source = ./CLAUDE.md;
-      ".claude/skills".source = ../../skills;
+      ".claude/CLAUDE.md".source = cfg.claudeMdPath;
+      ".claude/skills".source = config.coding-agents.skillsDir;
     };
 
     home.packages = with pkgs; [
