@@ -1,17 +1,23 @@
 { config, lib, pkgs, ... }:
-let cfg = config.coding-agents.pi-coding-agent; in
+let
+  cfg = config.coding-agents.pi-coding-agent;
+  skillsDir = config.coding-agents.skillsDir;
+  symlink = config.lib.file.mkOutOfStoreSymlink;
+in
 {
   options.coding-agents.pi-coding-agent = {
     enable = lib.mkEnableOption "Pi coding agent";
     extensionsDir = lib.mkOption {
-      type = lib.types.path;
-      default = ./extensions;
-      description = "Source for pi extensions directory";
+      type = lib.types.nullOr lib.types.str;
+      default = null;
+      description = "Path to extensions directory for live editing via symlink. When null, uses the store path.";
     };
   };
   config = lib.mkIf cfg.enable {
-    home.file.".pi/agent/extensions".source = cfg.extensionsDir;
-    home.file.".pi/agent/skills".source = config.coding-agents.skillsDir;
+    home.file.".pi/agent/extensions".source =
+      if cfg.extensionsDir != null then symlink cfg.extensionsDir else ./extensions;
+    home.file.".pi/agent/skills".source =
+      if skillsDir != null then symlink skillsDir else ../../skills;
     home.packages = [ pkgs.pi-coding-agent ];
   };
 }

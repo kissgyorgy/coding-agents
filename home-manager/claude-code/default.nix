@@ -1,22 +1,26 @@
 { config, lib, pkgs, ... }:
 let
   cfg = config.coding-agents.claude-code;
+  symlink = config.lib.file.mkOutOfStoreSymlink;
+  skillsDir = config.coding-agents.skillsDir;
   apiKeyRef = "op://Secrets/anthropic-api-key/credential";
 in
 {
   options.coding-agents.claude-code = {
     enable = lib.mkEnableOption "Claude Code AI coding assistant";
     claudeMdPath = lib.mkOption {
-      type = lib.types.path;
-      default = ./CLAUDE.md;
-      description = "Source for CLAUDE.md config file";
+      type = lib.types.nullOr lib.types.str;
+      default = null;
+      description = "Path to CLAUDE.md for live editing via symlink. When null, uses the store path.";
     };
   };
 
   config = lib.mkIf cfg.enable {
     home.file = {
-      ".claude/CLAUDE.md".source = cfg.claudeMdPath;
-      ".claude/skills".source = config.coding-agents.skillsDir;
+      ".claude/CLAUDE.md".source =
+        if cfg.claudeMdPath != null then symlink cfg.claudeMdPath else ./CLAUDE.md;
+      ".claude/skills".source =
+        if skillsDir != null then symlink skillsDir else ../../skills;
     };
 
     home.packages = with pkgs; [

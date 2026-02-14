@@ -32,9 +32,9 @@
             self.homeManagerModules.pi-coding-agent
           ];
           options.coding-agents.skillsDir = lib.mkOption {
-            type = lib.types.path;
-            default = ./skills;
-            description = "Source for skills directory shared by all coding agents";
+            type = lib.types.nullOr lib.types.str;
+            default = null;
+            description = "Path to skills directory for live editing via symlink. When null, uses the store path.";
           };
         };
       };
