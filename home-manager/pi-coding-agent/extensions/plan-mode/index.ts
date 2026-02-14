@@ -117,7 +117,7 @@ ${implementationText || todoList}` }],
 							timestamp: Date.now(),
 						}],
 					},
-					{ apiKey, maxTokens: 200 },
+					{ apiKey, maxTokens: 200, signal: AbortSignal.timeout(5_000) },
 				);
 				const raw = response.content
 					.filter((c): c is { type: "text"; text: string } => c.type === "text")
@@ -885,16 +885,29 @@ After completing a step, include a [DONE:n] tag in your response.`,
 				}
 			}
 
-			// Only scan messages after the execute marker
-			const messages: AssistantMessage[] = [];
-			for (let i = executeIndex + 1; i < entries.length; i++) {
-				const entry = entries[i];
-				if (entry.type === "message" && "message" in entry && isAssistantMessage(entry.message as AgentMessage)) {
-					messages.push(entry.message as AssistantMessage);
+			// Safety: if executionMode is stuck but the execute marker is
+			// missing (e.g. after compaction), auto-clear to avoid an empty
+			// context that makes the LLM loop or error.
+			if (executeIndex === -1) {
+				executionMode = false;
+				planModeEnabled = false;
+				todoItems = [];
+				planFilePath = null;
+				planFullText = null;
+				persistState();
+				ctx.ui.notify("Plan execution state was stale — auto-cleared. Use /plan to start fresh.", "warning");
+			} else {
+				// Only scan messages after the execute marker
+				const messages: AssistantMessage[] = [];
+				for (let i = executeIndex + 1; i < entries.length; i++) {
+					const entry = entries[i];
+					if (entry.type === "message" && "message" in entry && isAssistantMessage(entry.message as AgentMessage)) {
+						messages.push(entry.message as AssistantMessage);
+					}
 				}
+				const allText = messages.map(getTextContent).join("\n");
+				markCompletedSteps(allText, todoItems);
 			}
-			const allText = messages.map(getTextContent).join("\n");
-			markCompletedSteps(allText, todoItems);
 		}
 
 		if (planModeEnabled) {
