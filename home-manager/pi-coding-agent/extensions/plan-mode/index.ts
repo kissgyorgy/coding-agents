@@ -5,7 +5,7 @@ import type { AgentMessage } from "@mariozechner/pi-agent-core";
 import { complete, getModel } from "@mariozechner/pi-ai";
 import type { AssistantMessage, TextContent } from "@mariozechner/pi-ai";
 import { CustomEditor, DynamicBorder, type ExtensionAPI, type ExtensionContext } from "@mariozechner/pi-coding-agent";
-import { Container, Key, type SelectItem, SelectList, Text, matchesKey, truncateToWidth } from "@mariozechner/pi-tui";
+import { Container, Key, type SelectItem, SelectList, Text, matchesKey } from "@mariozechner/pi-tui";
 import { extractTodoItems, isSafeCommand, markCompletedSteps, parsePlanSections, type TodoItem } from "./utils.js";
 
 const PLAN_MODE_TOOLS = ["read", "bash", "grep", "find", "ls", "questionnaire"];
@@ -671,7 +671,7 @@ After completing a step, include a [DONE:n] tag in your response.`,
 			}
 		}
 
-		// Write plan file to disk before showing the dialog.
+		// Write plan file to disk.
 		// If a plan file already exists on disk, update it in-place (preserve slug/path).
 		// Only create a brand new file (with Haiku slug) when no file exists yet.
 		if (todoItems.length > 0) {
@@ -682,7 +682,7 @@ After completing a step, include a [DONE:n] tag in your response.`,
 			}
 		}
 
-		// Show plan steps and prompt for next action
+		// Show plan steps (user can press Tab to see /plan:* commands)
 		if (todoItems.length > 0) {
 			const todoListText = todoItems.map((t, i) => `${i + 1}. ☐ ${t.text}`).join("\n");
 			pi.sendMessage(
@@ -693,70 +693,6 @@ After completing a step, include a [DONE:n] tag in your response.`,
 				},
 				{ triggerTurn: false },
 			);
-		}
-
-		const executeLabel = todoItems.length > 0 ? "Execute the plan (track progress)" : "Execute the plan";
-
-		const choice = await ctx.ui.custom<boolean>((tui, theme, _kb, done) => {
-			let cachedLines: string[] | undefined;
-			let selectedIndex = 0;
-			const options = [
-				{ key: "1", label: executeLabel, value: true },
-				{ key: "2", label: "Continue planning", value: false },
-			];
-
-			function handleInput(data: string) {
-				if (matchesKey(data, Key.up) && selectedIndex > 0) {
-					selectedIndex--;
-					cachedLines = undefined;
-					tui.requestRender();
-					return;
-				}
-				if (matchesKey(data, Key.down) && selectedIndex < options.length - 1) {
-					selectedIndex++;
-					cachedLines = undefined;
-					tui.requestRender();
-					return;
-				}
-				if (matchesKey(data, Key.enter)) { done(options[selectedIndex].value); return; }
-				if (data === "1") { done(true); return; }
-				if (data === "2") { done(false); return; }
-				if (matchesKey(data, Key.escape)) { done(false); return; }
-			}
-
-			function render(width: number): string[] {
-				if (cachedLines) return cachedLines;
-				const lines: string[] = [];
-				const add = (s: string) => lines.push(truncateToWidth(s, width));
-
-				add(theme.fg("accent", "─".repeat(width)));
-				add(theme.fg("text", " Plan mode - what next?"));
-				lines.push("");
-				for (let i = 0; i < options.length; i++) {
-					const opt = options[i];
-					if (i === selectedIndex) {
-						add(theme.bg("selectedBg", `  ${theme.fg("accent", `${opt.key}.`)} ${theme.fg("accent", opt.label)}  `));
-					} else {
-						add(`  ${theme.fg("accent", `${opt.key}.`)} ${opt.label}`);
-					}
-				}
-				lines.push("");
-				add(theme.fg("dim", " ↑↓ navigate • enter select • 1/2 quick pick • Esc cancel"));
-				add(theme.fg("accent", "─".repeat(width)));
-
-				cachedLines = lines;
-				return lines;
-			}
-
-			return {
-				render,
-				invalidate: () => { cachedLines = undefined; },
-				handleInput,
-			};
-		});
-
-		if (choice && todoItems.length > 0) {
-			await startExecution(ctx);
 		}
 	});
 
@@ -808,6 +744,22 @@ After completing a step, include a [DONE:n] tag in your response.`,
 
 	class PlanEditor extends CustomEditor {
 		handleInput(data: string): void {
+			// Tab on empty editor in plan mode: show /plan:* command completions
+			if (
+				matchesKey(data, Key.tab) &&
+				planModeEnabled &&
+				!this.isShowingAutocomplete() &&
+				this.getText().trim() === ""
+			) {
+				// Type "/plan:" char by char so "/" triggers autocomplete
+				// and subsequent chars progressively filter to plan:* commands
+				this.setText("");
+				for (const ch of "/plan:") {
+					super.handleInput(ch);
+				}
+				return;
+			}
+
 			if (
 				matchesKey(data, Key.ctrl("g")) &&
 				(planModeEnabled || executionMode) &&
