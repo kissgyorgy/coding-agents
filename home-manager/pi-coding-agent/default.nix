@@ -1,11 +1,10 @@
-{ pkgs, config, ... }:
-with config.lib;
+{ config, lib, pkgs, ... }:
+let cfg = config.coding-agents.pi-coding-agent; in
 {
-  home.file = {
-    ".pi/agent/extensions".source = file.mkOutOfStoreSymlink "/home/walkman/nixconf/home/pi-coding-agent/extensions";
+  options.coding-agents.pi-coding-agent.enable =
+    lib.mkEnableOption "Pi coding agent";
+  config = lib.mkIf cfg.enable {
+    home.file.".pi/agent/extensions".source = ./extensions;
+    home.packages = [ pkgs.pi-coding-agent ];
   };
-
-  home.packages = with pkgs; [
-    pi-coding-agent
-  ];
 }

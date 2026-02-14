@@ -45,7 +45,7 @@
         hooks = [
           {
             type = "command";
-            command = "${../bin/format-file}";
+            command = "${./format-file}";
           }
         ];
       }
