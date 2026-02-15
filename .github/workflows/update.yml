@@ -19,6 +19,11 @@ jobs:
 
       - uses: DeterminateSystems/magic-nix-cache-action@main
 
+      - uses: cachix/cachix-action@v15
+        with:
+          name: coding-agents
+          authToken: '${{ secrets.CACHIX_AUTH_TOKEN }}'
+
       - name: Install tools
         run: nix profile install nixpkgs#just nixpkgs#nix-update nixpkgs#gh
 
@@ -32,3 +37,6 @@ jobs:
 
       - name: Push changes
         run: git push
+
+      - name: Build packages
+        run: nix build .#claude-code .#claude-code-ui .#gemini-cli .#ccusage .#codex .#pi-coding-agent

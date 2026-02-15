@@ -1,7 +1,18 @@
 {
   description = "Coding agent packages and home-manager modules";
 
-  outputs = { self }:
+  inputs = {
+    nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
+  };
+
+  outputs = { self, nixpkgs }:
+    let
+      pkgs = import nixpkgs {
+        system = "x86_64-linux";
+        config.allowUnfree = true;
+        overlays = [ self.overlays.default ];
+      };
+    in
     {
       overlays.default = final: prev: {
         claude-code = final.callPackage ./packages/claude-code.nix { };
@@ -10,6 +21,10 @@
         ccusage = final.callPackage ./packages/ccusage.nix { };
         codex = final.callPackage ./packages/codex.nix { };
         pi-coding-agent = final.callPackage ./packages/pi-coding-agent.nix { };
+      };
+
+      packages.x86_64-linux = {
+        inherit (pkgs) claude-code claude-code-ui gemini-cli ccusage codex pi-coding-agent;
       };
 
       homeManagerModules = {
