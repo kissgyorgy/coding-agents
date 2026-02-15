@@ -1,23 +1,16 @@
 {
   description = "Coding agent packages and home-manager modules";
-  inputs.nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";
 
-  outputs = { self, nixpkgs }:
-    let
-      system = "x86_64-linux";
-      pkgs = import nixpkgs { inherit system; config.allowUnfree = true; };
-    in
+  outputs = { self }:
     {
-      packages.${system} = {
-        claude-code = pkgs.callPackage ./packages/claude-code.nix { };
-        claude-code-ui = pkgs.callPackage ./packages/claude-code-ui.nix { };
-        gemini-cli = pkgs.callPackage ./packages/gemini-cli.nix { };
-        ccusage = pkgs.callPackage ./packages/ccusage.nix { };
-        codex = pkgs.callPackage ./packages/codex.nix { };
-        pi-coding-agent = pkgs.callPackage ./packages/pi-coding-agent.nix { };
+      overlays.default = final: prev: {
+        claude-code = final.callPackage ./packages/claude-code.nix { };
+        claude-code-ui = final.callPackage ./packages/claude-code-ui.nix { };
+        gemini-cli = final.callPackage ./packages/gemini-cli.nix { };
+        ccusage = final.callPackage ./packages/ccusage.nix { };
+        codex = final.callPackage ./packages/codex.nix { };
+        pi-coding-agent = final.callPackage ./packages/pi-coding-agent.nix { };
       };
-
-      overlays.default = final: prev: self.packages.${system};
 
       homeManagerModules = {
         claude-code = import ./home-manager/claude-code;
