@@ -608,24 +608,6 @@ Start with step 1.`,
     handler: async (ctx) => togglePlanMode(ctx),
   });
 
-  pi.registerShortcut(Key.ctrlAlt("e"), {
-    description: "Execute the current plan",
-    handler: async (ctx) => {
-      if (todoItems.length === 0) {
-        ctx.ui.notify(
-          "No plan to execute. Create a plan first with /plan",
-          "warning",
-        );
-        return;
-      }
-      if (executionMode) {
-        ctx.ui.notify("Already executing a plan", "warning");
-        return;
-      }
-      await startExecution(ctx);
-    },
-  });
-
   // Reset plan file modification tracking at start of each turn
   pi.on("agent_start", async () => {
     planFileModifiedThisTurn = false;
