@@ -22,10 +22,11 @@
         codex = final.callPackage ./packages/codex.nix { };
         crush = final.callPackage ./packages/crush.nix { };
         pi-coding-agent = final.callPackage ./packages/pi-coding-agent.nix { };
+        playwright-cli = final.callPackage ./packages/playwright-cli.nix { };
       };
 
       packages.x86_64-linux = {
-        inherit (pkgs) claude-code claude-code-ui gemini-cli ccusage codex crush pi-coding-agent;
+        inherit (pkgs) claude-code claude-code-ui gemini-cli ccusage codex crush pi-coding-agent playwright-cli;
       };
 
       homeManagerModules = {
