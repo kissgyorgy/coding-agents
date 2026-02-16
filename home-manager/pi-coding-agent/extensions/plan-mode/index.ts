@@ -1,12 +1,15 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
-import { homedir } from "node:os";
-import { join, resolve, relative } from "node:path";
+import { join, dirname, resolve, relative } from "node:path";
+import { fileURLToPath } from "node:url";
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
 import type { AgentMessage } from "@mariozechner/pi-agent-core";
 import { complete, getModel } from "@mariozechner/pi-ai";
 import type { AssistantMessage, TextContent } from "@mariozechner/pi-ai";
 import {
   CustomEditor,
   DynamicBorder,
+  getAgentDir,
   type ExtensionAPI,
   type ExtensionContext,
 } from "@mariozechner/pi-coding-agent";
@@ -60,7 +63,7 @@ interface PlanModeSettings {
   executionModel?: ModelRef;
 }
 
-const SETTINGS_PATH = join(homedir(), ".pi", "agent", "plan-mode.json");
+const SETTINGS_PATH = join(getAgentDir(), "plan-mode.json");
 
 function loadSettings(): PlanModeSettings {
   try {
@@ -74,8 +77,7 @@ function loadSettings(): PlanModeSettings {
 }
 
 function saveSettings(settings: PlanModeSettings): void {
-  const dir = join(homedir(), ".pi", "agent");
-  mkdirSync(dir, { recursive: true });
+  mkdirSync(getAgentDir(), { recursive: true });
   writeFileSync(SETTINGS_PATH, JSON.stringify(settings, null, 2) + "\n");
 }
 
@@ -89,18 +91,10 @@ export default function planModeExtension(pi: ExtensionAPI): void {
   let preExecutionModel: { provider: string; id: string } | null = null;
   let planFileModifiedThisTurn = false;
 
-  const PLAN_TEMPLATE = `# Overview
-
-
-# Implementation plan
-
-
-# Files to modify
-
-
-# Todo items
-1.
-`;
+  const PLAN_TEMPLATE = readFileSync(
+    join(__dirname, "plan-template.md"),
+    "utf-8",
+  );
 
   async function generateSlug(
     text: string,
@@ -736,33 +730,10 @@ Start with step 1.`,
       return {
         message: {
           customType: "plan-mode-context",
-          content: `[PLAN MODE ACTIVE]
-You are in plan mode for creating an implementation plan.
-
-Your plan file is: ${planRelative}
-Write your plan directly to this file using the write tool.
-
-You can also use: read, bash, grep, find, ls, questionnaire, edit (for the plan file only)
-Bash is restricted to read-only commands for safety.
-
-Ask clarifying questions using the questionnaire tool.
-Use brave-search skill via bash for web research.
-
-Structure your plan file with these sections:
-
-# Overview
-A short 1-2 sentence summary of the plan.
-
-# Implementation plan
-Detailed analysis and approach.
-
-# Files to modify
-List each file with a short explanation and code examples where helpful.
-
-# Todo items
-1. First step description
-2. Second step description
-...`,
+          content: readFileSync(
+            join(__dirname, "plan-mode-active.md"),
+            "utf-8",
+          ),
           display: false,
         },
       };
