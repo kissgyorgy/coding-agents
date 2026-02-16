@@ -1,14 +1,15 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
-import { join } from "node:path";
+import { join, resolve, relative } from "node:path";
 import type { AgentMessage } from "@mariozechner/pi-agent-core";
 import { complete, getModel } from "@mariozechner/pi-ai";
 import type { AssistantMessage, TextContent } from "@mariozechner/pi-ai";
 import { CustomEditor, DynamicBorder, type ExtensionAPI, type ExtensionContext } from "@mariozechner/pi-coding-agent";
 import { Container, Key, type SelectItem, SelectList, Text, matchesKey } from "@mariozechner/pi-tui";
 import { extractTodoItems, isSafeCommand, markCompletedSteps, parsePlanSections, type TodoItem } from "./utils.js";
+import { randomFunnySlug } from "./funny-names.js";
 
-const PLAN_MODE_TOOLS = ["read", "bash", "grep", "find", "ls", "questionnaire"];
+const PLAN_MODE_TOOLS = ["read", "bash", "edit", "write", "grep", "find", "ls", "questionnaire"];
 const NORMAL_MODE_TOOLS = ["read", "bash", "edit", "write"];
 
 function isAssistantMessage(m: AgentMessage): m is AssistantMessage {
@@ -59,6 +60,7 @@ export default function planModeExtension(pi: ExtensionAPI): void {
 	let planFullText: string | null = null;
 	let settings: PlanModeSettings = {};
 	let preExecutionModel: { provider: string; id: string } | null = null;
+	let planFileModifiedThisTurn = false;
 
 	const PLAN_TEMPLATE = `# Overview
 
@@ -73,24 +75,7 @@ export default function planModeExtension(pi: ExtensionAPI): void {
 1. 
 `;
 
-	function localDateSlug(): string {
-		const now = new Date();
-		const pad = (n: number) => String(n).padStart(2, "0");
-		return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
-	}
-
-	async function writePlanFile(items: TodoItem[], fullText: string | null, cwd: string, ctx: ExtensionContext): Promise<string> {
-		const plansDir = join(cwd, "plans");
-		mkdirSync(plansDir, { recursive: true });
-		const date = localDateSlug();
-		const todoList = items.map((t) => `${t.step}. ${t.text}`).join("\n");
-
-		// Parse sections from fullText if it already has structured headers (avoids duplicating them)
-		const parsed = fullText ? parsePlanSections(fullText) : null;
-		const implementationText = parsed?.implementation ?? fullText;
-
-		let slug = "";
-		let overview = "";
+	async function generateSlug(text: string, ctx: ExtensionContext): Promise<string> {
 		try {
 			const slugProvider = settings.slugModel?.provider ?? "anthropic";
 			const slugModelId = settings.slugModel?.id ?? "claude-haiku-4-5";
@@ -98,51 +83,55 @@ export default function planModeExtension(pi: ExtensionAPI): void {
 				?? getModel("anthropic", "claude-haiku-4-5");
 			const apiKey = model ? await ctx.modelRegistry.getApiKey(model) : undefined;
 			if (model && apiKey) {
-				const response = await complete(
-					model,
-					{
-						messages: [{
-							role: "user" as const,
-							content: [{ type: "text" as const, text: `Given this plan, provide two things separated by "---":
-1. A 1-2 sentence overview summary of what this plan accomplishes
-2. A short 2-4 word kebab-case slug for the filename
+				const response = await complete(model, {
+					messages: [{
+						role: "user" as const,
+						content: [{ type: "text" as const, text: `Given this task, provide a short 2-4 word kebab-case slug for a filename. Reply with ONLY the slug, nothing else.
 
-Example response:
-Add a Ctrl+G keyboard shortcut to the plan mode extension that opens the plan file in an external editor.
----
-plan-editor-shortcut
+Example: plan-editor-shortcut
 
-Plan:
-${implementationText || todoList}` }],
-							timestamp: Date.now(),
-						}],
-					},
-					{ apiKey, maxTokens: 200, signal: AbortSignal.timeout(5_000) },
-				);
+Task:
+${text}` }],
+						timestamp: Date.now(),
+					}],
+				}, { apiKey, maxTokens: 50, signal: AbortSignal.timeout(5_000) });
 				const raw = response.content
 					.filter((c): c is { type: "text"; text: string } => c.type === "text")
 					.map((c) => c.text)
 					.join("")
-					.trim();
-				const parts = raw.split("---");
-				if (parts.length >= 2) {
-					overview = parts[0].trim();
-					slug = parts[1]
-						.trim()
-						.toLowerCase()
-						.replace(/[^a-z0-9-]/g, "")
-						.slice(0, 40);
-				} else {
-					slug = raw.toLowerCase().replace(/[^a-z0-9-]/g, "").slice(0, 40);
-				}
+					.trim()
+					.toLowerCase()
+					.replace(/[^a-z0-9-]/g, "")
+					.slice(0, 40);
+				if (raw) return raw;
 			}
-		} catch { /* fall back to date-only */ }
+		} catch { /* fall through to funny name */ }
+		return randomFunnySlug();
+	}
 
-		// Prefer overview extracted from structured text over Haiku-generated one
-		if (parsed?.overview) overview = parsed.overview;
+	function planFilenameWithDedup(plansDir: string, slug: string): string {
+		const base = join(plansDir, `plan-${slug}.md`);
+		if (!existsSync(base)) return base;
+		let i = 2;
+		while (existsSync(join(plansDir, `plan-${slug}-${i}.md`))) i++;
+		return join(plansDir, `plan-${slug}-${i}.md`);
+	}
 
-		const filename = slug ? `plan-${date}-${slug}.md` : `plan-${date}.md`;
-		const filePath = join(plansDir, filename);
+	async function writePlanFile(items: TodoItem[], fullText: string | null, cwd: string, ctx: ExtensionContext): Promise<string> {
+		const plansDir = join(cwd, "plans");
+		mkdirSync(plansDir, { recursive: true });
+		const todoList = items.map((t) => `${t.step}. ${t.text}`).join("\n");
+
+		// Parse sections from fullText if it already has structured headers (avoids duplicating them)
+		const parsed = fullText ? parsePlanSections(fullText) : null;
+		const implementationText = parsed?.implementation ?? fullText;
+		const overview = parsed?.overview || "";
+
+		// Generate slug from implementation text or todo list
+		const slug = await generateSlug(implementationText || todoList, ctx);
+
+		// Create collision-safe filename
+		const filePath = planFilenameWithDedup(plansDir, slug);
 
 		const files = parsed?.files || (implementationText ? extractFileReferences(implementationText) : "");
 
@@ -512,16 +501,48 @@ Start with step 1.`,
 		},
 	});
 
-	// Block destructive bash commands in plan mode
-	pi.on("tool_call", async (event) => {
-		if (!planModeEnabled || event.toolName !== "bash") return;
+	// Reset plan file modification tracking at start of each turn
+	pi.on("agent_start", async () => {
+		planFileModifiedThisTurn = false;
+	});
 
-		const command = event.input.command as string;
-		if (!isSafeCommand(command)) {
-			return {
-				block: true,
-				reason: `Plan mode: command blocked (not allowlisted). Use /plan to disable plan mode first.\nCommand: ${command}`,
-			};
+	// Block destructive bash commands in plan mode
+	pi.on("tool_call", async (event, ctx) => {
+		if (!planModeEnabled) return;
+
+		if (event.toolName === "bash") {
+			const command = event.input.command as string;
+			if (!isSafeCommand(command)) {
+				return {
+					block: true,
+					reason: `Plan mode: command blocked (not allowlisted). Use /plan to disable plan mode first.\nCommand: ${command}`,
+				};
+			}
+			return;
+		}
+
+		if (event.toolName === "edit" || event.toolName === "write") {
+			if (!planFilePath) {
+				return { block: true, reason: "Plan mode: no plan file created yet." };
+			}
+			const targetPath = resolve(ctx.cwd, String(event.input.path).replace(/^@/, ""));
+			if (targetPath !== planFilePath) {
+				return {
+					block: true,
+					reason: `Plan mode: can only edit the plan file (${relative(ctx.cwd, planFilePath)}).\nPath: ${event.input.path}`,
+				};
+			}
+		}
+	});
+
+	// Track when plan file is modified via edit/write
+	pi.on("tool_result", async (event, ctx) => {
+		if (!planModeEnabled || !planFilePath) return;
+		if (event.toolName === "edit" || event.toolName === "write") {
+			const targetPath = resolve(ctx.cwd, String(event.input.path).replace(/^@/, ""));
+			if (targetPath === planFilePath) {
+				planFileModifiedThisTurn = true;
+			}
 		}
 	});
 
@@ -560,23 +581,35 @@ Start with step 1.`,
 	});
 
 	// Inject plan mode instructions before agent starts
-	pi.on("before_agent_start", async () => {
+	pi.on("before_agent_start", async (event, ctx) => {
 		if (planModeEnabled) {
+			// Create plan file on first prompt if none exists
+			if (!planFilePath || !existsSync(planFilePath)) {
+				const slug = await generateSlug(event.prompt, ctx);
+				const plansDir = join(ctx.cwd, "plans");
+				mkdirSync(plansDir, { recursive: true });
+				planFilePath = planFilenameWithDedup(plansDir, slug);
+				writeFileSync(planFilePath, PLAN_TEMPLATE);
+				persistState();
+			}
+
+			const planRelative = relative(ctx.cwd, planFilePath);
 			return {
 				message: {
 					customType: "plan-mode-context",
 					content: `[PLAN MODE ACTIVE]
-You are in plan mode - a read-only exploration mode for safe code analysis.
+You are in plan mode for creating an implementation plan.
 
-Restrictions:
-- You can only use: read, bash, grep, find, ls, questionnaire
-- You CANNOT use: edit, write (file modifications are disabled)
-- Bash is restricted to an allowlist of read-only commands
+Your plan file is: ${planRelative}
+Write your plan directly to this file using the write tool.
+
+You can also use: read, bash, grep, find, ls, questionnaire, edit (for the plan file only)
+Bash is restricted to read-only commands for safety.
 
 Ask clarifying questions using the questionnaire tool.
 Use brave-search skill via bash for web research.
 
-Structure your response with these sections:
+Structure your plan file with these sections:
 
 # Overview
 A short 1-2 sentence summary of the plan.
@@ -590,9 +623,7 @@ List each file with a short explanation and code examples where helpful.
 # Todo items
 1. First step description
 2. Second step description
-...
-
-Do NOT attempt to make changes - just describe what you would do.`,
+...`,
 					display: false,
 				},
 			};
@@ -660,7 +691,32 @@ After completing a step, include a [DONE:n] tag in your response.`,
 
 		if (!planModeEnabled || !ctx.hasUI) return;
 
-		// Extract todos from last assistant message
+		// If plan file was modified this turn, read and display it
+		if (planFileModifiedThisTurn && planFilePath && existsSync(planFilePath)) {
+			const planContent = readFileSync(planFilePath, "utf-8");
+			const extracted = extractTodoItems(planContent);
+			if (extracted.length > 0) {
+				todoItems = extracted;
+				planFullText = planContent;
+				persistState();
+			}
+
+			// Display updated plan
+			const todoListText = extracted.length > 0
+				? extracted.map((t, i) => `${i + 1}. ☐ ${t.text}`).join("\n")
+				: "(no todos yet)";
+			pi.sendMessage(
+				{
+					customType: "plan-updated",
+					content: `**Plan Updated** (${relative(ctx.cwd, planFilePath)})\n\n**Steps (${extracted.length}):**\n${todoListText}`,
+					display: true,
+				},
+				{ triggerTurn: false },
+			);
+			return;
+		}
+
+		// Fallback: Extract todos from last assistant message (when model didn't write to file)
 		const lastAssistant = [...event.messages].reverse().find(isAssistantMessage);
 		if (lastAssistant) {
 			const text = getTextContent(lastAssistant);
