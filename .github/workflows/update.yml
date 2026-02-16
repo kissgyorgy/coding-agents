@@ -19,7 +19,7 @@ jobs:
 
       - uses: DeterminateSystems/magic-nix-cache-action@main
 
-      - uses: cachix/cachix-action@v15
+      - uses: cachix/cachix-action@v16
         with:
           name: coding-agents
           authToken: '${{ secrets.CACHIX_AUTH_TOKEN }}'
