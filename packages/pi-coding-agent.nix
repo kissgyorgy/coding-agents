@@ -22,8 +22,7 @@ stdenv.mkDerivation rec {
     mkdir -p $out/lib/pi-coding-agent $out/bin
     cp -r ./* $out/lib/pi-coding-agent/
 
-    chmod u+w,+x $out/lib/pi-coding-agent/pi
-    patchelf --set-interpreter ${stdenv.cc.bintools.dynamicLinker} $out/lib/pi-coding-agent/pi
+    chmod +x $out/lib/pi-coding-agent/pi
 
     makeWrapper $out/lib/pi-coding-agent/pi $out/bin/pi \
       --set PI_PACKAGE_DIR $out/lib/pi-coding-agent
