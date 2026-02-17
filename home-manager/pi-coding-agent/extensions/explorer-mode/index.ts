@@ -145,12 +145,28 @@ export default function explorerModeExtension(pi: ExtensionAPI): void {
 		}
 	});
 
-	// Inject explorer guidance into system prompt each turn
-	pi.on("before_agent_start", async (event) => {
+	// Inject explorer guidance as a message (preserves system prompt caching)
+	pi.on("before_agent_start", async () => {
 		if (!explorerEnabled) return;
 
 		return {
-			systemPrompt: event.systemPrompt + "\n\n" + EXPLORER_SYSTEM_PROMPT,
+			message: {
+				customType: "explorer-mode-context",
+				content: EXPLORER_SYSTEM_PROMPT,
+				display: false,
+			},
+		};
+	});
+
+	// Filter out stale explorer context messages when mode is off
+	pi.on("context", async (event) => {
+		if (explorerEnabled) return;
+
+		return {
+			messages: event.messages.filter((m) => {
+				const msg = m as { customType?: string };
+				return msg.customType !== "explorer-mode-context";
+			}),
 		};
 	});
 
