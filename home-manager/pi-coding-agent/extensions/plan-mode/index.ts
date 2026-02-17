@@ -280,6 +280,17 @@ ${todoList}
       ctx.ui.setStatus("plan-mode", undefined);
     }
 
+    // Plan file path on the right side of the footer status area.
+    if (planModeEnabled && planFilePath) {
+      const planRelative = relative(ctx.cwd, planFilePath);
+      ctx.ui.setStatus(
+        "plan-mode-file",
+        ctx.ui.theme.fg("dim", `📝 ${planRelative}`),
+      );
+    } else {
+      ctx.ui.setStatus("plan-mode-file", undefined);
+    }
+
     // Widget (above editor)
     if (executionMode && todoItems.length > 0) {
       const lines = todoItems.map((item) => {
