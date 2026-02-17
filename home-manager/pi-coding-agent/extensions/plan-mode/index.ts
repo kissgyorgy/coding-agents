@@ -715,7 +715,7 @@ Start with step 1.`,
           content: readFileSync(
             join(__dirname, "plan-mode-active.md"),
             "utf-8",
-          ),
+          ).replaceAll("${planRelative}", planRelative),
           display: false,
         },
       };
