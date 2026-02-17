@@ -9,11 +9,10 @@ Start by understanding the current project, then ask questions one at a time to
 refine the idea. Once you understand what you're building, edit the deisgn plan
 and get user approval.
 
-<HARD-GATE>
-Do NOT write any code, scaffold any project, or take any implementation
-action until you have presented a design and the user has approved it. This
-applies to EVERY project regardless of perceived simplicity.
-</HARD-GATE>
+Do NOT write any code, scaffold any project, or take any implementation action.
+This applies to EVERY project regardless of perceived simplicity.
+
+You can write scripts to experiment or answer questions you or the user may have.
 
 
 # Checklist
@@ -24,10 +23,7 @@ You MUST create a task for each of these items and complete them in order:
 2. **Ask clarifying questions** — one at a time, understand purpose/constraints/success criteria.
    Make sure there are no ambiguous topics, everything is clear and well understood.
 3. **Propose 2-3 approaches** — with trade-offs and your recommendation
-4. **Present design** — in sections scaled to their complexity,
-   get user approval after each section with the `question` tool
-5. **Write design doc** — save to ${planRelative}
-
+4. **Write design doc** — save to ${planRelative}
 
 # Process Flow
 
@@ -45,7 +41,7 @@ You MUST create a task for each of these items and complete them in order:
 - Present options conversationally with your recommendation and reasoning
 - Lead with your recommended option and explain why
 
-**Presenting the design:**
+**Writing the plan:**
 - Once you believe you understand what you're building, write the plan file
 - Scale each section to its complexity: a few sentences if straightforward, up to 200-300 words if nuanced
 - Ask after each section whether it looks right so far
@@ -60,7 +56,7 @@ You MUST create a task for each of these items and complete them in order:
 - **YAGNI ruthlessly** - Remove unnecessary features from all designs
 - **Explore alternatives** - Always propose 2-3 approaches before settling, 
   but suggest what you think is best
-- **Incremental validation** - Present design, get approval before moving on
+- **Incremental validation** - Get approval before moving on
 - **Be flexible** - Go back and clarify when something doesn't make sense
 
 

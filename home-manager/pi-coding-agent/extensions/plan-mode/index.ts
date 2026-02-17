@@ -23,7 +23,6 @@ import {
 } from "@mariozechner/pi-tui";
 import {
   extractTodoItems,
-  isSafeCommand,
   markCompletedSteps,
   parsePlanSections,
   type TodoItem,
@@ -613,36 +612,9 @@ Start with step 1.`,
     planFileModifiedThisTurn = false;
   });
 
-  // Block destructive bash commands in plan mode
+  // Plan mode: no tool restrictions (tools are controlled via setActiveTools)
   pi.on("tool_call", async (event, ctx) => {
     if (!planModeEnabled) return;
-
-    if (event.toolName === "bash") {
-      const command = event.input.command as string;
-      if (!isSafeCommand(command)) {
-        return {
-          block: true,
-          reason: `Plan mode: command blocked (not allowlisted). Use /plan to disable plan mode first.\nCommand: ${command}`,
-        };
-      }
-      return;
-    }
-
-    if (event.toolName === "edit" || event.toolName === "write") {
-      if (!planFilePath) {
-        return { block: true, reason: "Plan mode: no plan file created yet." };
-      }
-      const targetPath = resolve(
-        ctx.cwd,
-        String(event.input.path).replace(/^@/, ""),
-      );
-      if (targetPath !== planFilePath) {
-        return {
-          block: true,
-          reason: `Plan mode: can only edit the plan file (${relative(ctx.cwd, planFilePath)}).\nPath: ${event.input.path}`,
-        };
-      }
-    }
   });
 
   // Track when plan file is modified via edit/write
