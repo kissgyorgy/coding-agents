@@ -38,7 +38,7 @@ const PLAN_MODE_TOOLS = [
   "grep",
   "find",
   "ls",
-  "questionnaire",
+  "question",
 ];
 const NORMAL_MODE_TOOLS = ["read", "bash", "edit", "write"];
 

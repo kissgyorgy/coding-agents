@@ -25,7 +25,7 @@ You MUST create a task for each of these items and complete them in order:
    Make sure there are no ambiguous topics, everything is clear and well understood.
 3. **Propose 2-3 approaches** — with trade-offs and your recommendation
 4. **Present design** — in sections scaled to their complexity,
-   get user approval after each section with the `questionnare` tool
+   get user approval after each section with the `question` tool
 5. **Write design doc** — save to ${planRelative}
 
 
@@ -69,7 +69,7 @@ You MUST create a task for each of these items and complete them in order:
 Your plan file is: ${planRelative}
 Write your plan directly to this file using the write tool.
 
-You can also use: read, bash, grep, find, ls, questionnaire, edit (for the plan file only)
+You can also use: read, bash, grep, find, ls, question, edit (for the plan file only)
 Bash is restricted to read-only commands for safety.
 
 Structure your plan file with these sections:
