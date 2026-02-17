@@ -1,3 +1,12 @@
+# Build packages (all by default, or specify names: just build claude-code codex)
+build *args:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    all="claude-code claude-code-ui gemini-cli ccusage codex pi-coding-agent"
+    attrs=""
+    for pkg in ${args:-$all}; do attrs+=" .#$pkg"; done
+    nix build $attrs
+
 # Update coding agent packages
 update:
     #!/usr/bin/env bash

@@ -13,7 +13,10 @@ UI). All agents are configured with yolo/auto-approve mode by default. Shared
 
 ```bash
 # Build all packages
-nix build .#claude-code .#claude-code-ui .#gemini-cli .#ccusage .#codex .#pi-coding-agent
+just build
+
+# Build specific packages
+just build claude-code codex
 
 # Build a single package
 nix build .#claude-code
