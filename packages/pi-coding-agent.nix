@@ -2,11 +2,11 @@
 
 stdenv.mkDerivation rec {
   pname = "pi-coding-agent";
-  version = "0.52.12";
+  version = "0.53.0";
 
   src = fetchurl {
     url = "https://github.com/badlogic/pi-mono/releases/download/v${version}/pi-linux-x64.tar.gz";
-    hash = "sha256-MU/7tCVa3EURo7Li2ZT/4Kqukt7dBP8tgPr/A01swHM=";
+    hash = "sha256-CJXlxEQWKoG/k/tqEbHVJkad4qcW6ySbmAZqVV8VxPA=";
   };
 
   sourceRoot = "pi";
