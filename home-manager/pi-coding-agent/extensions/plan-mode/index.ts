@@ -29,18 +29,6 @@ import {
 } from "./utils.js";
 import { randomFunnySlug } from "./funny-names.js";
 
-const PLAN_MODE_TOOLS = [
-  "read",
-  "bash",
-  "edit",
-  "write",
-  "grep",
-  "find",
-  "ls",
-  "question",
-];
-const NORMAL_MODE_TOOLS = ["read", "bash", "edit", "write"];
-
 function isAssistantMessage(m: AgentMessage): m is AssistantMessage {
   return m.role === "assistant" && Array.isArray(m.content);
 }
@@ -316,11 +304,9 @@ ${todoList}
     // survives toggling off/on (avoids creating duplicate files).
 
     if (planModeEnabled) {
-      pi.setActiveTools(PLAN_MODE_TOOLS);
-      ctx.ui.notify(`Plan mode enabled. Tools: ${PLAN_MODE_TOOLS.join(", ")}`);
+      ctx.ui.notify("Plan mode enabled.");
     } else {
-      pi.setActiveTools(NORMAL_MODE_TOOLS);
-      ctx.ui.notify("Plan mode disabled. Full access restored.");
+      ctx.ui.notify("Plan mode disabled.");
     }
     updateStatus(ctx);
     persistState();
@@ -332,7 +318,6 @@ ${todoList}
     if (!planFilePath) {
       planFilePath = await writePlanFile(todoItems, planFullText, ctx.cwd, ctx);
     }
-    pi.setActiveTools(NORMAL_MODE_TOOLS);
 
     // Switch to execution model if configured
     if (settings.executionModel) {
@@ -401,7 +386,7 @@ Start with step 1.`,
   }
 
   pi.registerCommand("plan", {
-    description: "Toggle plan mode (read-only exploration)",
+    description: "Toggle plan mode",
     handler: async (_args, ctx) => togglePlanMode(ctx),
   });
 
@@ -623,11 +608,6 @@ Start with step 1.`,
     planFileModifiedThisTurn = false;
   });
 
-  // Plan mode: no tool restrictions (tools are controlled via setActiveTools)
-  pi.on("tool_call", async (event, ctx) => {
-    if (!planModeEnabled) return;
-  });
-
   // Track when plan file is modified via edit/write
   pi.on("tool_result", async (event, ctx) => {
     if (!planModeEnabled || !planFilePath) return;
@@ -764,7 +744,6 @@ After completing a step, include a [DONE:n] tag in your response.`,
         todoItems = [];
         planFilePath = null;
         planFullText = null;
-        pi.setActiveTools(NORMAL_MODE_TOOLS);
         updateStatus(ctx);
         persistState(); // Save cleared state so resume doesn't restore old execution mode
       }
@@ -1036,9 +1015,6 @@ After completing a step, include a [DONE:n] tag in your response.`,
       }
     }
 
-    if (planModeEnabled) {
-      pi.setActiveTools(PLAN_MODE_TOOLS);
-    }
     updateStatus(ctx);
   });
 }
