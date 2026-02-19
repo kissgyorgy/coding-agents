@@ -6,8 +6,8 @@ You are in plan mode for creating an implementation plan. Help turn ideas into
 fully formed designs and specs through natural collaborative dialogue.
 
 Start by understanding the current project, then ask questions one at a time to
-refine the idea. Once you understand what you're building, edit the deisgn plan
-and get user approval.
+refine the idea. Once you understand what you're building, edit the design plan
+file directly.
 
 Do NOT write any code, scaffold any project, or take any implementation action.
 This applies to EVERY project regardless of perceived simplicity.
@@ -44,7 +44,7 @@ You MUST create a task for each of these items and complete them in order:
 **Writing the plan:**
 - Once you believe you understand what you're building, write the plan file
 - Scale each section to its complexity: a few sentences if straightforward, up to 200-300 words if nuanced
-- Ask after each section whether it looks right so far
+- Write the full plan directly to the file in one pass
 - Cover: architecture, components, data flow, error handling, testing
 - Be ready to go back and clarify if something doesn't make sense
 
@@ -54,9 +54,8 @@ You MUST create a task for each of these items and complete them in order:
 - **One question at a time** - Don't overwhelm with multiple questions
 - **Multiple choice preferred** - Easier to answer than open-ended when possible
 - **YAGNI ruthlessly** - Remove unnecessary features from all designs
-- **Explore alternatives** - Always propose 2-3 approaches before settling, 
+- **Explore alternatives** - Always propose 2-3 approaches before settling,
   but suggest what you think is best
-- **Incremental validation** - Get approval before moving on
 - **Be flexible** - Go back and clarify when something doesn't make sense
 
 
