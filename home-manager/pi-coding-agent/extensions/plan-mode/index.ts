@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, unlinkSync, writeFileSync } from "node:fs";
 import { join, dirname, resolve, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -442,6 +442,32 @@ Start with step 1.`,
       } else {
         savePlanEdit(edited, ctx);
       }
+    },
+  });
+
+  pi.registerCommand("plan:delete", {
+    description: "Delete the current plan file and reset plan state",
+    handler: async (_args, ctx) => {
+      if (!planFilePath || !existsSync(planFilePath)) {
+        ctx.ui.notify("No plan file to delete", "warning");
+        return;
+      }
+      const planRelative = relative(ctx.cwd, planFilePath);
+      const ok = await ctx.ui.confirm(
+        "Delete plan?",
+        `Delete ${planRelative} and reset plan state?`,
+      );
+      if (!ok) return;
+
+      unlinkSync(planFilePath);
+      planModeEnabled = false;
+      executionMode = false;
+      todoItems = [];
+      planFilePath = null;
+      planFullText = null;
+      updateStatus(ctx);
+      persistState();
+      ctx.ui.notify(`Deleted ${planRelative}`, "info");
     },
   });
 
