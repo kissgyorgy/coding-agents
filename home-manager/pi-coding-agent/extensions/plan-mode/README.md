@@ -24,10 +24,12 @@ Read-only exploration mode for safe code analysis.
 | `/plan` | Toggle plan mode (read-only exploration) |
 | `/plan:execute` | Execute the current plan |
 | `/plan:edit` | Edit the current plan file (inline editor) |
+| `/plan:view` | View the current plan in a read-only scrollable modal |
 | `/plan:model` | Configure models for slug generation and execution |
 | `/todos` | Show current plan progress |
 | `Ctrl+Alt+P` | Toggle plan mode |
 | `Ctrl+Alt+E` | Execute the current plan |
+| `Ctrl+Alt+O` | View the current plan in the read-only modal |
 | `Ctrl+G` | Edit plan file in `$VISUAL`/`$EDITOR` (in plan/execution mode) |
 | `--plan` flag | Start pi in plan mode |
 
@@ -61,9 +63,13 @@ Detailed analysis and approach.
 5. Edit the plan anytime:
    - `Ctrl+G` opens the plan file in `$VISUAL`/`$EDITOR` (creates from template if no plan exists)
    - `/plan:edit` opens the inline editor
-6. During execution, the agent marks steps complete with `[DONE:n]` tags
-7. Progress widget shows completion status; footer shows `📋 completed/total`
-8. On completion, all tools are restored and state is cleared
+6. View the plan anytime:
+   - `/plan:view` or `Ctrl+Alt+O` opens a read-only Markdown viewer modal
+   - Scroll with `↑/↓`, `PageUp/PageDown`, `Home/End`; close with `Esc`
+   - Works even outside plan/execution mode as long as a plan file exists
+7. During execution, the agent marks steps complete with `[DONE:n]` tags
+8. Progress widget shows completion status; footer shows `📋 completed/total`
+9. On completion, all tools are restored and state is cleared
 
 > **Note:** `Ctrl+G` is overridden in plan/execution mode to edit the plan file
 > instead of the prompt. Outside plan mode, `Ctrl+G` works normally (opens
