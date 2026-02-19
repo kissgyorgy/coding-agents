@@ -20,22 +20,25 @@
         gemini-cli = final.callPackage ./packages/gemini-cli.nix { };
         ccusage = final.callPackage ./packages/ccusage.nix { };
         codex = final.callPackage ./packages/codex.nix { };
+        crush = final.callPackage ./packages/crush.nix { };
         pi-coding-agent = final.callPackage ./packages/pi-coding-agent.nix { };
       };
 
       packages.x86_64-linux = {
-        inherit (pkgs) claude-code claude-code-ui gemini-cli ccusage codex pi-coding-agent;
+        inherit (pkgs) claude-code claude-code-ui gemini-cli ccusage codex crush pi-coding-agent;
       };
 
       homeManagerModules = {
         claude-code = import ./home-manager/claude-code;
         codex = import ./home-manager/codex;
         gemini-cli = import ./home-manager/gemini-cli;
+        crush = import ./home-manager/crush;
         pi-coding-agent = import ./home-manager/pi-coding-agent;
         default = { lib, ... }: {
           imports = [
             self.homeManagerModules.claude-code
             self.homeManagerModules.codex
+            self.homeManagerModules.crush
             self.homeManagerModules.gemini-cli
             self.homeManagerModules.pi-coding-agent
           ];

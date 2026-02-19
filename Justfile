@@ -2,7 +2,7 @@
 build *args:
     #!/usr/bin/env bash
     set -euo pipefail
-    all="claude-code claude-code-ui gemini-cli ccusage codex pi-coding-agent"
+    all="claude-code claude-code-ui gemini-cli ccusage codex crush pi-coding-agent"
     attrs=""
     for pkg in ${args:-$all}; do attrs+=" .#$pkg"; done
     nix build $attrs
@@ -15,6 +15,7 @@ update:
         [claude-code]="anthropics/claude-code"
         [codex]="openai/codex"
         [gemini-cli]="google-gemini/gemini-cli"
+        [crush]="charmbracelet/crush"
         [pi-coding-agent]="badlogic/pi-mono"
     )
     tmpdir=$(mktemp -d)
