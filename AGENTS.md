@@ -79,3 +79,7 @@ and `writing-plans`.
 Runs 3× daily via cron. Executes `just update` which checks GitHub releases for
 newer versions, updates package files with `nix-update`, commits, pushes, and
 pushes built results to a Cachix binary cache.
+
+### Notes
+
+If you update or add a package, don't forget to update README.md too!

@@ -10,6 +10,7 @@ All agents and aliases are configured with yolo mode by default. (e.g. `--danger
 | **claude-code** | [Claude Code](https://github.com/anthropics/claude-code) — Anthropic's CLI coding agent |
 | **claude-code-ui** | [Claude Code UI](https://github.com/siteboon/claudecodeui) — Web UI for Claude Code |
 | **codex** | [Codex](https://github.com/openai/codex) — OpenAI's CLI coding agent |
+| **crush** | [Crush](https://github.com/charmbracelet/crush) — Charm's glamorous terminal coding agent |
 | **gemini-cli** | [Gemini CLI](https://github.com/google-gemini/gemini-cli) — Google's CLI coding agent |
 | **pi-coding-agent** | [Pi](https://github.com/badlogic/pi-mono) — The minimal coding agent with extensions, skills, and TUI |
 | **ccusage** | [ccusage](https://www.npmjs.com/package/ccusage) — Track Claude Code token usage and costs |
@@ -35,6 +36,7 @@ Run any package directly:
 ```bash
 nix run github:kissgyorgy/coding-agents#claude-code
 nix run github:kissgyorgy/coding-agents#codex
+nix run github:kissgyorgy/coding-agents#crush
 nix run github:kissgyorgy/coding-agents#gemini-cli
 nix run github:kissgyorgy/coding-agents#pi-coding-agent
 ```
@@ -67,6 +69,7 @@ Import the module and apply the overlay:
   coding-agents = {
     claude-code.enable = true;
     codex.enable = true;
+    crush.enable = true;
     gemini-cli.enable = true;
     pi-coding-agent.enable = true;
   };
@@ -96,6 +99,12 @@ integration.
 #### `coding-agents.codex`
 
 - **`enable`** — Install Codex and link shared skills
+
+#### `coding-agents.crush`
+
+- **`enable`** — Install Crush, link shared skills, configure `crush.json` with
+  allowed tool permissions, LSPs (gopls, typescript-language-server, nil, pyright),
+  disabled attribution, and add a `crush` shell alias (runs with `-y` yolo mode)
 
 #### `coding-agents.gemini-cli`
 
