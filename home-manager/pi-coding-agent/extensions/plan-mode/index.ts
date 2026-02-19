@@ -721,15 +721,6 @@ After completing a step, include a [DONE:n] tag in your response.`,
     // Check if execution is complete
     if (executionMode && todoItems.length > 0) {
       if (todoItems.every((t) => t.completed)) {
-        const completedList = todoItems.map((t) => `~~${t.text}~~`).join("\n");
-        pi.sendMessage(
-          {
-            customType: "plan-complete",
-            content: `**Plan Complete!** ✓\n\n${completedList}`,
-            display: true,
-          },
-          { triggerTurn: false },
-        );
         // Restore pre-execution model
         if (preExecutionModel) {
           const prevModel = ctx.modelRegistry.find(
@@ -762,19 +753,6 @@ After completing a step, include a [DONE:n] tag in your response.`,
         persistState();
       }
 
-      // Display updated plan
-      const todoListText =
-        extracted.length > 0
-          ? extracted.map((t, i) => `${i + 1}. ☐ ${t.text}`).join("\n")
-          : "(no todos yet)";
-      pi.sendMessage(
-        {
-          customType: "plan-updated",
-          content: `**Plan Updated** (${relative(ctx.cwd, planFilePath)})\n\n**Steps (${extracted.length}):**\n${todoListText}`,
-          display: true,
-        },
-        { triggerTurn: false },
-      );
       return;
     }
 
@@ -807,20 +785,7 @@ After completing a step, include a [DONE:n] tag in your response.`,
       }
     }
 
-    // Show plan steps (user can press Tab to see /plan:* commands)
-    if (todoItems.length > 0) {
-      const todoListText = todoItems
-        .map((t, i) => `${i + 1}. ☐ ${t.text}`)
-        .join("\n");
-      pi.sendMessage(
-        {
-          customType: "plan-todo-list",
-          content: `**Plan Steps (${todoItems.length}):**\n\n${todoListText}`,
-          display: true,
-        },
-        { triggerTurn: false },
-      );
-    }
+
   });
 
   // Shared helper: save edited plan content back to file, re-parse todos
