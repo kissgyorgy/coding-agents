@@ -10,8 +10,18 @@ function isPythonFile(filePath: string): boolean {
   return filePath.endsWith(".py");
 }
 
-function isYamlFile(filePath: string): boolean {
-  return filePath.endsWith(".yaml") || filePath.endsWith(".yml");
+const PRETTIER_EXTENSIONS = new Set([
+  ".yaml", ".yml", ".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs",
+  ".html", ".css", ".scss", ".less", ".json", ".jsonc", ".md", ".mdx",
+]);
+
+function isPrettierFile(filePath: string): boolean {
+  const dot = filePath.lastIndexOf(".");
+  return dot !== -1 && PRETTIER_EXTENSIONS.has(filePath.slice(dot));
+}
+
+function isGoFile(filePath: string): boolean {
+  return filePath.endsWith(".go");
 }
 
 function isShellScript(filePath: string): boolean {
@@ -35,10 +45,11 @@ interface Formatter {
 }
 
 const FORMATTERS = new Map<string, Formatter>([
-  ["Python file", { check: isPythonFile, cmd: "ruff", args: (p) => ["format", "--stdin-filename", p, "-"] }],
-  ["YAML file",   { check: isYamlFile,   cmd: "prettier", args: (p) => ["--stdin-filepath", p] }],
-  ["shell script",{ check: isShellScript,cmd: "shfmt",    args: (_) => [] }],
-  ["Nix file",    { check: isNixFile,    cmd: "nixpkgs-fmt", args: (_) => [] }],
+  ["Python",  { check: isPythonFile,  cmd: "ruff",        args: (p) => ["format", "--stdin-filename", p, "-"] }],
+  ["Prettier",{ check: isPrettierFile,cmd: "prettier",    args: (p) => ["--stdin-filepath", p] }],
+  ["Shell",   { check: isShellScript, cmd: "shfmt",       args: (_) => [] }],
+  ["Nix",     { check: isNixFile,     cmd: "nixpkgs-fmt", args: (_) => [] }],
+  ["Go",      { check: isGoFile,      cmd: "gofmt",       args: (_) => [] }],
 ]);
 
 function selectFormatter(filePath: string): [string, Formatter] | undefined {
