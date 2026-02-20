@@ -496,9 +496,8 @@ ${todoList}
   function togglePlanMode(ctx: ExtensionContext): void {
     planModeEnabled = !planModeEnabled;
     executionMode = false;
-    todoItems = [];
-    // Preserve planFilePath and planFullText so the plan file reference
-    // survives toggling off/on (avoids creating duplicate files).
+    // Preserve todoItems, planFilePath and planFullText so the plan
+    // survives toggling off/on (avoids losing state and creating duplicate files).
 
     if (planModeEnabled) {
       ctx.ui.notify("Plan mode enabled.");
@@ -512,8 +511,13 @@ ${todoList}
   async function startExecution(ctx: ExtensionContext): Promise<void> {
     planModeEnabled = false;
     executionMode = true;
-    if (!planFilePath) {
-      planFilePath = await writePlanFile(todoItems, planFullText, ctx.cwd, ctx);
+
+    // Read plan file and extract todos for progress tracking
+    const fileContents = readFileSync(planFilePath!, "utf-8");
+    const extracted = extractTodoItems(fileContents);
+    if (extracted.length > 0) {
+      todoItems = extracted;
+      planFullText = fileContents;
     }
 
     // Switch to execution model if configured
@@ -545,26 +549,11 @@ ${todoList}
     updateStatus(ctx);
     persistState();
 
-    let fileContents = "";
-    if (planFilePath) {
-      try {
-        fileContents = readFileSync(planFilePath, "utf-8");
-      } catch {
-        /* ignore */
-      }
-    }
-
-    const todoList = todoItems.map((t) => `${t.step}. ${t.text}`).join("\n");
+    const planRelative = relative(ctx.cwd, planFilePath!);
     pi.sendMessage(
       {
         customType: "plan-mode-execute",
-        content: `Execute this plan step by step. After completing each step, include a [DONE:n] tag in your response (e.g. [DONE:1], [DONE:2]).
-
-Plan file (${planFilePath}):
-${fileContents}
-
-Todo list:
-${todoList}
+        content: `Read and execute the plan in ${planRelative} step by step. Follow the todo items in order. After completing each step, include a [DONE:n] tag in your response (e.g. [DONE:1], [DONE:2]).
 
 Start with step 1.`,
         display: true,
@@ -599,9 +588,9 @@ Start with step 1.`,
     description:
       "Execute the current plan (exit plan mode and start tracked execution)",
     handler: async (_args, ctx) => {
-      if (todoItems.length === 0) {
+      if (!planFilePath || !existsSync(planFilePath)) {
         ctx.ui.notify(
-          "No plan to execute. Create a plan first with /plan",
+          "No plan file to execute. Create a plan first with /plan",
           "warning",
         );
         return;
@@ -978,8 +967,6 @@ After completing a step, include a [DONE:n] tag in your response.`,
 
         executionMode = false;
         todoItems = [];
-        planFilePath = null;
-        planFullText = null;
         updateStatus(ctx);
         persistState(); // Save cleared state so resume doesn't restore old execution mode
       }
