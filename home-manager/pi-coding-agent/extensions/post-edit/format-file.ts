@@ -11,8 +11,22 @@ function isPythonFile(filePath: string): boolean {
 }
 
 const PRETTIER_EXTENSIONS = new Set([
-  ".yaml", ".yml", ".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs",
-  ".html", ".css", ".scss", ".less", ".json", ".jsonc", ".md", ".mdx",
+  ".yaml",
+  ".yml",
+  ".ts",
+  ".tsx",
+  ".js",
+  ".jsx",
+  ".mjs",
+  ".cjs",
+  ".html",
+  ".css",
+  ".scss",
+  ".less",
+  ".json",
+  ".jsonc",
+  ".md",
+  ".mdx",
 ]);
 
 function isPrettierFile(filePath: string): boolean {
@@ -45,11 +59,25 @@ interface Formatter {
 }
 
 const FORMATTERS = new Map<string, Formatter>([
-  ["Python",  { check: isPythonFile,  cmd: "ruff",        args: (p) => ["format", "--stdin-filename", p, "-"] }],
-  ["Prettier",{ check: isPrettierFile,cmd: "prettier",    args: (p) => ["--stdin-filepath", p] }],
-  ["Shell",   { check: isShellScript, cmd: "shfmt",       args: (_) => [] }],
-  ["Nix",     { check: isNixFile,     cmd: "nixpkgs-fmt", args: (_) => [] }],
-  ["Go",      { check: isGoFile,      cmd: "gofmt",       args: (_) => [] }],
+  [
+    "Python",
+    {
+      check: isPythonFile,
+      cmd: "ruff",
+      args: (p) => ["format", "--stdin-filename", p, "-"],
+    },
+  ],
+  [
+    "Prettier",
+    {
+      check: isPrettierFile,
+      cmd: "prettier",
+      args: (p) => ["--stdin-filepath", p],
+    },
+  ],
+  ["Shell", { check: isShellScript, cmd: "shfmt", args: (_) => [] }],
+  ["Nix", { check: isNixFile, cmd: "nixpkgs-fmt", args: (_) => [] }],
+  ["Go", { check: isGoFile, cmd: "gofmt", args: (_) => [] }],
 ]);
 
 function selectFormatter(filePath: string): [string, Formatter] | undefined {
@@ -59,7 +87,11 @@ function selectFormatter(filePath: string): [string, Formatter] | undefined {
   return undefined;
 }
 
-function runFormatterOnString(cmd: string, args: string[], input: string): Promise<string> {
+function runFormatterOnString(
+  cmd: string,
+  args: string[],
+  input: string,
+): Promise<string> {
   return new Promise((resolve, reject) => {
     const child = execFile(cmd, args, { encoding: "utf8" }, (error, stdout) => {
       if (error) reject(error);
@@ -70,11 +102,18 @@ function runFormatterOnString(cmd: string, args: string[], input: string): Promi
   });
 }
 
-export async function formatContent(filePath: string, content: string): Promise<FormatResult> {
+export async function formatContent(
+  filePath: string,
+  content: string,
+): Promise<FormatResult> {
   const selected = selectFormatter(filePath);
   if (!selected) return { changed: false, content };
 
   const [, formatter] = selected;
-  const formatted = await runFormatterOnString(formatter.cmd, formatter.args(filePath), content);
+  const formatted = await runFormatterOnString(
+    formatter.cmd,
+    formatter.args(filePath),
+    content,
+  );
   return { changed: formatted !== content, content: formatted };
 }

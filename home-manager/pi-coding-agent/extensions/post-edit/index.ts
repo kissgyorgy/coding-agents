@@ -40,7 +40,10 @@ export default function (pi: ExtensionAPI) {
         const result = await formatContent(filePath, block.arguments.content);
         if (result.changed) block.arguments.content = result.content;
       } catch (error: unknown) {
-        ctx.ui.notify(`post-edit: formatting ${filePath} failed: ${getErrorMessage(error)}`, "error");
+        ctx.ui.notify(
+          `post-edit: formatting ${filePath} failed: ${getErrorMessage(error)}`,
+          "error",
+        );
       }
     }
   });
@@ -63,7 +66,10 @@ export default function (pi: ExtensionAPI) {
         content: [{ type: "text", text: `Formatted: ${filePath}` }],
       };
     } catch (error: unknown) {
-      ctx.ui.notify(`post-edit: formatting ${filePath} failed: ${getErrorMessage(error)}`, "error");
+      ctx.ui.notify(
+        `post-edit: formatting ${filePath} failed: ${getErrorMessage(error)}`,
+        "error",
+      );
     }
   });
 }
