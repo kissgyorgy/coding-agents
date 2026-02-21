@@ -21,7 +21,7 @@
         ccusage = final.callPackage ./packages/ccusage.nix { };
         codex = final.callPackage ./packages/codex.nix { };
         crush = final.callPackage ./packages/crush.nix { };
-        pi-coding-agent = final.callPackage ./packages/pi-coding-agent.nix { };
+        pi-coding-agent = final.callPackage ./packages/pi-coding-agent { };
         playwright-cli = final.callPackage ./packages/playwright-cli.nix { };
       };
 

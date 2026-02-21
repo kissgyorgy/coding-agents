@@ -1,13 +1,18 @@
 { lib, buildNpmPackage, fetchFromGitHub, nodejs_22, makeBinaryWrapper, autoPatchelfHook, stdenv }:
 
+let
+  upstreamVersion = "0.54.0";
+  modelsDate = "20260221";
+in
+
 buildNpmPackage rec {
   pname = "pi-coding-agent";
-  version = "0.54.0";
+  version = "${upstreamVersion}-models-${modelsDate}";
 
   src = fetchFromGitHub {
     owner = "badlogic";
     repo = "pi-mono";
-    rev = "v${version}";
+    rev = "v${upstreamVersion}";
     hash = "sha256-j8h8KKt/1m47Y6/KA8g213gooq0n2fAqBVkKhHsBCGw=";
   };
 
@@ -22,8 +27,13 @@ buildNpmPackage rec {
   nativeBuildInputs = [ autoPatchelfHook makeBinaryWrapper ];
   buildInputs = [ stdenv.cc.cc.lib ];
 
+  # Replace upstream models with our freshly generated ones
+  postPatch = ''
+    cp ${./models.generated.ts} packages/ai/src/models.generated.ts
+  '';
+
   # Build workspace packages in dependency order: tui -> ai -> agent -> coding-agent
-  # Skip generate-models (needs network) — committed models.generated.ts is used
+  # Skip generate-models (needs network) — our local models.generated.ts is used instead
   npmBuildScript = "none";
   buildPhase = ''
     runHook preBuild

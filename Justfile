@@ -35,6 +35,35 @@ update:
             continue
         fi
         nix-update --flake --version "$latest" packages.x86_64-linux."$pkg"
-        git add "packages/$pkg.nix"
+        git add "packages/$pkg.nix" "packages/$pkg/"
         git commit -m "$pkg: $current -> $latest"
     done
+
+# Update pi-coding-agent model definitions from upstream APIs
+update-pi-models:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    pkg_dir="packages/pi-coding-agent"
+    upstream_version=$(grep 'upstreamVersion' "$pkg_dir/default.nix" | head -1 | sed 's/.*"\(.*\)".*/\1/')
+
+    tmpdir=$(mktemp -d)
+    trap "rm -rf $tmpdir" EXIT
+
+    echo "Cloning pi-mono v$upstream_version..."
+    git clone --depth 1 --branch "v$upstream_version" https://github.com/badlogic/pi-mono.git "$tmpdir/pi-mono"
+
+    echo "Installing dependencies..."
+    cd "$tmpdir/pi-mono"
+    npm ci --ignore-scripts
+
+    echo "Generating models..."
+    npm run --prefix packages/ai generate-models
+
+
+    cp packages/ai/src/models.generated.ts "$OLDPWD/$pkg_dir/models.generated.ts"
+    cd "$OLDPWD"
+
+    today=$(date +%Y%m%d)
+    sed -i "s/modelsDate = \"[0-9]*\"/modelsDate = \"$today\"/" "$pkg_dir/default.nix"
+
+    echo "Updated models.generated.ts ($(nix eval --raw .#pi-coding-agent.version))"
