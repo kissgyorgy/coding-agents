@@ -19,9 +19,9 @@ buildNpmPackage rec {
 
   postFixup = ''
     wrapProgram $out/bin/playwright-cli \
-      --set PLAYWRIGHT_MCP_EXECUTABLE_PATH ${google-chrome}/bin/google-chrome-stable \
-      --set PLAYWRIGHT_MCP_BROWSER chrome \
-      --set PLAYWRIGHT_MCP_HEADLESS false
+      --set-default PLAYWRIGHT_MCP_EXECUTABLE_PATH ${google-chrome}/bin/google-chrome-stable \
+      --set-default PLAYWRIGHT_MCP_BROWSER chrome \
+      --set-default PLAYWRIGHT_MCP_HEADLESS false
   '';
 
   meta = {
