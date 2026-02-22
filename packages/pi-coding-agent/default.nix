@@ -2,7 +2,7 @@
 
 let
   upstreamVersion = "0.54.0";
-  modelsDate = "20260221";
+  modelsDate = "20260222";
 in
 
 buildNpmPackage rec {
