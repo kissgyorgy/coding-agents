@@ -30,12 +30,17 @@ update:
     for pkg in "${!repos[@]}"; do
         latest=$(cat "$tmpdir/$pkg")
         current=$(nix eval --raw .#"$pkg".version)
-        if [[ "$latest" == "$current" ]]; then
+        # Strip custom suffixes for comparison (e.g. pi-coding-agent appends -models-YYYYMMDD)
+        if [[ "$current" == "$latest" || "$current" == "$latest"-* ]]; then
             echo "$pkg: already at $current"
             continue
         fi
         nix-update --flake --version "$latest" packages.x86_64-linux."$pkg"
-        git add "packages/$pkg.nix" "packages/$pkg/"
+        if git diff --quiet -- packages/"$pkg"*; then
+            echo "$pkg: no changes after nix-update"
+            continue
+        fi
+        git add -- packages/"$pkg"*
         git commit -m "$pkg: $current -> $latest"
     done
 
