@@ -4,6 +4,15 @@ A [pi-coding-agent](https://github.com/nichochar/pi-coding-agent) extension
 that redirects all agent commands to a shared terminal split, giving both the
 agent and the user full bidirectional visibility of the same terminal.
 
+## Usage
+
+```bash
+pi --mirror
+```
+
+The extension is auto-discovered from `~/.pi/agent/extensions/` but only
+activates when the `--mirror` flag is passed.
+
 Supports two backends:
 
 - **tmux** — detected via `$TMUX`, uses tmux split panes and `tmux wait-for`
