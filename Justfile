@@ -30,8 +30,7 @@ update:
     for pkg in "${!repos[@]}"; do
         latest=$(cat "$tmpdir/$pkg")
         current=$(nix eval --raw .#"$pkg".version)
-        # Strip custom suffixes for comparison (e.g. pi-coding-agent appends -models-YYYYMMDD)
-        if [[ "$current" == "$latest" || "$current" == "$latest"-* ]]; then
+        if [[ "$current" == "$latest" ]]; then
             echo "$pkg: already at $current"
             continue
         fi
@@ -49,7 +48,7 @@ update-pi-models:
     #!/usr/bin/env bash
     set -euo pipefail
     pkg_dir="packages/pi-coding-agent"
-    upstream_version=$(grep 'upstreamVersion' "$pkg_dir/default.nix" | head -1 | sed 's/.*"\(.*\)".*/\1/')
+    upstream_version=$(grep 'version = ' "$pkg_dir/default.nix" | head -1 | sed 's/.*"\(.*\)".*/\1/')
 
     tmpdir=$(mktemp -d)
     trap "rm -rf $tmpdir" EXIT

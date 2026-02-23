@@ -1,18 +1,17 @@
 { lib, buildNpmPackage, fetchFromGitHub, nodejs_22, makeBinaryWrapper, autoPatchelfHook, stdenv }:
 
 let
-  upstreamVersion = "0.54.0";
   modelsDate = "20260222";
 in
 
 buildNpmPackage rec {
-  pname = "pi-coding-agent";
-  version = "${upstreamVersion}-models-${modelsDate}";
+  pname = "pi-coding-agent-models-${modelsDate}";
+  version = "0.54.0";
 
   src = fetchFromGitHub {
     owner = "badlogic";
     repo = "pi-mono";
-    rev = "v${upstreamVersion}";
+    rev = "v${version}";
     hash = "sha256-j8h8KKt/1m47Y6/KA8g213gooq0n2fAqBVkKhHsBCGw=";
   };
 
