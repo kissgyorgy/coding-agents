@@ -78,7 +78,9 @@ export default function (pi: ExtensionAPI) {
 
   // ── tmux helpers ─────────────────────────────────────────
 
-  async function tmuxExec(...args: string[]): Promise<{ stdout: string; code: number }> {
+  async function tmuxExec(
+    ...args: string[]
+  ): Promise<{ stdout: string; code: number }> {
     const r = await pi.exec("tmux", args, { timeout: 5000 });
     return { stdout: r.stdout, code: r.code ?? 1 };
   }
@@ -102,7 +104,9 @@ export default function (pi: ExtensionAPI) {
 
   // ── kitty helpers ────────────────────────────────────────
 
-  async function kittyExec(...args: string[]): Promise<{ stdout: string; code: number }> {
+  async function kittyExec(
+    ...args: string[]
+  ): Promise<{ stdout: string; code: number }> {
     const r = await pi.exec("kitty", ["@", ...args], { timeout: 5000 });
     return { stdout: r.stdout, code: r.code ?? 1 };
   }
@@ -127,7 +131,10 @@ export default function (pi: ExtensionAPI) {
   async function kittySendText(text: string): Promise<void> {
     await pi.exec(
       "bash",
-      ["-c", `printf '%s' ${sq(text)} | kitty @ send-text --match id:${kittyWindowId} --stdin`],
+      [
+        "-c",
+        `printf '%s' ${sq(text)} | kitty @ send-text --match id:${kittyWindowId} --stdin`,
+      ],
       { timeout: 5000 },
     );
   }
@@ -161,7 +168,9 @@ export default function (pi: ExtensionAPI) {
       await tmuxUnsetEnv(ENV_LAST_RC).catch(() => {});
     } else {
       kittyWindowId = 0;
-      try { unlinkSync(kittyRcFile); } catch {}
+      try {
+        unlinkSync(kittyRcFile);
+      } catch {}
     }
   }
 
@@ -170,7 +179,9 @@ export default function (pi: ExtensionAPI) {
       const paneId = (id as string) || target;
       if (!paneId) return false;
       try {
-        const r = await pi.exec("tmux", ["list-panes", "-F", "#{pane_id}"], { timeout: 2000 });
+        const r = await pi.exec("tmux", ["list-panes", "-F", "#{pane_id}"], {
+          timeout: 2000,
+        });
         return r.stdout.trim().split("\n").includes(paneId);
       } catch {
         return false;
@@ -187,7 +198,13 @@ export default function (pi: ExtensionAPI) {
     while (Date.now() < deadline) {
       if (backend === "tmux") {
         const cmd = (
-          await tmuxExec("display-message", "-t", target, "-p", "#{pane_current_command}")
+          await tmuxExec(
+            "display-message",
+            "-t",
+            target,
+            "-p",
+            "#{pane_current_command}",
+          )
         ).stdout.trim();
         if (cmd && /sh$/.test(cmd)) return true;
       } else {
@@ -221,7 +238,10 @@ export default function (pi: ExtensionAPI) {
     if ((await tmuxExec("has-session")).code !== 0) return false;
 
     if (target) {
-      if (await paneAlive(target)) { paneReady = true; return true; }
+      if (await paneAlive(target)) {
+        paneReady = true;
+        return true;
+      }
       return false;
     }
 
@@ -232,7 +252,14 @@ export default function (pi: ExtensionAPI) {
       return true;
     }
 
-    const split = await tmuxExec("split-window", "-h", "-d", "-P", "-F", "#{pane_id}");
+    const split = await tmuxExec(
+      "split-window",
+      "-h",
+      "-d",
+      "-P",
+      "-F",
+      "#{pane_id}",
+    );
     if (split.code !== 0) return false;
 
     target = split.stdout.trim();
@@ -321,9 +348,25 @@ export default function (pi: ExtensionAPI) {
 
   async function capturePane(lines = 2000): Promise<string> {
     if (backend === "tmux") {
-      return (await tmuxExec("capture-pane", "-p", "-J", "-t", target, "-S", `-${lines}`)).stdout;
+      return (
+        await tmuxExec(
+          "capture-pane",
+          "-p",
+          "-J",
+          "-t",
+          target,
+          "-S",
+          `-${lines}`,
+        )
+      ).stdout;
     } else {
-      const r = await kittyExec("get-text", "--match", `id:${kittyWindowId}`, "--extent", "all");
+      const r = await kittyExec(
+        "get-text",
+        "--match",
+        `id:${kittyWindowId}`,
+        "--extent",
+        "all",
+      );
       if (r.code !== 0) return "";
       const allLines = r.stdout.split("\n");
       if (allLines.length <= lines) return r.stdout;
@@ -334,7 +377,13 @@ export default function (pi: ExtensionAPI) {
   async function getPaneCwd(): Promise<string> {
     if (backend === "tmux") {
       return (
-        await tmuxExec("display-message", "-t", target, "-p", "#{pane_current_path}")
+        await tmuxExec(
+          "display-message",
+          "-t",
+          target,
+          "-p",
+          "#{pane_current_path}",
+        )
       ).stdout.trim();
     } else {
       const win = await kittyGetWindow(kittyWindowId);
@@ -375,7 +424,13 @@ export default function (pi: ExtensionAPI) {
   async function getShellName(): Promise<string> {
     if (backend === "tmux") {
       return (
-        await tmuxExec("display-message", "-t", target, "-p", "#{pane_current_command}")
+        await tmuxExec(
+          "display-message",
+          "-t",
+          target,
+          "-p",
+          "#{pane_current_command}",
+        )
       ).stdout.trim();
     } else {
       const win = await kittyGetWindow(kittyWindowId);
@@ -430,7 +485,9 @@ export default function (pi: ExtensionAPI) {
       if (backend === "tmux") {
         await tmuxUnsetEnv(ENV_LAST_RC).catch(() => {});
       } else {
-        try { unlinkSync(kittyRcFile); } catch {}
+        try {
+          unlinkSync(kittyRcFile);
+        } catch {}
       }
 
       // Send the hook inline
@@ -440,7 +497,9 @@ export default function (pi: ExtensionAPI) {
       // Wait for the hook to prove it works
       let hookFired = false;
       if (backend === "tmux") {
-        const result = await pi.exec("tmux", ["wait-for", WAIT_CHANNEL], { timeout: 5000 });
+        const result = await pi.exec("tmux", ["wait-for", WAIT_CHANNEL], {
+          timeout: 5000,
+        });
         const { seq } = await readRc();
         hookFired = seq > 0 || result.code === 0;
       } else {
@@ -449,7 +508,10 @@ export default function (pi: ExtensionAPI) {
         while (Date.now() < deadline) {
           await sleep(300);
           const { seq } = readRcKitty();
-          if (seq > 0) { hookFired = true; break; }
+          if (seq > 0) {
+            hookFired = true;
+            break;
+          }
         }
       }
 
@@ -499,7 +561,9 @@ export default function (pi: ExtensionAPI) {
   async function waitForPrompt(timeoutMs: number): Promise<boolean> {
     if (backend === "tmux") {
       try {
-        const r = await pi.exec("tmux", ["wait-for", WAIT_CHANNEL], { timeout: timeoutMs });
+        const r = await pi.exec("tmux", ["wait-for", WAIT_CHANNEL], {
+          timeout: timeoutMs,
+        });
         return r.code === 0;
       } catch {
         return false;
@@ -527,7 +591,8 @@ export default function (pi: ExtensionAPI) {
     const bLines = before.split("\n");
     const aLines = after.split("\n");
     let d = 0;
-    while (d < bLines.length && d < aLines.length && bLines[d] === aLines[d]) d++;
+    while (d < bLines.length && d < aLines.length && bLines[d] === aLines[d])
+      d++;
     const lines = aLines.slice(d);
 
     let lastCmdIdx = -1;
@@ -542,7 +607,11 @@ export default function (pi: ExtensionAPI) {
     const out: string[] = [];
     for (let i = lastCmdIdx + 1; i < lines.length; i++) {
       if (isPromptLine(lines[i])) break;
-      if (i + promptHeight - 1 < lines.length && isPromptLine(lines[i + promptHeight - 1])) break;
+      if (
+        i + promptHeight - 1 < lines.length &&
+        isPromptLine(lines[i + promptHeight - 1])
+      )
+        break;
       out.push(lines[i]);
     }
     while (out.length && !out[out.length - 1].trim()) out.pop();
@@ -556,7 +625,10 @@ export default function (pi: ExtensionAPI) {
     return cmd;
   }
 
-  async function formatActivity(diff: string, exitCode: number): Promise<string | null> {
+  async function formatActivity(
+    diff: string,
+    exitCode: number,
+  ): Promise<string | null> {
     const lines = diff.split("\n");
 
     let lastCmdIdx = -1;
@@ -576,14 +648,19 @@ export default function (pi: ExtensionAPI) {
     const out: string[] = [];
     for (let i = lastCmdIdx + 1; i < lines.length; i++) {
       if (isPromptLine(lines[i])) break;
-      if (i + promptHeight - 1 < lines.length && isPromptLine(lines[i + promptHeight - 1])) break;
+      if (
+        i + promptHeight - 1 < lines.length &&
+        isPromptLine(lines[i + promptHeight - 1])
+      )
+        break;
       out.push(lines[i]);
     }
     while (out.length && !out[out.length - 1].trim()) out.pop();
 
     const cwd = await getPaneCwd();
     const home = process.env.HOME || "";
-    const shortCwd = home && cwd.startsWith(home) ? "~" + cwd.slice(home.length) : cwd;
+    const shortCwd =
+      home && cwd.startsWith(home) ? "~" + cwd.slice(home.length) : cwd;
 
     let result = `${shortCwd} $ ${lastCmd}`;
     if (out.length) result += `\n${out.join("\n")}`;
@@ -601,7 +678,8 @@ export default function (pi: ExtensionAPI) {
   ): Promise<{ output: string; exitCode: number }> {
     if (!(await installHook())) {
       return {
-        output: "Failed to set up the shared terminal hook. The shell in the pane may not be ready.",
+        output:
+          "Failed to set up the shared terminal hook. The shell in the pane may not be ready.",
         exitCode: 1,
       };
     }
@@ -647,7 +725,10 @@ export default function (pi: ExtensionAPI) {
 
       if (!(await paneAlive())) {
         await resetState();
-        return { output: "Terminal pane was closed during execution.", exitCode: 1 };
+        return {
+          output: "Terminal pane was closed during execution.",
+          exitCode: 1,
+        };
       }
     }
 
@@ -686,7 +767,10 @@ export default function (pi: ExtensionAPI) {
           if (signal.aborted || !paneReady) break;
           if (agentRunning) continue;
           if (!signaled) {
-            if (!(await paneAlive())) { await resetState(); break; }
+            if (!(await paneAlive())) {
+              await resetState();
+              break;
+            }
             continue;
           }
         } else {
@@ -700,10 +784,18 @@ export default function (pi: ExtensionAPI) {
 
         try {
           const dbg = (msg: string) => {
-            try { writeFileSync("/tmp/pi-mirror-debug.log", `${new Date().toISOString()} ${msg}\n`, { flag: "a" }); } catch {}
+            try {
+              writeFileSync(
+                "/tmp/pi-mirror-debug.log",
+                `${new Date().toISOString()} ${msg}\n`,
+                { flag: "a" },
+              );
+            } catch {}
           };
 
-          dbg(`signaled, agentRunning=${agentRunning}, promptSymbol=${JSON.stringify(promptSymbol)}, promptHeight=${promptHeight}`);
+          dbg(
+            `signaled, agentRunning=${agentRunning}, promptSymbol=${JSON.stringify(promptSymbol)}, promptHeight=${promptHeight}`,
+          );
 
           const current = (await capturePane(200)).trim();
           if (current === lastSnapshot) {
@@ -714,17 +806,29 @@ export default function (pi: ExtensionAPI) {
           const bLines = lastSnapshot.split("\n");
           const aLines = current.split("\n");
           let i = 0;
-          while (i < bLines.length && i < aLines.length && bLines[i] === aLines[i]) i++;
+          while (
+            i < bLines.length &&
+            i < aLines.length &&
+            bLines[i] === aLines[i]
+          )
+            i++;
           const diff = aLines.slice(i).join("\n").trim();
 
           lastSnapshot = current;
-          if (diff.length < 5) { dbg(`skip: diff too short (${diff.length})`); continue; }
+          if (diff.length < 5) {
+            dbg(`skip: diff too short (${diff.length})`);
+            continue;
+          }
 
-          dbg(`diff (${diff.length} chars): ${JSON.stringify(diff.slice(0, 500))}`);
+          dbg(
+            `diff (${diff.length} chars): ${JSON.stringify(diff.slice(0, 500))}`,
+          );
 
           const { rc } = await readRc();
           const message = await formatActivity(diff, rc);
-          dbg(`formatActivity result: ${JSON.stringify(message?.slice(0, 300) ?? null)}`);
+          dbg(
+            `formatActivity result: ${JSON.stringify(message?.slice(0, 300) ?? null)}`,
+          );
           if (!message) continue;
 
           pi.sendMessage(
@@ -744,7 +848,8 @@ export default function (pi: ExtensionAPI) {
             const pb = lastSnapshot.split("\n");
             const pa = postAgent.split("\n");
             let pi2 = 0;
-            while (pi2 < pb.length && pi2 < pa.length && pb[pi2] === pa[pi2]) pi2++;
+            while (pi2 < pb.length && pi2 < pa.length && pb[pi2] === pa[pi2])
+              pi2++;
             const postDiff = pa.slice(pi2).join("\n").trim();
 
             if (postDiff.length >= 5) {
@@ -800,23 +905,40 @@ export default function (pi: ExtensionAPI) {
     async execute(_id, params, signal, onUpdate, ctx) {
       try {
         if (!(await ensurePane())) {
-          const hint = backend === "tmux"
-            ? "Are you inside tmux?"
-            : "Is kitty remote control enabled? (allow_remote_control in kitty.conf)";
+          const hint =
+            backend === "tmux"
+              ? "Are you inside tmux?"
+              : "Is kitty remote control enabled? (allow_remote_control in kitty.conf)";
           return {
-            content: [{ type: "text", text: `Error: could not create terminal pane. ${hint}` }],
+            content: [
+              {
+                type: "text",
+                text: `Error: could not create terminal pane. ${hint}`,
+              },
+            ],
             details: { command: params.command, exitCode: 1, cwd: ctx.cwd },
             isError: true,
           };
         }
 
-        const displayTarget = backend === "tmux" ? target : `kitty:${kittyWindowId}`;
+        const displayTarget =
+          backend === "tmux" ? target : `kitty:${kittyWindowId}`;
         onUpdate?.({
-          content: [{ type: "text", text: `Running in ${backendLabel} → ${displayTarget}…` }],
+          content: [
+            {
+              type: "text",
+              text: `Running in ${backendLabel} → ${displayTarget}…`,
+            },
+          ],
         });
 
         const ms = params.timeout ? params.timeout * 1000 : undefined;
-        const { output, exitCode } = await runCommand(params.command, ctx.cwd, ms, signal);
+        const { output, exitCode } = await runCommand(
+          params.command,
+          ctx.cwd,
+          ms,
+          signal,
+        );
 
         if (paneReady) {
           lastSnapshot = (await capturePane(200)).trim();
@@ -843,7 +965,12 @@ export default function (pi: ExtensionAPI) {
       } catch (err) {
         await resetState();
         return {
-          content: [{ type: "text", text: `tmux-mirror error: ${err instanceof Error ? err.message : String(err)}` }],
+          content: [
+            {
+              type: "text",
+              text: `tmux-mirror error: ${err instanceof Error ? err.message : String(err)}`,
+            },
+          ],
           details: { command: params.command, exitCode: 1, cwd: ctx.cwd },
           isError: true,
         };
@@ -867,7 +994,9 @@ export default function (pi: ExtensionAPI) {
     async execute(_id, params) {
       if (!(await ensurePane())) {
         return {
-          content: [{ type: "text", text: "Error: terminal pane not available" }],
+          content: [
+            { type: "text", text: "Error: terminal pane not available" },
+          ],
           isError: true,
         };
       }
@@ -895,7 +1024,8 @@ export default function (pi: ExtensionAPI) {
       await installHook();
       lastSnapshot = (await capturePane(200)).trim();
       startActivityLoop();
-      const displayTarget = backend === "tmux" ? target : `kitty:${kittyWindowId}`;
+      const displayTarget =
+        backend === "tmux" ? target : `kitty:${kittyWindowId}`;
       ctx.ui.notify(`Shared ${backendLabel} pane → ${displayTarget}`, "info");
     }
   });
@@ -904,7 +1034,9 @@ export default function (pi: ExtensionAPI) {
     stopActivityLoop();
     // Clean up kitty temp files
     if (backend === "kitty") {
-      try { unlinkSync(kittyRcFile); } catch {}
+      try {
+        unlinkSync(kittyRcFile);
+      } catch {}
     }
   });
 }
