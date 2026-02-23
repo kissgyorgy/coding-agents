@@ -6,32 +6,26 @@ Read-only exploration mode for safe code analysis.
 
 - **Read-only tools**: Restricts available tools to `read`, `bash`, `grep`, `find`, `ls`, `questionnaire`
 - **Bash filtering**: Destructive commands are blocked; only allowlisted read-only commands pass through
-- **Plan extraction**: Extracts numbered steps from `# Todo items` or `Plan:` sections in agent output
-- **Plan file generation**: Saves plans to `plans/plan-<date>-<slug>.md` with AI-generated slug and overview (via Claude Haiku)
+- **Plan file generation**: Saves plans to `plans/plan-<slug>.md` with AI-generated slug (via Claude Haiku)
 - **Structured plan files**: Generated files include Overview, Implementation plan, Files to modify, and Todo items sections
 - **File reference extraction**: Automatically extracts file paths mentioned in the plan into the "Files to modify" section
-- **Progress tracking**: Widget above the editor shows step completion status with checkboxes
-- **`[DONE:n]` markers**: Agent marks steps complete during execution; completion state is tracked in real-time
-- **Interactive picker**: After plan creation, a TUI picker offers "Execute the plan" or "Continue planning"
 - **Context management**: Execution mode starts with a clean context from the execute message onward; plan mode injections are filtered out otherwise
-- **Session persistence**: Full state (mode, todos, plan file path) survives session resume via `appendEntry`
-- **Resume re-scan**: On session resume, re-scans messages after the last execution marker to rebuild completion state
+- **Session persistence**: Full state (mode, plan file path) survives session resume via `appendEntry`
 
 ## Commands & Shortcuts
 
-| Trigger | Description |
-|---------|-------------|
-| `/plan` | Toggle plan mode (read-only exploration) |
-| `/plan:execute` | Execute the current plan |
-| `/plan:edit` | Edit the current plan file (inline editor) |
-| `/plan:view` | View the current plan in a read-only scrollable modal |
-| `/plan:model` | Configure models for slug generation and execution |
-| `/todos` | Show current plan progress |
-| `Ctrl+Alt+P` | Toggle plan mode |
-| `Ctrl+Alt+E` | Execute the current plan |
-| `Ctrl+Alt+O` | View the current plan in the read-only modal |
-| `Ctrl+G` | Edit plan file in `$VISUAL`/`$EDITOR` (in plan/execution mode) |
-| `--plan` flag | Start pi in plan mode |
+| Trigger         | Description                                                    |
+| --------------- | -------------------------------------------------------------- |
+| `/plan`         | Toggle plan mode (read-only exploration)                       |
+| `/plan:execute` | Execute the current plan                                       |
+| `/plan:edit`    | Edit the current plan file (inline editor)                     |
+| `/plan:view`    | View the current plan in a read-only scrollable modal          |
+| `/plan:delete`  | Delete the current plan file and reset state                   |
+| `/plan:model`   | Configure models for slug generation and execution             |
+| `Ctrl+Alt+P`    | Toggle plan mode                                               |
+| `Ctrl+Alt+O`    | View the current plan in the read-only modal                   |
+| `Ctrl+G`        | Edit plan file in `$VISUAL`/`$EDITOR` (in plan/execution mode) |
+| `--plan` flag   | Start pi in plan mode                                          |
 
 ## Usage
 
@@ -41,25 +35,26 @@ Read-only exploration mode for safe code analysis.
 
 ```markdown
 # Overview
+
 Brief summary of the plan.
 
 # Implementation plan
+
 Detailed analysis and approach.
 
 # Files to modify
+
 - path/to/file1.ts
 - path/to/file2.ts
 
 # Todo items
+
 1. First step description
 2. Second step description
 3. Third step description
 ```
 
-4. Start execution in one of three ways:
-   - Choose "Execute the plan" from the interactive picker
-   - Run `/plan:execute`
-   - Press `Ctrl+Alt+E`
+4. Start execution with `/plan:execute`
 5. Edit the plan anytime:
    - `Ctrl+G` opens the plan file in `$VISUAL`/`$EDITOR` (creates from template if no plan exists)
    - `/plan:edit` opens the inline editor
@@ -67,9 +62,7 @@ Detailed analysis and approach.
    - `/plan:view` or `Ctrl+Alt+O` opens a read-only Markdown viewer modal
    - Scroll with `↑/↓`, `PageUp/PageDown`, `Home/End`; close with `Esc`
    - Works even outside plan/execution mode as long as a plan file exists
-7. During execution, the agent marks steps complete with `[DONE:n]` tags
-8. Progress widget shows completion status; footer shows `📋 completed/total`
-9. On completion, all tools are restored and state is cleared
+7. Toggle plan mode off with `/plan` or `Ctrl+Alt+P` to end execution and restore the previous model
 
 > **Note:** `Ctrl+G` is overridden in plan/execution mode to edit the plan file
 > instead of the prompt. Outside plan mode, `Ctrl+G` works normally (opens
@@ -78,23 +71,27 @@ Detailed analysis and approach.
 ## How It Works
 
 ### Plan Mode (Read-Only)
+
 - Only read-only tools available (`read`, `bash`, `grep`, `find`, `ls`, `questionnaire`)
 - Bash commands must match the safe allowlist AND not match any destructive pattern
 - Agent receives a context injection with plan mode instructions and output format
 - Agent creates a plan without making changes
 
 ### Execution Mode
+
 - Full tool access restored (`read`, `bash`, `edit`, `write`)
 - Context is trimmed: only messages from the execution marker onward are kept
-- The plan file content and todo list are sent as a user message to start execution
-- Agent executes steps in order, marking each with `[DONE:n]`
-- Widget shows progress; on full completion, mode resets automatically
+- The plan file path is sent as a user message to start execution
+- Agent reads the plan file and executes steps in order
+- Toggle plan mode off (`/plan` or `Ctrl+Alt+P`) to end execution
 
 ### Plan File
-- Saved to `plans/plan-<date>-<slug>.md`
-- Slug and overview are generated by Claude Haiku from the plan content
-- Falls back to `plan-<date>.md` if slug generation fails
+
+- Saved to `plans/plan-<slug>.md`
+- Slug is generated by Claude Haiku from the plan content
+- Falls back to a random funny name if slug generation fails
 - Template for new plans (via `Ctrl+G` or `/plan:edit`):
+
   ```markdown
   # Overview
 
@@ -103,6 +100,7 @@ Detailed analysis and approach.
   # Files to modify
 
   # Todo items
+
   1.
   ```
 
@@ -119,11 +117,12 @@ Configurable via `/plan:model` command. Settings are persisted in `~/.pi/agent/p
 
 **Slug/Overview model** (`slugModel`): Used for generating the plan file slug and overview summary. This is a quick, cheap API call. Defaults to `anthropic/claude-haiku-4-5` if not configured.
 
-**Execution model** (`executionModel`): The model switched to via `pi.setModel()` when entering execution mode. When not configured, the current model is kept (no switch). The previous model is automatically restored when the plan completes.
+**Execution model** (`executionModel`): The model switched to via `pi.setModel()` when entering execution mode. When not configured, the current model is kept (no switch). The previous model is automatically restored when toggling plan mode off.
 
 ### Command Allowlist
 
 Safe commands (allowed):
+
 - File inspection: `cat`, `head`, `tail`, `less`, `more`, `bat`
 - Search: `grep`, `find`, `rg`, `fd`
 - Text processing: `wc`, `sort`, `uniq`, `diff`, `sed -n`, `awk`, `jq`
@@ -138,6 +137,7 @@ Safe commands (allowed):
 - System info: `uname`, `whoami`, `id`, `date`, `cal`, `uptime`, `ps`, `top`, `htop`, `free`
 
 Blocked commands:
+
 - File modification: `rm`, `rmdir`, `mv`, `cp`, `mkdir`, `touch`, `chmod`, `chown`, `chgrp`, `ln`, `tee`, `truncate`, `dd`, `shred`
 - Redirects: `>`, `>>`
 - Git write: `git add`, `git commit`, `git push`, `git pull`, `git merge`, `git rebase`, `git reset`, `git checkout`, `git branch -d/-D`, `git stash`, `git cherry-pick`, `git revert`, `git tag`, `git init`, `git clone`

@@ -1,4 +1,10 @@
-import { existsSync, mkdirSync, readFileSync, unlinkSync, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  mkdirSync,
+  readFileSync,
+  unlinkSync,
+  writeFileSync,
+} from "node:fs";
 import { join, dirname, resolve, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -26,8 +32,8 @@ import {
   visibleWidth,
 } from "@mariozechner/pi-tui";
 import {
+  extractDoneSteps,
   extractTodoItems,
-  markCompletedSteps,
   parsePlanSections,
   type TodoItem,
 } from "./utils.js";
@@ -268,12 +274,15 @@ async function showPlanViewModal(
 export default function planModeExtension(pi: ExtensionAPI): void {
   let planModeEnabled = false;
   let executionMode = false;
-  let todoItems: TodoItem[] = [];
   let planFilePath: string | null = null;
-  let planFullText: string | null = null;
   let settings: PlanModeSettings = {};
   let preExecutionModel: { provider: string; id: string } | null = null;
   let planFileModifiedThisTurn = false;
+  let execProgress = {
+    total: 0,
+    done: new Set<number>(),
+    steps: [] as string[],
+  };
 
   const PLAN_TEMPLATE = readFileSync(
     join(__dirname, "plan-template.md"),
@@ -448,56 +457,65 @@ ${todoList}
   });
 
   function updateStatus(ctx: ExtensionContext): void {
+    const planRelative = planFilePath ? relative(ctx.cwd, planFilePath) : null;
+
     // Footer status
-    if (executionMode && todoItems.length > 0) {
-      const completed = todoItems.filter((t) => t.completed).length;
-      ctx.ui.setStatus(
-        "plan-mode",
-        ctx.ui.theme.fg("accent", `📋 ${completed}/${todoItems.length}`),
-      );
+    if (executionMode) {
+      const { total, done, steps } = execProgress;
+      const file = planRelative ? ` 📝 ${planRelative}` : "";
+      if (total > 0) {
+        if (done.size >= total) {
+          ctx.ui.setStatus(
+            "plan-mode",
+            ctx.ui.theme.fg("success", `✓ Done.`) +
+              ctx.ui.theme.fg("dim", `${file}`),
+          );
+        } else {
+          const currentIdx = done.size;
+          const stepDesc = steps[currentIdx] || `step ${currentIdx + 1}`;
+          ctx.ui.setStatus(
+            "plan-mode",
+            ctx.ui.theme.fg("accent", `▶ executing${file}`) +
+              ctx.ui.theme.fg("dim", ` • ${done.size}/${total} ${stepDesc}`),
+          );
+        }
+      } else {
+        ctx.ui.setStatus(
+          "plan-mode",
+          ctx.ui.theme.fg("accent", `▶ executing${file}`),
+        );
+      }
     } else if (planModeEnabled) {
+      const file = planRelative
+        ? ctx.ui.theme.fg("dim", ` 📝 ${planRelative}`)
+        : "";
       ctx.ui.setStatus(
         "plan-mode",
         ctx.ui.theme.fg("warning", "⏸ plan") +
-          ctx.ui.theme.fg("dim", " (ctrl+g)"),
+          ctx.ui.theme.fg("dim", " (ctrl+g)") +
+          file,
       );
     } else {
       ctx.ui.setStatus("plan-mode", undefined);
     }
-
-    // Plan file path on the right side of the footer status area.
-    if (planModeEnabled && planFilePath) {
-      const planRelative = relative(ctx.cwd, planFilePath);
-      ctx.ui.setStatus(
-        "plan-mode-file",
-        ctx.ui.theme.fg("dim", `📝 ${planRelative}`),
-      );
-    } else {
-      ctx.ui.setStatus("plan-mode-file", undefined);
-    }
-
-    // Widget (above editor)
-    if (executionMode && todoItems.length > 0) {
-      const lines = todoItems.map((item) => {
-        if (item.completed) {
-          return (
-            ctx.ui.theme.fg("success", "☑ ") +
-            ctx.ui.theme.fg("muted", ctx.ui.theme.strikethrough(item.text))
-          );
-        }
-        return `${ctx.ui.theme.fg("muted", "☐ ")}${item.text}`;
-      });
-      ctx.ui.setWidget("plan-todos", lines);
-    } else {
-      ctx.ui.setWidget("plan-todos", undefined);
-    }
+    ctx.ui.setStatus("plan-mode-file", undefined);
   }
 
   function togglePlanMode(ctx: ExtensionContext): void {
+    const wasExecuting = executionMode;
     planModeEnabled = !planModeEnabled;
     executionMode = false;
-    // Preserve todoItems, planFilePath and planFullText so the plan
-    // survives toggling off/on (avoids losing state and creating duplicate files).
+    execProgress = { total: 0, done: new Set(), steps: [] };
+
+    // Restore pre-execution model when leaving execution mode
+    if (wasExecuting && preExecutionModel) {
+      const prevModel = ctx.modelRegistry.find(
+        preExecutionModel.provider,
+        preExecutionModel.id,
+      );
+      if (prevModel) pi.setModel(prevModel);
+      preExecutionModel = null;
+    }
 
     if (planModeEnabled) {
       ctx.ui.notify("Plan mode enabled.");
@@ -512,13 +530,14 @@ ${todoList}
     planModeEnabled = false;
     executionMode = true;
 
-    // Read plan file and extract todos for progress tracking
+    // Count steps from plan file for status bar progress
     const fileContents = readFileSync(planFilePath!, "utf-8");
-    const extracted = extractTodoItems(fileContents);
-    if (extracted.length > 0) {
-      todoItems = extracted;
-      planFullText = fileContents;
-    }
+    const items = extractTodoItems(fileContents);
+    execProgress = {
+      total: items.length,
+      done: new Set(),
+      steps: items.map((t) => t.text),
+    };
 
     // Switch to execution model if configured
     if (settings.executionModel) {
@@ -553,9 +572,10 @@ ${todoList}
     pi.sendMessage(
       {
         customType: "plan-mode-execute",
-        content: `Read and execute the plan in ${planRelative} step by step. Follow the todo items in order. After completing each step, include a [DONE:n] tag in your response (e.g. [DONE:1], [DONE:2]).
-
-Start with step 1.`,
+        content:
+          `Read and execute the plan in ${planRelative} step by step. ` +
+          `Follow the todo items in order. After completing each step, include a [DONE:n] tag ` +
+          `(e.g. [DONE:1], [DONE:2]). Start with step 1.`,
         display: true,
       },
       { triggerTurn: true },
@@ -565,7 +585,6 @@ Start with step 1.`,
   function persistState(): void {
     pi.appendEntry("plan-mode", {
       enabled: planModeEnabled,
-      todos: todoItems,
       executing: executionMode,
       planFile: planFilePath,
     });
@@ -586,7 +605,7 @@ Start with step 1.`,
 
   pi.registerCommand("plan:execute", {
     description:
-      "Execute the current plan (exit plan mode and start tracked execution)",
+      "Execute the current plan (exit plan mode and start execution)",
     handler: async (_args, ctx) => {
       if (!planFilePath || !existsSync(planFilePath)) {
         ctx.ui.notify(
@@ -600,22 +619,6 @@ Start with step 1.`,
         return;
       }
       await startExecution(ctx);
-    },
-  });
-
-  pi.registerCommand("todos", {
-    description: "Show current plan todo list",
-    handler: async (_args, ctx) => {
-      if (todoItems.length === 0) {
-        ctx.ui.notify("No todos. Create a plan first with /plan", "info");
-        return;
-      }
-      const list = todoItems
-        .map(
-          (item, i) => `${i + 1}. ${item.completed ? "✓" : "○"} ${item.text}`,
-        )
-        .join("\n");
-      ctx.ui.notify(`Plan Progress:\n${list}`, "info");
     },
   });
 
@@ -654,11 +657,19 @@ Start with step 1.`,
       if (!ok) return;
 
       unlinkSync(planFilePath);
+      // Restore pre-execution model if deleting during execution
+      if (executionMode && preExecutionModel) {
+        const prevModel = ctx.modelRegistry.find(
+          preExecutionModel.provider,
+          preExecutionModel.id,
+        );
+        if (prevModel) pi.setModel(prevModel);
+        preExecutionModel = null;
+      }
       planModeEnabled = false;
       executionMode = false;
-      todoItems = [];
       planFilePath = null;
-      planFullText = null;
+      execProgress = { total: 0, done: new Set(), steps: [] };
       updateStatus(ctx);
       persistState();
       ctx.ui.notify(`Deleted ${planRelative}`, "info");
@@ -842,9 +853,10 @@ Start with step 1.`,
     planFileModifiedThisTurn = false;
   });
 
-  // Track when plan file is modified via edit/write
+  // Track when plan file is modified via edit/write.
+  // If the agent writes to a different .md file in plans/, adopt it as the plan file.
   pi.on("tool_result", async (event, ctx) => {
-    if (!planModeEnabled || !planFilePath) return;
+    if (!planModeEnabled) return;
     if (event.toolName === "edit" || event.toolName === "write") {
       const targetPath = resolve(
         ctx.cwd,
@@ -852,6 +864,27 @@ Start with step 1.`,
       );
       if (targetPath === planFilePath) {
         planFileModifiedThisTurn = true;
+      } else if (
+        targetPath.startsWith(join(ctx.cwd, "plans") + "/") &&
+        targetPath.endsWith(".md")
+      ) {
+        // Agent wrote to a different plan file — adopt it and clean up the
+        // auto-generated template if it's still the empty template.
+        const oldPath = planFilePath;
+        planFilePath = targetPath;
+        planFileModifiedThisTurn = true;
+        persistState();
+        updateStatus(ctx);
+        if (oldPath && existsSync(oldPath)) {
+          try {
+            const oldContent = readFileSync(oldPath, "utf-8");
+            if (oldContent.trim() === PLAN_TEMPLATE.trim()) {
+              unlinkSync(oldPath);
+            }
+          } catch {
+            /* ignore */
+          }
+        }
       }
     }
   });
@@ -903,6 +936,7 @@ Start with step 1.`,
         planFilePath = planFilenameWithDedup(plansDir, slug);
         writeFileSync(planFilePath, PLAN_TEMPLATE);
         persistState();
+        updateStatus(ctx);
       }
 
       const planRelative = relative(ctx.cwd, planFilePath);
@@ -917,125 +951,54 @@ Start with step 1.`,
         },
       };
     }
-
-    // Inject remaining steps on each agent run during execution to keep it going
-    if (executionMode && todoItems.length > 0) {
-      const remaining = todoItems.filter((t) => !t.completed);
-      const todoList = remaining.map((t) => `${t.step}. ${t.text}`).join("\n");
-      return {
-        message: {
-          customType: "plan-execution-context",
-          content: `[EXECUTING PLAN - Full tool access enabled]
-
-Remaining steps:
-${todoList}
-
-Execute each step in order.
-After completing a step, include a [DONE:n] tag in your response.`,
-          display: false,
-        },
-      };
-    }
   });
 
-  // Track [DONE:n] progress after each turn
+  // Update status bar progress from [DONE:n] markers
   pi.on("turn_end", async (event, ctx) => {
-    if (!executionMode || todoItems.length === 0) return;
+    if (!executionMode || execProgress.total === 0) return;
     if (!isAssistantMessage(event.message)) return;
 
     const text = getTextContent(event.message);
-    if (markCompletedSteps(text, todoItems) > 0) {
-      updateStatus(ctx);
+    for (const step of extractDoneSteps(text)) {
+      execProgress.done.add(step);
     }
-    persistState();
+    updateStatus(ctx);
   });
 
-  // Handle plan completion and post-plan interactive picker
+  // Handle plan file updates after agent finishes
   pi.on("agent_end", async (event, ctx) => {
-    // Check if execution is complete
-    if (executionMode && todoItems.length > 0) {
-      if (todoItems.every((t) => t.completed)) {
-        // Restore pre-execution model
-        if (preExecutionModel) {
-          const prevModel = ctx.modelRegistry.find(
-            preExecutionModel.provider,
-            preExecutionModel.id,
-          );
-          if (prevModel) await pi.setModel(prevModel);
-          preExecutionModel = null;
-        }
-
-        executionMode = false;
-        todoItems = [];
-        updateStatus(ctx);
-        persistState(); // Save cleared state so resume doesn't restore old execution mode
-      }
-      return;
-    }
-
     if (!planModeEnabled || !ctx.hasUI) return;
 
-    // If plan file was modified this turn, read and display it
+    // If plan file was modified this turn, nothing more to do
     if (planFileModifiedThisTurn && planFilePath && existsSync(planFilePath)) {
-      const planContent = readFileSync(planFilePath, "utf-8");
-      const extracted = extractTodoItems(planContent);
-      if (extracted.length > 0) {
-        todoItems = extracted;
-        planFullText = planContent;
-        persistState();
-      }
-
       return;
     }
 
-    // Fallback: Extract todos from last assistant message (when model didn't write to file)
+    // Fallback: Extract plan content from last assistant message (when model didn't write to file)
     const lastAssistant = [...event.messages]
       .reverse()
       .find(isAssistantMessage);
-    if (lastAssistant) {
-      const text = getTextContent(lastAssistant);
-      const extracted = extractTodoItems(text);
-      if (extracted.length > 0) {
-        todoItems = extracted;
-        planFullText = text;
-      }
-    }
+    if (!lastAssistant) return;
+
+    const text = getTextContent(lastAssistant);
+    const items = extractTodoItems(text);
 
     // Write plan file to disk.
     // If a plan file already exists on disk, update it in-place (preserve slug/path).
     // Only create a brand new file (with Haiku slug) when no file exists yet.
-    if (todoItems.length > 0) {
+    if (items.length > 0) {
       if (planFilePath && existsSync(planFilePath)) {
-        updatePlanFileInPlace(planFilePath, todoItems, planFullText);
+        updatePlanFileInPlace(planFilePath, items, text);
       } else {
-        planFilePath = await writePlanFile(
-          todoItems,
-          planFullText,
-          ctx.cwd,
-          ctx,
-        );
+        planFilePath = await writePlanFile(items, text, ctx.cwd, ctx);
       }
     }
-
-
   });
 
-  // Shared helper: save edited plan content back to file, re-parse todos
+  // Shared helper: save edited plan content back to file
   function savePlanEdit(edited: string, ctx: ExtensionContext): void {
     if (!planFilePath) return;
     writeFileSync(planFilePath, edited);
-
-    const oldCompleted = new Set(
-      todoItems.filter((t) => t.completed).map((t) => t.text),
-    );
-    const newItems = extractTodoItems(edited);
-    if (newItems.length > 0) {
-      for (const item of newItems) {
-        if (oldCompleted.has(item.text)) item.completed = true;
-      }
-      todoItems = newItems;
-      planFullText = edited;
-    }
     updateStatus(ctx);
     persistState();
     ctx.ui.notify(`Plan updated (${planFilePath})`, "info");
@@ -1047,14 +1010,10 @@ After completing a step, include a [DONE:n] tag in your response.`,
     edited: string,
     ctx: ExtensionContext,
   ): Promise<void> {
-    const newItems = extractTodoItems(edited);
-    if (newItems.length > 0) {
-      todoItems = newItems;
-      planFullText = edited;
-    }
+    const items = extractTodoItems(edited);
     planFilePath = await writePlanFile(
-      newItems.length > 0
-        ? newItems
+      items.length > 0
+        ? items
         : [{ step: 1, text: "Define plan steps", completed: false }],
       edited,
       ctx.cwd,
@@ -1068,7 +1027,7 @@ After completing a step, include a [DONE:n] tag in your response.`,
   // Custom editor that intercepts Ctrl+G to edit the plan file in $EDITOR.
   // When plan/execution mode is active, Ctrl+G opens the plan file (or a
   // template for new plans) in $VISUAL/$EDITOR. On save, the content is
-  // written back and todo items are re-parsed.
+  // written back to the plan file.
   let editorCtx: ExtensionContext | null = null;
 
   class PlanEditor extends CustomEditor {
@@ -1155,22 +1114,20 @@ After completing a step, include a [DONE:n] tag in your response.`,
           e.type === "custom" && e.customType === "plan-mode",
       )
       .pop() as
-      | { data?: { enabled: boolean; todos?: TodoItem[]; executing?: boolean } }
+      | { data?: { enabled: boolean; executing?: boolean } }
       | undefined;
 
     if (planModeEntry?.data) {
       planModeEnabled = planModeEntry.data.enabled ?? planModeEnabled;
-      todoItems = planModeEntry.data.todos ?? todoItems;
       executionMode = planModeEntry.data.executing ?? executionMode;
       planFilePath =
         (planModeEntry.data as { planFile?: string }).planFile ?? planFilePath;
     }
 
-    // On resume: re-scan messages to rebuild completion state
-    // Only scan messages AFTER the last "plan-mode-execute" to avoid picking up [DONE:n] from previous plans
-    const isResume = planModeEntry !== undefined;
-    if (isResume && executionMode && todoItems.length > 0) {
-      // Find the index of the last plan-mode-execute entry (marks when current execution started)
+    // Safety: if executionMode is stuck but the execute marker is
+    // missing (e.g. after compaction), auto-clear to avoid an empty
+    // context that makes the LLM loop or error.
+    if (executionMode) {
       let executeIndex = -1;
       for (let i = entries.length - 1; i >= 0; i--) {
         const entry = entries[i] as { type: string; customType?: string };
@@ -1180,35 +1137,41 @@ After completing a step, include a [DONE:n] tag in your response.`,
         }
       }
 
-      // Safety: if executionMode is stuck but the execute marker is
-      // missing (e.g. after compaction), auto-clear to avoid an empty
-      // context that makes the LLM loop or error.
       if (executeIndex === -1) {
         executionMode = false;
         planModeEnabled = false;
-        todoItems = [];
         planFilePath = null;
-        planFullText = null;
+        execProgress = { total: 0, done: new Set(), steps: [] };
         persistState();
         ctx.ui.notify(
           "Plan execution state was stale — auto-cleared. Use /plan to start fresh.",
           "warning",
         );
       } else {
-        // Only scan messages after the execute marker
-        const messages: AssistantMessage[] = [];
-        for (let i = executeIndex + 1; i < entries.length; i++) {
-          const entry = entries[i];
-          if (
-            entry.type === "message" &&
-            "message" in entry &&
-            isAssistantMessage(entry.message as AgentMessage)
-          ) {
-            messages.push(entry.message as AssistantMessage);
+        // Rebuild progress from plan file + [DONE:n] markers after execute marker
+        if (planFilePath && existsSync(planFilePath)) {
+          const items = extractTodoItems(readFileSync(planFilePath, "utf-8"));
+          const done = new Set<number>();
+          for (let i = executeIndex + 1; i < entries.length; i++) {
+            const entry = entries[i];
+            if (
+              entry.type === "message" &&
+              "message" in entry &&
+              isAssistantMessage(entry.message as AgentMessage)
+            ) {
+              for (const step of extractDoneSteps(
+                getTextContent(entry.message as AssistantMessage),
+              )) {
+                done.add(step);
+              }
+            }
           }
+          execProgress = {
+            total: items.length,
+            done,
+            steps: items.map((t) => t.text),
+          };
         }
-        const allText = messages.map(getTextContent).join("\n");
-        markCompletedSteps(allText, todoItems);
       }
     }
 

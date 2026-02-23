@@ -64,15 +64,6 @@ export function extractDoneSteps(message: string): number[] {
   return steps;
 }
 
-export function markCompletedSteps(text: string, items: TodoItem[]): number {
-  const doneSteps = extractDoneSteps(text);
-  for (const step of doneSteps) {
-    const item = items.find((t) => t.step === step);
-    if (item) item.completed = true;
-  }
-  return doneSteps.length;
-}
-
 export interface PlanSections {
   overview: string;
   implementation: string;
