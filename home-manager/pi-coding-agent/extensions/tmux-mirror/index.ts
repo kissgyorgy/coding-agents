@@ -774,10 +774,14 @@ export default function (pi: ExtensionAPI) {
             continue;
           }
         } else {
-          // Poll for kitty (check every 1s)
+          // Poll for kitty — only react when a command completes
+          // (RC sequence number changes), not on every keystroke.
+          const { seq: seqBefore } = readRcKitty();
           await sleep(1000);
           if (signal.aborted || !paneReady) break;
           if (agentRunning) continue;
+          const { seq: seqAfter } = readRcKitty();
+          if (seqAfter <= seqBefore) continue; // No command completed
         }
 
         if (agentRunning) continue;
