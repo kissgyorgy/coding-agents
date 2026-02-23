@@ -4,13 +4,14 @@
  * Overrides the built-in bash tool to run commands in a shared terminal split.
  * Supports two backends:
  *   - tmux: splits via tmux, signals via `tmux wait-for`
- *   - kitty: splits via `kitty @` remote control, signals via file polling
+ *   - kitty: splits via `kitty @` remote control, signals via named pipe (FIFO)
  *
  * The actual command text is sent directly — no wrappers, no markers.
  *
  * Completion and exit code are detected via a shell hook (precmd for zsh,
  * PROMPT_COMMAND for bash). The hook writes a sequence number + $? and
- * signals completion (tmux wait-for or temp file for kitty).
+ * signals completion (tmux wait-for or named pipe/FIFO for kitty).
+ * Both backends block with zero CPU until signaled.
  *
  * The user can also type commands in the pane. A background loop detects
  * new activity when the agent is idle and injects it into the conversation.
@@ -32,6 +33,7 @@ import {
 } from "@mariozechner/pi-coding-agent";
 import { Type } from "@sinclair/typebox";
 import { writeFileSync, readFileSync, unlinkSync } from "node:fs";
+import { randomUUID } from "node:crypto";
 
 const WAIT_CHANNEL = "pi-prompt";
 
@@ -66,10 +68,12 @@ export default function (pi: ExtensionAPI) {
   let activityAbort: AbortController | null = null;
   let lastSnapshot = "";
 
-  // Kitty-specific paths
-  const kittyPaneIdFile = `/tmp/pi-mirror-pane-${process.env.KITTY_PID || "unknown"}`;
-  const kittyRcFile = `/tmp/pi-mirror-rc-${process.pid}`;
+  // Kitty-specific paths (UUID-scoped so multiple agents don't collide)
   const myKittyWindowId = parseInt(process.env.KITTY_WINDOW_ID || "0", 10);
+  const kittyPaneIdFile = `/tmp/pi-mirror-pane-${myKittyWindowId || process.env.KITTY_PID || "unknown"}`;
+  const sessionId = randomUUID().slice(0, 8);
+  const kittyRcFile = `/tmp/pi-mirror-rc-${sessionId}`;
+  const kittySignalFifo = `/tmp/pi-mirror-signal-${sessionId}`;
 
   // ── common helpers ───────────────────────────────────────
 
@@ -170,6 +174,9 @@ export default function (pi: ExtensionAPI) {
       kittyWindowId = 0;
       try {
         unlinkSync(kittyRcFile);
+      } catch {}
+      try {
+        unlinkSync(kittySignalFifo);
       } catch {}
     }
   }
@@ -458,7 +465,7 @@ export default function (pi: ExtensionAPI) {
         hook = [
           envSetup,
           `typeset -gi __pi_seq=0`,
-          `__pi_precmd() { local rc=$?; echo "$((++__pi_seq)) $rc" > ${kittyRcFile}; return $rc; }`,
+          `__pi_precmd() { local rc=$?; echo "$((++__pi_seq)) $rc" > ${kittyRcFile}; (echo > ${kittySignalFifo} &) 2>/dev/null; return $rc; }`,
           `precmd_functions=(__pi_precmd $precmd_functions)`,
         ].join("; ");
       }
@@ -474,20 +481,24 @@ export default function (pi: ExtensionAPI) {
         hook = [
           envSetup,
           `__pi_seq=0`,
-          `__pi_pcmd() { local rc=$?; echo "$((++__pi_seq)) $rc" > ${kittyRcFile}; return $rc; }`,
+          `__pi_pcmd() { local rc=$?; echo "$((++__pi_seq)) $rc" > ${kittyRcFile}; (echo > ${kittySignalFifo} &) 2>/dev/null; return $rc; }`,
           `PROMPT_COMMAND="__pi_pcmd;\${PROMPT_COMMAND}"`,
         ].join("; ");
       }
     }
 
     for (let attempt = 0; attempt < 3; attempt++) {
-      // Clear RC state
+      // Clear RC state and recreate FIFO
       if (backend === "tmux") {
         await tmuxUnsetEnv(ENV_LAST_RC).catch(() => {});
       } else {
         try {
           unlinkSync(kittyRcFile);
         } catch {}
+        try {
+          unlinkSync(kittySignalFifo);
+        } catch {}
+        await pi.exec("mkfifo", [kittySignalFifo], { timeout: 2000 });
       }
 
       // Send the hook inline
@@ -503,15 +514,15 @@ export default function (pi: ExtensionAPI) {
         const { seq } = await readRc();
         hookFired = seq > 0 || result.code === 0;
       } else {
-        // Poll for RC file to appear
-        const deadline = Date.now() + 5000;
-        while (Date.now() < deadline) {
-          await sleep(300);
+        // Block on FIFO signal (like tmux wait-for)
+        try {
+          const result = await pi.exec("cat", [kittySignalFifo], {
+            timeout: 5000,
+          });
           const { seq } = readRcKitty();
-          if (seq > 0) {
-            hookFired = true;
-            break;
-          }
+          hookFired = seq > 0 || result.code === 0;
+        } catch {
+          hookFired = false;
         }
       }
 
@@ -569,15 +580,15 @@ export default function (pi: ExtensionAPI) {
         return false;
       }
     } else {
-      // Poll the RC file for changes
-      const { seq: seqBefore } = readRcKitty();
-      const deadline = Date.now() + timeoutMs;
-      while (Date.now() < deadline) {
-        await sleep(200);
-        const { seq } = readRcKitty();
-        if (seq > seqBefore) return true;
+      // Block on FIFO signal (zero CPU, like tmux wait-for)
+      try {
+        const r = await pi.exec("cat", [kittySignalFifo], {
+          timeout: timeoutMs,
+        });
+        return r.code === 0;
+      } catch {
+        return false;
       }
-      return false;
     }
   }
 
@@ -754,35 +765,34 @@ export default function (pi: ExtensionAPI) {
 
     (async () => {
       const { signal } = activityAbort!;
+      // Track last-seen RC seq to filter stale FIFO signals
+      let lastSeenSeq = (await readRc()).seq;
 
       while (!signal.aborted && paneReady) {
         if (agentRunning) {
           await sleep(250);
+          // Re-sync seq after agent finishes so we don't mistake
+          // agent commands for user activity
+          lastSeenSeq = (await readRc()).seq;
           continue;
         }
 
-        if (backend === "tmux") {
-          // Block on tmux wait-for (zero CPU)
-          const signaled = await waitForPrompt(30000);
-          if (signal.aborted || !paneReady) break;
-          if (agentRunning) continue;
-          if (!signaled) {
-            if (!(await paneAlive())) {
-              await resetState();
-              break;
-            }
-            continue;
+        // Block until a command completes (zero CPU for both backends)
+        const signaled = await waitForPrompt(30000);
+        if (signal.aborted || !paneReady) break;
+        if (agentRunning) continue;
+        if (!signaled) {
+          if (!(await paneAlive())) {
+            await resetState();
+            break;
           }
-        } else {
-          // Poll for kitty — only react when a command completes
-          // (RC sequence number changes), not on every keystroke.
-          const { seq: seqBefore } = readRcKitty();
-          await sleep(1000);
-          if (signal.aborted || !paneReady) break;
-          if (agentRunning) continue;
-          const { seq: seqAfter } = readRcKitty();
-          if (seqAfter <= seqBefore) continue; // No command completed
+          continue;
         }
+
+        // Verify a new command actually completed (filters stale FIFO signals)
+        const { seq: currentSeq } = await readRc();
+        if (currentSeq <= lastSeenSeq) continue;
+        lastSeenSeq = currentSeq;
 
         if (agentRunning) continue;
 
@@ -884,8 +894,13 @@ export default function (pi: ExtensionAPI) {
       activityAbort.abort();
       activityAbort = null;
     }
+    // Unblock any reader waiting on the signal channel
     if (backend === "tmux") {
       tmuxExec("wait-for", "-S", WAIT_CHANNEL).catch(() => {});
+    } else {
+      pi.exec("bash", ["-c", `(echo > ${kittySignalFifo} &) 2>/dev/null`], {
+        timeout: 2000,
+      }).catch(() => {});
     }
   }
 
@@ -1040,6 +1055,9 @@ export default function (pi: ExtensionAPI) {
     if (backend === "kitty") {
       try {
         unlinkSync(kittyRcFile);
+      } catch {}
+      try {
+        unlinkSync(kittySignalFifo);
       } catch {}
     }
   });

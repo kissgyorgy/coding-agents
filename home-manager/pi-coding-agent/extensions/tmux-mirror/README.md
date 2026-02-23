@@ -5,10 +5,12 @@ that redirects all agent commands to a shared terminal split, giving both the
 agent and the user full bidirectional visibility of the same terminal.
 
 Supports two backends:
+
 - **tmux** — detected via `$TMUX`, uses tmux split panes and `tmux wait-for`
   for instant signaling.
 - **kitty** — detected via `$KITTY_PID` (when not inside tmux), uses kitty's
-  remote control protocol (`kitty @`) and file-based polling for signaling.
+  remote control protocol (`kitty @`) and a named pipe (FIFO) for instant
+  signaling.
 
 ## Features
 
@@ -22,9 +24,9 @@ Supports two backends:
 - **Exit code tracking** — a shell hook (`precmd` for zsh, `PROMPT_COMMAND` for
   bash) atomically writes a sequence number + exit code to a temp file after
   every command.
-- **Instant detection** — uses `tmux wait-for` for zero-CPU event-driven
-  notifications instead of polling. Both command completion (agent) and user
-  activity detection block on `wait-for` with no busy loops.
+- **Instant detection** — uses `tmux wait-for` (tmux) or a named pipe FIFO
+  (kitty) for zero-CPU event-driven notifications. Both command completion
+  (agent) and user activity detection block with no busy loops.
 - **Prompt-aware output parsing** — auto-detects the user's prompt symbol and
   height from the pane after `clear`. Uses this to cleanly extract command
   output, stripping prompt lines and RPROMPT timestamps. The same parsing logic
@@ -46,6 +48,7 @@ Supports two backends:
 ### Architecture
 
 **tmux backend:**
+
 ```
 ┌─────────────────────┐  ┌──────────────────────┐
 │  pi (agent pane)    │  │  shared pane (%N)     │
@@ -60,33 +63,39 @@ Supports two backends:
 ```
 
 **kitty backend:**
+
 ```
 ┌─────────────────────┐  ┌──────────────────────┐
 │  pi (agent window)  │  │  shared vsplit (id:N) │
 │                     │  │                       │
 │  tmux-mirror ext    │──│  zsh/bash + hook      │
-│  ├─ bash tool       │  │  └─ precmd writes RC  │
-│  ├─ read_terminal   │  │      to temp file     │
+│  ├─ bash tool       │  │  ├─ precmd writes RC  │
+│  ├─ read_terminal   │  │  └─ echo > FIFO &     │
 │  └─ activity loop   │  │                       │
 └─────────────────────┘  └──────────────────────┘
          │                          │
          ├── kitty @ send-text ─────┘  (remote control via socket)
          ├── kitty @ get-text
-         └── polls RC temp file        (200ms interval)
+         └── cat FIFO (blocks)         (zero CPU, like tmux wait-for)
 ```
 
 ### Shell Hook
 
-On startup the extension sends the hook code inline via `tmux send-keys` to the
-pane's shell. The hook:
+On startup the extension sends the hook code inline to the pane's shell. The
+hook:
 
 1. Registers a `precmd` function (zsh) or `PROMPT_COMMAND` (bash).
-2. On every prompt: stores `<seq> <exit_code>` in a tmux session environment
-   variable (`PI_LAST_RC`) via `tmux set-environment`.
-3. Signals `tmux wait-for -S pi-prompt` to wake any blocked waiters.
+2. On every prompt: stores `<seq> <exit_code>`.
+   - **tmux:** in a tmux session env var (`PI_LAST_RC`) via `tmux set-environment`.
+   - **kitty:** in a temp file (`/tmp/pi-mirror-rc-<session-uuid>`).
+3. Signals completion to wake any blocked waiters.
+   - **tmux:** `tmux wait-for -S pi-prompt`.
+   - **kitty:** `echo > /tmp/pi-mirror-signal-<session-uuid> &` (writes to a
+     named pipe/FIFO; backgrounded so the shell doesn't block if no reader is
+     connected yet).
 
 This provides instant, invisible notification that a command has completed,
-along with its exit code.
+along with its exit code. Both mechanisms use zero CPU while waiting.
 
 ### Prompt Detection
 
@@ -143,32 +152,34 @@ can be reused across agent restarts without creating duplicate panes.
 
 Executes a command in the shared tmux pane.
 
-| Parameter | Type     | Description                          |
-|-----------|----------|--------------------------------------|
-| `command` | `string` | Bash command to execute              |
-| `timeout` | `number` | Timeout in seconds (default: 120)    |
+| Parameter | Type     | Description                       |
+| --------- | -------- | --------------------------------- |
+| `command` | `string` | Bash command to execute           |
+| `timeout` | `number` | Timeout in seconds (default: 120) |
 
 ### `read_terminal`
 
 Reads recent content from the shared tmux pane scrollback.
 
-| Parameter | Type     | Description                          |
-|-----------|----------|--------------------------------------|
-| `lines`   | `number` | Lines of scrollback (default: 200)   |
+| Parameter | Type     | Description                        |
+| --------- | -------- | ---------------------------------- |
+| `lines`   | `number` | Lines of scrollback (default: 200) |
 
 ## Configuration
 
-| Environment Variable   | Description                                    |
-|------------------------|------------------------------------------------|
-| `TMUX_MIRROR_TARGET`   | Explicit tmux pane target (default: auto-split) |
+| Environment Variable | Description                                     |
+| -------------------- | ----------------------------------------------- |
+| `TMUX_MIRROR_TARGET` | Explicit tmux pane target (default: auto-split) |
 
 ## Requirements
 
 **tmux backend:**
+
 - Must run pi inside a tmux session.
 - The shell in the split pane must be zsh or bash.
 
 **kitty backend:**
+
 - Must run pi inside kitty (detected via `$KITTY_PID`).
 - Remote control must be enabled in kitty.conf:
   ```
@@ -182,17 +193,18 @@ Reads recent content from the shared tmux pane scrollback.
 
 **tmux backend** — all state in tmux session environment variables (no temp files):
 
-| Variable          | Purpose                                     |
-|-------------------|---------------------------------------------|
-| `PI_MIRROR_PANE`  | Pane ID for cross-restart reuse             |
-| `PI_LAST_RC`      | `<seq> <exit_code>` written by precmd hook  |
+| Variable         | Purpose                                    |
+| ---------------- | ------------------------------------------ |
+| `PI_MIRROR_PANE` | Pane ID for cross-restart reuse            |
+| `PI_LAST_RC`     | `<seq> <exit_code>` written by precmd hook |
 
-**kitty backend** — state in temp files (scoped to kitty/pi process):
+**kitty backend** — state in temp files (UUID-scoped per session for multi-agent safety):
 
-| File                               | Purpose                                     |
-|------------------------------------|---------------------------------------------|
-| `/tmp/pi-mirror-pane-<KITTY_PID>`  | Window ID for cross-restart reuse           |
-| `/tmp/pi-mirror-rc-<PI_PID>`       | `<seq> <exit_code>` written by precmd hook  |
+| File                                   | Purpose                                    |
+| -------------------------------------- | ------------------------------------------ |
+| `/tmp/pi-mirror-pane-<KITTY_WINDOW>`   | Window ID for cross-restart reuse          |
+| `/tmp/pi-mirror-rc-<session-uuid>`     | `<seq> <exit_code>` written by precmd hook |
+| `/tmp/pi-mirror-signal-<session-uuid>` | Named pipe (FIFO) for event-driven signals |
 
 ### Diff Viewer Pane
 
@@ -214,13 +226,18 @@ Seventh change — another round.
 
 ## Implementation Notes
 
-### Why `tmux wait-for` instead of polling?
+### Why event-driven signaling instead of polling?
 
 The original implementation polled the RC file every 300ms to detect command
 completion, and used a 3-second `setInterval` for user activity. This was
-replaced with `tmux wait-for` which blocks the process with zero CPU until
-signaled. Both the agent command wait loop and the user activity loop use this
-mechanism. Detection is instant rather than delayed by a polling interval.
+replaced with blocking mechanisms that use zero CPU while waiting:
+
+- **tmux:** `tmux wait-for` blocks until signaled by `tmux wait-for -S`.
+- **kitty:** `cat /tmp/pi-mirror-signal-<uuid>` blocks on a named pipe (FIFO)
+  until the precmd hook writes to it via `echo > fifo &`.
+
+Both the agent command wait loop and the user activity loop use this mechanism.
+Detection is instant rather than delayed by a polling interval.
 
 ### Why `capture-pane -J`?
 
