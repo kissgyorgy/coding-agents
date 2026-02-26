@@ -23,10 +23,11 @@
         crush = final.callPackage ./packages/crush.nix { };
         pi-coding-agent = final.callPackage ./packages/pi-coding-agent { };
         playwright-cli = final.callPackage ./packages/playwright-cli.nix { };
+        vibe-kanban = final.callPackage ./packages/vibe-kanban.nix { };
       };
 
       packages.x86_64-linux = {
-        inherit (pkgs) claude-code claude-code-ui gemini-cli ccusage codex crush pi-coding-agent playwright-cli;
+        inherit (pkgs) claude-code claude-code-ui gemini-cli ccusage codex crush pi-coding-agent playwright-cli vibe-kanban;
       };
 
       homeManagerModules = {

@@ -5,15 +5,16 @@ All agents and aliases are configured with yolo mode by default. (e.g. `--danger
 
 ## Packages
 
-| Package | Description |
-|---------|-------------|
-| **claude-code** | [Claude Code](https://github.com/anthropics/claude-code) — Anthropic's CLI coding agent |
-| **claude-code-ui** | [Claude Code UI](https://github.com/siteboon/claudecodeui) — Web UI for Claude Code |
-| **codex** | [Codex](https://github.com/openai/codex) — OpenAI's CLI coding agent |
-| **crush** | [Crush](https://github.com/charmbracelet/crush) — Charm's glamorous terminal coding agent |
-| **gemini-cli** | [Gemini CLI](https://github.com/google-gemini/gemini-cli) — Google's CLI coding agent |
-| **pi-coding-agent** | [Pi](https://github.com/badlogic/pi-mono) — The minimal coding agent with extensions, skills, and TUI |
-| **ccusage** | [ccusage](https://www.npmjs.com/package/ccusage) — Track Claude Code token usage and costs |
+| Package             | Description                                                                                                     |
+| ------------------- | --------------------------------------------------------------------------------------------------------------- |
+| **claude-code**     | [Claude Code](https://github.com/anthropics/claude-code) — Anthropic's CLI coding agent                         |
+| **claude-code-ui**  | [Claude Code UI](https://github.com/siteboon/claudecodeui) — Web UI for Claude Code                             |
+| **codex**           | [Codex](https://github.com/openai/codex) — OpenAI's CLI coding agent                                            |
+| **crush**           | [Crush](https://github.com/charmbracelet/crush) — Charm's glamorous terminal coding agent                       |
+| **gemini-cli**      | [Gemini CLI](https://github.com/google-gemini/gemini-cli) — Google's CLI coding agent                           |
+| **pi-coding-agent** | [Pi](https://github.com/badlogic/pi-mono) — The minimal coding agent with extensions, skills, and TUI           |
+| **vibe-kanban**     | [Vibe Kanban](https://github.com/BloopAI/vibe-kanban) — Kanban-style orchestration surface for AI coding agents |
+| **ccusage**         | [ccusage](https://www.npmjs.com/package/ccusage) — Track Claude Code token usage and costs                      |
 
 Packages are automatically updated 3 times a day via GitHub Actions.
 
@@ -22,10 +23,10 @@ Packages are automatically updated 3 times a day via GitHub Actions.
 [Agent Skills](https://agentskills.io) get installed into each agent's config
 directory, so every agent has access to the same domain knowledge.
 
-| Skill | Description |
-|-------|-------------|
-| **devenv** | Setting up [devenv.sh](https://devenv.sh) development environments — Python/uv, services (Postgres, Redis), Django projects, and Nix packages |
-| **compone** | Building Python components with the [compone](https://github.com/kissgyorgy/compone) framework for type-safe HTML/XML/RSS generation |
+| Skill       | Description                                                                                                                                   |
+| ----------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| **devenv**  | Setting up [devenv.sh](https://devenv.sh) development environments — Python/uv, services (Postgres, Redis), Django projects, and Nix packages |
+| **compone** | Building Python components with the [compone](https://github.com/kissgyorgy/compone) framework for type-safe HTML/XML/RSS generation          |
 
 ## Installation
 
@@ -39,6 +40,7 @@ nix run github:kissgyorgy/coding-agents#codex
 nix run github:kissgyorgy/coding-agents#crush
 nix run github:kissgyorgy/coding-agents#gemini-cli
 nix run github:kissgyorgy/coding-agents#pi-coding-agent
+nix run github:kissgyorgy/coding-agents#vibe-kanban
 ```
 
 ### Home Manager module
