@@ -6,18 +6,18 @@ in
 
 buildNpmPackage rec {
   pname = "pi-coding-agent-models-${modelsDate}";
-  version = "0.55.2";
+  version = "0.55.3";
 
   src = fetchFromGitHub {
     owner = "badlogic";
     repo = "pi-mono";
     rev = "v${version}";
-    hash = "sha256-g1SGUxhhysTBH/z9+iJj+ZTp/JxWK4qjZhxdyveGukQ=";
+    hash = "sha256-N+ICbQ5hdphbg4RMCqtXa5by3VRyfuD4Sz+60mRkEdw=";
   };
 
   nodejs = nodejs_22;
 
-  npmDepsHash = "sha256-us4CZPEkFm4J+BRXhhpTyPS9kKat7m1qrpwYqJm4fxo=";
+  npmDepsHash = "sha256-CG6iLtu0VKAd5ynSQnKyCXFXP7JXctkE+R9zop83nCE=";
 
   # Skip native addon compilation (canvas etc.) — koffi/clipboard ship pre-built binaries
   npmFlags = [ "--ignore-scripts" ];
