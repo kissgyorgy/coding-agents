@@ -91,12 +91,18 @@ function runFormatterOnString(
   cmd: string,
   args: string[],
   input: string,
+  timeoutMs = 5000,
 ): Promise<string> {
   return new Promise((resolve, reject) => {
-    const child = execFile(cmd, args, { encoding: "utf8" }, (error, stdout) => {
-      if (error) reject(error);
-      else resolve(stdout);
-    });
+    const child = execFile(
+      cmd,
+      args,
+      { encoding: "utf8", timeout: timeoutMs },
+      (error, stdout) => {
+        if (error) reject(error);
+        else resolve(stdout);
+      },
+    );
     child.stdin!.write(input);
     child.stdin!.end();
   });

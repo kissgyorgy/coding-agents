@@ -57,7 +57,12 @@ export default function (pi: ExtensionAPI) {
           formatted = formatCache.get(cacheKey)!;
         } else {
           try {
-            const result = await formatContent(filePath, content);
+            const result = await Promise.race([
+              formatContent(filePath, content),
+              new Promise<never>((_, reject) =>
+                setTimeout(() => reject(new Error("timeout")), 5000),
+              ),
+            ]);
             formatted = result.content;
           } catch {
             continue;
