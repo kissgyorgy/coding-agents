@@ -895,10 +895,14 @@ ${todoList}
     if (planModeEnabled) return;
 
     if (executionMode) {
-      const startIdx = event.messages.findIndex((m) => {
-        const msg = m as AgentMessage & { customType?: string };
-        return msg.customType === "plan-mode-execute";
-      });
+      let startIdx = -1;
+      for (let i = event.messages.length - 1; i >= 0; i--) {
+        const msg = event.messages[i] as AgentMessage & { customType?: string };
+        if (msg.customType === "plan-mode-execute") {
+          startIdx = i;
+          break;
+        }
+      }
       return { messages: startIdx >= 0 ? event.messages.slice(startIdx) : [] };
     }
 
