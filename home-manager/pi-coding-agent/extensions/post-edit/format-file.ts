@@ -29,6 +29,12 @@ const PRETTIER_EXTENSIONS = new Set([
   ".mdx",
 ]);
 
+const JINJA2_PATTERN = /\{[%#{][\s\S]*?[%#}]\}/;
+
+function isJinja2Template(content: string): boolean {
+  return JINJA2_PATTERN.test(content);
+}
+
 function isPrettierFile(filePath: string): boolean {
   const dot = filePath.lastIndexOf(".");
   return dot !== -1 && PRETTIER_EXTENSIONS.has(filePath.slice(dot));
@@ -114,6 +120,11 @@ export async function formatContent(
 ): Promise<FormatResult> {
   const selected = selectFormatter(filePath);
   if (!selected) return { changed: false, content };
+
+  // Skip Prettier for HTML files containing Jinja2 syntax
+  if (filePath.endsWith(".html") && isJinja2Template(content)) {
+    return { changed: false, content };
+  }
 
   const [, formatter] = selected;
   const formatted = await runFormatterOnString(
