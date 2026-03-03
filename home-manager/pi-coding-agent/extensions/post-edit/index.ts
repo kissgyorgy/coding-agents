@@ -26,60 +26,34 @@ function getErrorMessage(error: unknown): string {
 }
 
 export default function (pi: ExtensionAPI) {
-  // Format write tool_use arguments in the LLM context so the model sees
-  // formatted code and continues in the same style.  Previously this was
-  // done in a message_end handler, but spawning a formatter subprocess
-  // there delays persistence of the assistant entry.  Because Agent.emit()
-  // does not await async listeners, the next event's persistence can
-  // finish first — corrupting the parentId chain in the session file.
-  //
-  // Doing it in context instead:
-  //  - runs at a safe point (before the LLM call, not during persistence)
-  //  - operates on a deep copy, so no mutation of stored messages
-  //  - results are cached so formatters run at most once per unique content
-  const formatCache = new Map<string, string>();
+  // Patch the session-stored AssistantMessage so the LLM context has
+  // formatted content. The consumer awaits extension handlers before
+  // appendMessage, so the mutation persists. This alone doesn't fix the
+  // file on disk (race condition — tool extracts args before handler
+  // finishes), so we also override the write tool below.
+  pi.on("message_end", async (event, ctx) => {
+    if (event.message.role !== "assistant") return;
 
-  pi.on("context", async (event) => {
-    let modified = false;
-    for (const msg of event.messages) {
-      if (msg.role !== "assistant") continue;
-      for (const block of (msg as any).content) {
-        if (block.type !== "toolCall" || block.name !== "write") continue;
-        const content: string | undefined = block.arguments?.content;
-        let filePath: string = block.arguments?.path ?? "";
-        if (filePath.startsWith("@")) filePath = filePath.slice(1);
-        if (!content || !filePath) continue;
+    for (const block of (event.message as any).content) {
+      if (block.type !== "toolCall" || block.name !== "write") continue;
 
-        const cacheKey = `${filePath}\0${content}`;
-        let formatted: string;
+      let filePath: string = block.arguments.path ?? "";
+      if (filePath.startsWith("@")) filePath = filePath.slice(1);
 
-        if (formatCache.has(cacheKey)) {
-          formatted = formatCache.get(cacheKey)!;
-        } else {
-          try {
-            const result = await Promise.race([
-              formatContent(filePath, content),
-              new Promise<never>((_, reject) =>
-                setTimeout(() => reject(new Error("timeout")), 5000),
-              ),
-            ]);
-            formatted = result.content;
-          } catch {
-            continue;
-          }
-          formatCache.set(cacheKey, formatted);
-        }
-
-        if (formatted !== content) {
-          block.arguments.content = formatted;
-          modified = true;
-        }
+      try {
+        const result = await formatContent(filePath, block.arguments.content);
+        if (result.changed) block.arguments.content = result.content;
+      } catch (error: unknown) {
+        ctx.ui.notify(
+          `post-edit: formatting ${filePath} failed: ${getErrorMessage(error)}`,
+          "error",
+        );
       }
     }
-    if (modified) return { messages: event.messages };
   });
 
   // Override the built-in write tool to format content before writing.
+  // Fixes the file on disk — message_end can't do this due to the race.
   const builtinWrite = createWriteTool(process.cwd());
 
   pi.registerTool({
