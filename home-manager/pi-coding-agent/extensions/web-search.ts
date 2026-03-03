@@ -1,15 +1,14 @@
 /**
- * Web Search extension — uses the ChatGPT subscription (OpenAI Codex OAuth)
- * to perform web searches via the Codex Responses API.
+ * Web Search extension — supports two auth modes:
+ * 1) OPENAI_API_KEY (or OpenAI provider key) via api.openai.com/v1/responses
+ * 2) ChatGPT subscription token (/login, OpenAI Codex OAuth) via chatgpt.com backend
  *
- * The ChatGPT backend supports a server-side `web_search` tool. This extension
- * sends a query to `chatgpt.com/backend-api/codex/responses` with that tool
- * enabled and streams back the search-augmented response.
- *
- * Requires: /login with OpenAI (ChatGPT Plus/Pro subscription).
+ * Auth mode is detected once at session start and then reused for the whole session.
  */
-import { getModel } from "@mariozechner/pi-ai";
-import type { ExtensionAPI } from "@mariozechner/pi-coding-agent";
+import type {
+  ExtensionAPI,
+  ExtensionContext,
+} from "@mariozechner/pi-coding-agent";
 import {
   truncateHead,
   DEFAULT_MAX_BYTES,
@@ -28,8 +27,26 @@ function linkify(text: string): string {
   );
 }
 
+const OPENAI_BASE_URL = "https://api.openai.com/v1";
 const CODEX_BASE_URL = "https://chatgpt.com/backend-api";
 const JWT_CLAIM_PATH = "https://api.openai.com/auth";
+const SEARCH_MODEL = "gpt-5.3-codex";
+const SEARCH_TOOL = { type: "web_search" } as const;
+
+type SessionAuth =
+  | {
+      mode: "openai-api-key";
+      apiKey: string;
+    }
+  | {
+      mode: "chatgpt-subscription";
+      token: string;
+      accountId: string;
+    }
+  | {
+      mode: "none";
+      reason: string;
+    };
 
 /** Extract the chatgpt_account_id from the JWT access token. */
 function extractAccountId(token: string): string {
@@ -43,7 +60,7 @@ function extractAccountId(token: string): string {
 }
 
 /** Build headers matching the Codex client format. */
-function buildHeaders(
+function buildCodexHeaders(
   token: string,
   accountId: string,
 ): Record<string, string> {
@@ -54,6 +71,14 @@ function buildHeaders(
     "OpenAI-Beta": "responses=experimental",
     originator: "pi",
     "User-Agent": userAgent,
+    Accept: "text/event-stream",
+    "Content-Type": "application/json",
+  };
+}
+
+function buildOpenAIHeaders(apiKey: string): Record<string, string> {
+  return {
+    Authorization: `Bearer ${apiKey}`,
     Accept: "text/event-stream",
     "Content-Type": "application/json",
   };
@@ -113,11 +138,11 @@ async function parseSSEResponse(
             // Handle errors
             if (type === "error") {
               const msg = event.message || event.code || JSON.stringify(event);
-              throw new Error(`Codex error: ${msg}`);
+              throw new Error(`Responses API error: ${msg}`);
             }
             if (type === "response.failed") {
               const msg = event.response?.error?.message;
-              throw new Error(msg || "Codex response failed");
+              throw new Error(msg || "Response failed");
             }
           } catch (e) {
             if (e instanceof SyntaxError) continue; // bad JSON, skip
@@ -135,7 +160,103 @@ async function parseSSEResponse(
   return { text: textParts.join(""), searchQueries };
 }
 
+async function detectSessionAuth(ctx: ExtensionContext): Promise<SessionAuth> {
+  const envKey = process.env.OPENAI_API_KEY?.trim();
+  if (envKey) {
+    return { mode: "openai-api-key", apiKey: envKey };
+  }
+
+  // Also support OpenAI provider keys configured outside OPENAI_API_KEY env.
+  const openaiModel = ctx.modelRegistry.find("openai", SEARCH_MODEL);
+  if (openaiModel) {
+    const providerKey = await ctx.modelRegistry.getApiKey(openaiModel);
+    if (providerKey) {
+      return { mode: "openai-api-key", apiKey: providerKey };
+    }
+  }
+
+  const getApiKeyForProvider = (ctx.modelRegistry as any).getApiKeyForProvider;
+  if (typeof getApiKeyForProvider === "function") {
+    const providerKey = await getApiKeyForProvider("openai");
+    if (providerKey) {
+      return { mode: "openai-api-key", apiKey: providerKey };
+    }
+  }
+
+  // Fallback to ChatGPT subscription token.
+  let codexToken: string | undefined;
+  const codexModel = ctx.modelRegistry.find("openai-codex", SEARCH_MODEL);
+  if (codexModel) {
+    codexToken = await ctx.modelRegistry.getApiKey(codexModel);
+  }
+  if (!codexToken && typeof getApiKeyForProvider === "function") {
+    codexToken = await getApiKeyForProvider("openai-codex");
+  }
+
+  if (!codexToken) {
+    return {
+      mode: "none",
+      reason:
+        "No credentials found. Set OPENAI_API_KEY (preferred) or run /login for ChatGPT subscription auth.",
+    };
+  }
+
+  try {
+    const accountId = extractAccountId(codexToken);
+    return { mode: "chatgpt-subscription", token: codexToken, accountId };
+  } catch (e: any) {
+    return {
+      mode: "none",
+      reason:
+        e?.message ||
+        "Invalid OpenAI Codex token. Re-run /login or set OPENAI_API_KEY.",
+    };
+  }
+}
+
+function buildSearchBody(query: string) {
+  return {
+    model: SEARCH_MODEL,
+    store: false,
+    stream: true,
+    instructions:
+      "You are a web search assistant. Search the web for the user's query and provide a concise, informative answer. Include relevant facts and dates. When citing sources, output each URL as a bare URL on its own line — never use markdown link syntax.",
+    input: [
+      {
+        role: "user",
+        content: query,
+      },
+    ],
+    tools: [SEARCH_TOOL],
+    tool_choice: "auto",
+  };
+}
+
+function parseErrorMessage(errorText: string): string {
+  try {
+    const parsed = JSON.parse(errorText);
+    return parsed?.error?.message || parsed?.message || errorText;
+  } catch {
+    return errorText;
+  }
+}
+
 export default function (pi: ExtensionAPI) {
+  let sessionAuth: SessionAuth | undefined;
+
+  const getSessionAuth = async (
+    ctx: ExtensionContext,
+  ): Promise<SessionAuth> => {
+    if (!sessionAuth) {
+      sessionAuth = await detectSessionAuth(ctx);
+    }
+    return sessionAuth;
+  };
+
+  pi.on("session_start", async (_event, ctx) => {
+    sessionAuth = await detectSessionAuth(ctx);
+  });
+
   pi.registerTool({
     name: "web_search",
     label: "Web Search",
@@ -171,43 +292,10 @@ export default function (pi: ExtensionAPI) {
     },
 
     async execute(toolCallId, params, signal, onUpdate, ctx) {
-      // Get the OpenAI Codex subscription token
-      let apiKey: string | undefined;
-
-      // Use a codex model to get the subscription token
-      const codexModel = ctx.modelRegistry.find(
-        "openai-codex",
-        "gpt-5.1-codex-mini",
-      );
-      if (codexModel) {
-        apiKey = await ctx.modelRegistry.getApiKey(codexModel);
-      }
-
-      // Fallback: try getApiKeyForProvider
-      if (!apiKey) {
-        apiKey = await (ctx.modelRegistry as any).getApiKeyForProvider?.(
-          "openai-codex",
-        );
-      }
-
-      if (!apiKey) {
+      const auth = await getSessionAuth(ctx);
+      if (auth.mode === "none") {
         return {
-          content: [
-            {
-              type: "text",
-              text: "Error: No OpenAI subscription token found. Run /login to authenticate with ChatGPT.",
-            },
-          ],
-          isError: true,
-        };
-      }
-
-      let accountId: string;
-      try {
-        accountId = extractAccountId(apiKey);
-      } catch (e: any) {
-        return {
-          content: [{ type: "text", text: `Error: ${e.message}` }],
+          content: [{ type: "text", text: `Error: ${auth.reason}` }],
           isError: true,
         };
       }
@@ -217,36 +305,31 @@ export default function (pi: ExtensionAPI) {
       });
 
       try {
-        const body = {
-          model: "gpt-5.1-codex-mini",
-          store: false,
-          stream: true,
-          instructions:
-            "You are a web search assistant. Search the web for the user's query and provide a concise, informative answer. Include relevant facts and dates. When citing sources, output each URL as a bare URL on its own line — never use markdown link syntax.",
-          input: [
-            {
-              role: "user",
-              content: params.query,
-            },
-          ],
-          tools: [
-            {
-              type: "web_search",
-              external_web_access: true,
-            },
-          ],
-          tool_choice: "auto",
-        };
+        let response: Response;
 
-        const url = `${CODEX_BASE_URL}/codex/responses`;
-        const headers = buildHeaders(apiKey, accountId);
+        if (auth.mode === "openai-api-key") {
+          const url = `${OPENAI_BASE_URL}/responses`;
+          const headers = buildOpenAIHeaders(auth.apiKey);
+          const body = buildSearchBody(params.query);
 
-        const response = await fetch(url, {
-          method: "POST",
-          headers,
-          body: JSON.stringify(body),
-          signal,
-        });
+          response = await fetch(url, {
+            method: "POST",
+            headers,
+            body: JSON.stringify(body),
+            signal,
+          });
+        } else {
+          const url = `${CODEX_BASE_URL}/codex/responses`;
+          const headers = buildCodexHeaders(auth.token, auth.accountId);
+          const body = buildSearchBody(params.query);
+
+          response = await fetch(url, {
+            method: "POST",
+            headers,
+            body: JSON.stringify(body),
+            signal,
+          });
+        }
 
         if (!response.ok) {
           const errorText = await response.text();
@@ -256,7 +339,7 @@ export default function (pi: ExtensionAPI) {
             const err = parsed?.error;
             if (err?.code?.includes("usage_limit") || response.status === 429) {
               const plan = err.plan_type
-                ? ` (${err.plan_type.toLowerCase()} plan)`
+                ? ` (${String(err.plan_type).toLowerCase()} plan)`
                 : "";
               const mins = err.resets_at
                 ? Math.max(
@@ -281,7 +364,7 @@ export default function (pi: ExtensionAPI) {
             content: [
               {
                 type: "text",
-                text: `Search API error (${response.status}): ${errorText}`,
+                text: `Search API error (${response.status}): ${parseErrorMessage(errorText)}`,
               },
             ],
             isError: true,
@@ -318,7 +401,11 @@ export default function (pi: ExtensionAPI) {
 
         return {
           content: [{ type: "text", text: finalOutput }],
-          details: { query: params.query, searchQueries },
+          details: {
+            query: params.query,
+            searchQueries,
+            authMode: auth.mode,
+          },
         };
       } catch (err: any) {
         if (
