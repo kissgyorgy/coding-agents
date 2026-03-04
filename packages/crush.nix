@@ -2,11 +2,11 @@
 
 stdenv.mkDerivation rec {
   pname = "crush";
-  version = "0.46.2";
+  version = "0.47.0";
 
   src = fetchurl {
     url = "https://github.com/charmbracelet/crush/releases/download/v${version}/crush_${version}_Linux_x86_64.tar.gz";
-    hash = "sha256-21sfpp+Gt9K9zBY9E7EMRziNBbdHwJYOTfxOk2ZRY/I=";
+    hash = "sha256-F3ueV1ECZGge1gQnU9hJrwSdTN89/lnppt0gsGZm2bM=";
   };
 
   nativeBuildInputs = [ autoPatchelfHook ];
