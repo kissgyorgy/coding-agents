@@ -86,6 +86,8 @@ buildNpmPackage rec {
       mkdir -p "$pkgDir/node_modules/@mariozechner/$name"
       cp -r "packages/$dir/dist" "$pkgDir/node_modules/@mariozechner/$name/"
       cp "packages/$dir/package.json" "$pkgDir/node_modules/@mariozechner/$name/"
+      # Copy root-level compiled files referenced by package.json exports
+      cp -f packages/$dir/*.js packages/$dir/*.d.ts "$pkgDir/node_modules/@mariozechner/$name/" 2>/dev/null || true
     done
 
     # Create the pi wrapper
