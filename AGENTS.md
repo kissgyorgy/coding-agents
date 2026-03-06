@@ -1,17 +1,17 @@
-# AGENTS.md
-
-This file provides guidance to coding agents when working with code in this repository.
-
 # Overview
 
 This is a Nix flake that provides opinionated packages and Home Manager modules
-for AI coding agents (Claude Code, Codex, Gemini CLI, Pi, ccusage, Claude Code
-UI). All agents are configured with yolo/auto-approve mode by default. Shared
-"skills" (domain knowledge documents) are distributed to every agent.
+for AI coding agents (Claude Code, Codex, Gemini CLI, Pi, Crush, ccusage, Claude
+Code UI, Vibe Kanban). All agents are configured with yolo/auto-approve mode by
+default. Shared "skills" (domain knowledge documents) are distributed to every
+agent.
 
 ## Commands
 
 ```bash
+# Discover all available commands
+just --list
+
 # Build all packages
 just build
 
@@ -25,18 +25,30 @@ nix build .#claude-code
 nix eval --raw .#claude-code.version
 ```
 
+Note: `just build` defaults to a subset of packages. To build packages not in
+that list (e.g. `playwright-cli`, `vibe-kanban`), use `nix build .#<name>`.
+
 ### Update all packages to latest releases
+
 ```bash
 just update
 ```
-This fetches the latest GitHub release for each package, runs `nix-update` to patch the version and hash in the corresponding `.nix` file, and commits each change.
 
+This fetches the latest GitHub release for each package in parallel, runs
+`nix-update` to patch the version and hash in the corresponding `.nix` file,
+and commits each change.
+
+```bash
+# Update pi-coding-agent model definitions separately
+just update-pi-models
+```
 
 ## Architecture
 
 ### Nix Flake Structure
 
 **`flake.nix`** — Entry point. Defines:
+
 - An **overlay** that adds all packages to nixpkgs (each calls `callPackage` on `packages/<name>.nix`)
 - **`packages.x86_64-linux`** — Exposes the packages for direct `nix build`/`nix run`
 - **`homeManagerModules`** — Per-agent Home Manager modules plus a `default` that imports all of them and defines the shared `coding-agents.skillsDir` option
@@ -44,22 +56,32 @@ This fetches the latest GitHub release for each package, runs `nix-update` to pa
 ### Packages (`packages/`)
 
 Each `.nix` file is a standalone Nix derivation that downloads a pre-built binary or npm bundle from upstream releases and patches it for NixOS. Packaging patterns used:
-- **Binary ELF patching**: `claude-code.nix`, `pi-coding-agent.nix` — download a single binary, `patchelf` the interpreter
+
+- **Binary ELF patching**: `claude-code.nix`, `pi-coding-agent/` — download a single binary, `patchelf` the interpreter
 - **autoPatchelfHook**: `codex.nix` — automatic shared library resolution
 - **Node.js wrapper**: `gemini-cli.nix`, `ccusage.nix` — download a JS bundle, wrap with `makeBinaryWrapper` pointing to `nodejs_20`
 - **buildNpmPackage**: `claude-code-ui.nix` — full npm build from source
+- **AppImage**: `emdash.nix` — extract and wrap AppImage with Wayland flags
+
+`pi-coding-agent/` is a subdirectory (not a single `.nix` file) because it also
+ships a `models.generated.ts` file updated from upstream.
+
+Some packages exist in `packages/` but are not yet wired into `flake.nix`
+(e.g. `emdash.nix`, `pi-agent/`).
 
 When updating a package, change `version` and `hash` in the corresponding file (or use `nix-update`).
 
 ### Home Manager Modules (`home-manager/`)
 
 Each agent has a subdirectory with a `default.nix` that:
+
 1. Defines `coding-agents.<agent>.enable` (and agent-specific options)
 2. Installs the package and any companions
 3. Links shared skills from `skills/` into the agent's config directory
 4. Optionally supports a `skillsDir` symlink override for live editing
 
 **Claude Code** (`home-manager/claude-code/`) is the most complex module:
+
 - `settings.nix` — Claude Code settings as a Nix attrset (permissions, env vars, hooks config, teammate mode)
 - `CLAUDE.md` — Global system prompt shipped to `~/.claude/CLAUDE.md`
 - `command-validator.py` — PreToolUse hook that validates Bash commands (blocks `find -exec`, `rm -rf`, etc.)
@@ -67,12 +89,18 @@ Each agent has a subdirectory with a `default.nix` that:
 - `statusline.sh` — Status line showing hostname, model, estimated tokens, session duration, and path
 - Shell aliases: `claude` (interactive with Max subscription) and `claude-api` (with 1Password API key)
 
+**Crush** (`home-manager/crush/`) — also has a `settings.nix` for configuring allowed tool permissions, LSPs, and behavior.
+
+**Pi** (`home-manager/pi-coding-agent/`) — includes:
+
+- `extensions/` — Custom Pi extensions (plan-mode, tmux-mirror, web-search, explorer-mode, post-edit, etc.)
+- `prompts/` — Custom prompt templates (e.g. `init.md`)
+
 ### Skills (`skills/`)
 
 Shared domain knowledge documents installed into every agent's skills directory.
 Each skill has a `SKILL.md` entry point and supporting markdown files.
-Currently: `devenv` (devenv.sh setup), `compone` (Python component framework),
-and `writing-plans`.
+Current skills: `devenv`, `compone`, `writing-plans`, `frontend-design`, `playwright-cli`.
 
 ### Automatic Updates (`.github/workflows/update.yml`)
 
