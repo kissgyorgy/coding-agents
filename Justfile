@@ -7,50 +7,56 @@ build *args:
     for pkg in ${args:-$all}; do attrs+=" .#$pkg"; done
     nix build $attrs
 
-# Update coding agent packages
+# Update all packages in parallel
 update:
     #!/usr/bin/env bash
     set -euo pipefail
-    declare -A repos=(
-        [claude-code]="anthropics/claude-code"
-        [codex]="openai/codex"
-        [gemini-cli]="google-gemini/gemini-cli"
-        [crush]="charmbracelet/crush"
-        [pi-coding-agent]="badlogic/pi-mono"
-    )
-    tmpdir=$(mktemp -d)
-    trap "rm -rf $tmpdir" EXIT
-    for pkg in "${!repos[@]}"; do
-        (
-            latest=$(gh release list --repo "${repos[$pkg]}" --exclude-pre-releases --limit 1 --json tagName -q '.[0].tagName' | sed 's/^v//')
-            echo "$latest" > "$tmpdir/$pkg"
-        ) &
+    pids=()
+    for task in update-claude-code update-codex update-gemini-cli update-crush update-pi-coding-agent; do
+        just $task &
+        pids+=($!)
     done
-    wait
-    for pkg in "${!repos[@]}"; do
-        latest=$(cat "$tmpdir/$pkg")
-        current=$(nix eval --raw .#"$pkg".version)
-        if [[ "$current" == "$latest" ]]; then
-            echo "$pkg: already at $current"
-            continue
-        fi
-        nix-update --flake --version "$latest" packages.x86_64-linux."$pkg"
-        if git diff --quiet -- packages/"$pkg"*; then
-            echo "$pkg: no changes after nix-update"
-            continue
-        fi
-        # For pi-coding-agent, also copy upstream models.generated.ts
-        if [[ "$pkg" == "pi-coding-agent" ]]; then
-            pkg_dir="packages/pi-coding-agent"
-            src=$(nix build .#pi-coding-agent.src --no-link --print-out-paths)
-            cp "$src/packages/ai/src/models.generated.ts" "$pkg_dir/models.generated.ts"
-            today=$(date +%Y%m%d)
-            sed -i "s/modelsDate = \"[0-9]*\"/modelsDate = \"$today\"/" "$pkg_dir/default.nix"
-        fi
+    failed=0
+    for pid in "${pids[@]}"; do wait $pid || ((failed++)); done
+    exit $failed
 
-        git add -- packages/"$pkg"*
-        git commit -m "$pkg: $current -> $latest"
-    done
+update-claude-code: (_update-pkg "claude-code" "anthropics/claude-code")
+update-codex: (_update-pkg "codex" "openai/codex")
+update-gemini-cli: (_update-pkg "gemini-cli" "google-gemini/gemini-cli")
+update-crush: (_update-pkg "crush" "charmbracelet/crush")
+
+update-pi-coding-agent: (_update-pkg "pi-coding-agent" "badlogic/pi-mono" "_pi-post-update") update-pi-models
+
+_pi-post-update:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    pkg_dir="packages/pi-coding-agent"
+    src=$(nix build .#pi-coding-agent.src --no-link --print-out-paths)
+    cp "$src/packages/ai/src/models.generated.ts" "$pkg_dir/models.generated.ts"
+    today=$(date +%Y%m%d)
+    sed -i "s/modelsDate = \"[0-9]*\"/modelsDate = \"$today\"/" "$pkg_dir/default.nix"
+
+_update-pkg pkg repo pre_commit="":
+    #!/usr/bin/env bash
+    set -euo pipefail
+    pkg="{{pkg}}"
+    repo="{{repo}}"
+    latest=$(gh release list --repo "$repo" --exclude-pre-releases --limit 1 --json tagName -q '.[0].tagName' | sed 's/^v//')
+    current=$(nix eval --raw .#"$pkg".version)
+    if [[ "$current" == "$latest" ]]; then
+        echo "$pkg: already at $current"
+        exit 0
+    fi
+    nix-update --flake --version "$latest" packages.x86_64-linux."$pkg"
+    if git diff --quiet -- packages/"$pkg"*; then
+        echo "$pkg: no changes after nix-update"
+        exit 0
+    fi
+    if [[ -n "{{pre_commit}}" ]]; then
+        just {{pre_commit}}
+    fi
+    git add -- packages/"$pkg"*
+    git commit -m "$pkg: $current -> $latest"
 
 # Update pi-coding-agent model definitions from upstream APIs
 update-pi-models:
@@ -79,4 +85,8 @@ update-pi-models:
     today=$(date +%Y%m%d)
     sed -i "s/modelsDate = \"[0-9]*\"/modelsDate = \"$today\"/" "$pkg_dir/default.nix"
 
+    if ! git diff --quiet -- "$pkg_dir"; then
+        git add -- "$pkg_dir"
+        git commit -m "pi-coding-agent: update generated models"
+    fi
     echo "Updated models.generated.ts ($(nix eval --raw .#pi-coding-agent.version))"
