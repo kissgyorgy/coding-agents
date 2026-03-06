@@ -39,6 +39,15 @@ update:
             echo "$pkg: no changes after nix-update"
             continue
         fi
+        # For pi-coding-agent, also copy upstream models.generated.ts
+        if [[ "$pkg" == "pi-coding-agent" ]]; then
+            pkg_dir="packages/pi-coding-agent"
+            src=$(nix build .#pi-coding-agent.src --no-link --print-out-paths)
+            cp "$src/packages/ai/src/models.generated.ts" "$pkg_dir/models.generated.ts"
+            today=$(date +%Y%m%d)
+            sed -i "s/modelsDate = \"[0-9]*\"/modelsDate = \"$today\"/" "$pkg_dir/default.nix"
+        fi
+
         git add -- packages/"$pkg"*
         git commit -m "$pkg: $current -> $latest"
     done
