@@ -3430,6 +3430,23 @@ export const MODELS = {
 			contextWindow: 200000,
 			maxTokens: 64000,
 		} satisfies Model<"google-gemini-cli">,
+		"claude-sonnet-4-6": {
+			id: "claude-sonnet-4-6",
+			name: "Claude Sonnet 4.6 (Antigravity)",
+			api: "google-gemini-cli",
+			provider: "google-antigravity",
+			baseUrl: "https://daily-cloudcode-pa.sandbox.googleapis.com",
+			reasoning: true,
+			input: ["text", "image"],
+			cost: {
+				input: 3,
+				output: 15,
+				cacheRead: 0.3,
+				cacheWrite: 3.75,
+			},
+			contextWindow: 200000,
+			maxTokens: 64000,
+		} satisfies Model<"google-gemini-cli">,
 		"gemini-3-flash": {
 			id: "gemini-3-flash",
 			name: "Gemini 3 Flash (Antigravity)",
