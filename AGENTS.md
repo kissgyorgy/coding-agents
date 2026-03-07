@@ -110,4 +110,6 @@ pushes built results to a Cachix binary cache.
 
 ### Notes
 
-If you update or add a package, don't forget to update README.md too!
+- If you update or add a package, don't forget to update README.md too!
+- The pi agent folder ~/.pi/agent/extensions is symlinked to ./home-manager/pi-agent/extensions,
+  so when you are working with extensions there, you are working in this repo.
