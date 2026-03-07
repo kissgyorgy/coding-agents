@@ -3250,9 +3250,9 @@ export const MODELS = {
 			reasoning: true,
 			input: ["text", "image"],
 			cost: {
-				input: 0,
-				output: 0,
-				cacheRead: 0,
+				input: 0.5,
+				output: 3,
+				cacheRead: 0.05,
 				cacheWrite: 0,
 			},
 			contextWindow: 1048576,
