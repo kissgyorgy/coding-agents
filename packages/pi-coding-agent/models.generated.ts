@@ -3250,9 +3250,9 @@ export const MODELS = {
 			reasoning: true,
 			input: ["text", "image"],
 			cost: {
-				input: 0.5,
-				output: 3,
-				cacheRead: 0.05,
+				input: 0,
+				output: 0,
+				cacheRead: 0,
 				cacheWrite: 0,
 			},
 			contextWindow: 1048576,
@@ -4588,7 +4588,7 @@ export const MODELS = {
 	"mistral": {
 		"codestral-latest": {
 			id: "codestral-latest",
-			name: "Codestral (latest)",
+			name: "Codestral",
 			api: "mistral-conversations",
 			provider: "mistral",
 			baseUrl: "https://api.mistral.ai",
@@ -4639,7 +4639,7 @@ export const MODELS = {
 		} satisfies Model<"mistral-conversations">,
 		"devstral-medium-latest": {
 			id: "devstral-medium-latest",
-			name: "Devstral 2 (latest)",
+			name: "Devstral 2",
 			api: "mistral-conversations",
 			provider: "mistral",
 			baseUrl: "https://api.mistral.ai",
@@ -4707,7 +4707,7 @@ export const MODELS = {
 		} satisfies Model<"mistral-conversations">,
 		"magistral-medium-latest": {
 			id: "magistral-medium-latest",
-			name: "Magistral Medium (latest)",
+			name: "Magistral Medium",
 			api: "mistral-conversations",
 			provider: "mistral",
 			baseUrl: "https://api.mistral.ai",
@@ -4741,7 +4741,7 @@ export const MODELS = {
 		} satisfies Model<"mistral-conversations">,
 		"ministral-3b-latest": {
 			id: "ministral-3b-latest",
-			name: "Ministral 3B (latest)",
+			name: "Ministral 3B",
 			api: "mistral-conversations",
 			provider: "mistral",
 			baseUrl: "https://api.mistral.ai",
@@ -4758,7 +4758,7 @@ export const MODELS = {
 		} satisfies Model<"mistral-conversations">,
 		"ministral-8b-latest": {
 			id: "ministral-8b-latest",
-			name: "Ministral 8B (latest)",
+			name: "Ministral 8B",
 			api: "mistral-conversations",
 			provider: "mistral",
 			baseUrl: "https://api.mistral.ai",
@@ -4809,7 +4809,7 @@ export const MODELS = {
 		} satisfies Model<"mistral-conversations">,
 		"mistral-large-latest": {
 			id: "mistral-large-latest",
-			name: "Mistral Large (latest)",
+			name: "Mistral Large",
 			api: "mistral-conversations",
 			provider: "mistral",
 			baseUrl: "https://api.mistral.ai",
@@ -4860,7 +4860,7 @@ export const MODELS = {
 		} satisfies Model<"mistral-conversations">,
 		"mistral-medium-latest": {
 			id: "mistral-medium-latest",
-			name: "Mistral Medium (latest)",
+			name: "Mistral Medium",
 			api: "mistral-conversations",
 			provider: "mistral",
 			baseUrl: "https://api.mistral.ai",
@@ -4911,7 +4911,7 @@ export const MODELS = {
 		} satisfies Model<"mistral-conversations">,
 		"mistral-small-latest": {
 			id: "mistral-small-latest",
-			name: "Mistral Small (latest)",
+			name: "Mistral Small",
 			api: "mistral-conversations",
 			provider: "mistral",
 			baseUrl: "https://api.mistral.ai",
@@ -4996,7 +4996,7 @@ export const MODELS = {
 		} satisfies Model<"mistral-conversations">,
 		"pixtral-large-latest": {
 			id: "pixtral-large-latest",
-			name: "Pixtral Large (latest)",
+			name: "Pixtral Large",
 			api: "mistral-conversations",
 			provider: "mistral",
 			baseUrl: "https://api.mistral.ai",
