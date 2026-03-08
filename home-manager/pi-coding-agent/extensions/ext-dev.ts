@@ -137,7 +137,10 @@ export default function (pi: ExtensionAPI) {
   // --- Custom message renderers for context visibility ---
   pi.registerMessageRenderer("ext-dev-docs", (message, { expanded }, theme) => {
     const details = message.details as
-      | { docFiles: string[]; totalBytes: number }
+      | {
+          docFiles: { name: string; size: number; preview: string }[];
+          totalBytes: number;
+        }
       | undefined;
     const docFiles = details?.docFiles ?? [];
     const totalBytes = details?.totalBytes ?? 0;
@@ -148,9 +151,14 @@ export default function (pi: ExtensionAPI) {
       `loaded ${docFiles.length} docs (${formatSize(totalBytes)})`,
     );
 
-    if (expanded) {
-      for (const file of docFiles) {
-        text += `\n  ${theme.fg("dim", file)}`;
+    for (const file of docFiles) {
+      if (expanded) text += "\n";
+      text += `\n  ${theme.fg("dim", file.name)} ${theme.fg("muted", formatSize(file.size))}`;
+      if (expanded) {
+        const lines = file.preview.split("\n").filter((l) => l.length > 0);
+        for (const line of lines) {
+          text += `\n    ${theme.fg("dim", line)}`;
+        }
       }
     }
 
@@ -165,7 +173,7 @@ export default function (pi: ExtensionAPI) {
       const details = message.details as
         | {
             extName: string;
-            files: string[];
+            files: { path: string; size: number; preview: string }[];
             basePath: string;
             totalBytes: number;
           }
@@ -182,11 +190,19 @@ export default function (pi: ExtensionAPI) {
         ` — ${files.length} file${files.length !== 1 ? "s" : ""} (${formatSize(totalBytes)})`,
       );
 
-      if (expanded) {
-        text += `\n  ${theme.fg("dim", details?.basePath ?? "")}`;
-        for (const file of files) {
-          text += `\n  ${theme.fg("dim", file)}`;
+      for (const file of files) {
+        if (expanded) text += "\n";
+        text += `\n  ${theme.fg("dim", file.path)} ${theme.fg("muted", formatSize(file.size))}`;
+        if (expanded) {
+          const lines = file.preview.split("\n").filter((l) => l.length > 0);
+          for (const line of lines) {
+            text += `\n    ${theme.fg("dim", line)}`;
+          }
         }
+      }
+
+      if (expanded) {
+        text += `\n\n  ${theme.fg("dim", details?.basePath ?? "")}`;
       }
 
       const box = new Box(1, 1, (t) => theme.bg("customMessageBg", t));
@@ -219,6 +235,7 @@ export default function (pi: ExtensionAPI) {
       const { docsDir, examplesDir } = getPiPaths();
 
       // --- Read documentation ---
+      const PREVIEW_LINES = 5;
       const docFileNames = [
         "extensions.md",
         "tui.md",
@@ -226,12 +243,23 @@ export default function (pi: ExtensionAPI) {
         "themes.md",
       ];
       let docsContent = "";
-      const loadedDocFiles: string[] = [];
+      const loadedDocFiles: { name: string; size: number; preview: string }[] =
+        [];
       if (docsDir) {
         docsContent = readDocs(docsDir, docFileNames);
         for (const file of docFileNames) {
-          if (fs.existsSync(path.join(docsDir, file))) {
-            loadedDocFiles.push(file);
+          const filePath = path.join(docsDir, file);
+          if (fs.existsSync(filePath)) {
+            const content = fs.readFileSync(filePath, "utf-8");
+            const preview = content
+              .split("\n")
+              .slice(0, PREVIEW_LINES)
+              .join("\n");
+            loadedDocFiles.push({
+              name: file,
+              size: Buffer.byteLength(content, "utf-8"),
+              preview,
+            });
           }
         }
       } else {
@@ -243,10 +271,19 @@ export default function (pi: ExtensionAPI) {
       if (examplesDir) {
         const readmePath = path.join(examplesDir, "README.md");
         if (fs.existsSync(readmePath)) {
+          const content = fs.readFileSync(readmePath, "utf-8");
           examplesRef += `\n\n${"=".repeat(60)}\n# Extension Examples Reference\n${"=".repeat(60)}\n\n`;
-          examplesRef += fs.readFileSync(readmePath, "utf-8");
+          examplesRef += content;
           examplesRef += `\n\nExamples directory: ${examplesDir}\nUse the read tool to inspect specific examples as needed.\n`;
-          loadedDocFiles.push("examples/extensions/README.md");
+          const preview = content
+            .split("\n")
+            .slice(0, PREVIEW_LINES)
+            .join("\n");
+          loadedDocFiles.push({
+            name: "examples/extensions/README.md",
+            size: Buffer.byteLength(content, "utf-8"),
+            preview,
+          });
         }
       }
 
@@ -258,18 +295,26 @@ export default function (pi: ExtensionAPI) {
       const freeText = extName ? parts.slice(1).join(" ").trim() : args.trim();
 
       // --- Read extension source if specified ---
+      const PREVIEW_LINES_SRC = 5;
       let extSource = "";
-      let extFiles: string[] = [];
+      let extFileDetails: { path: string; size: number; preview: string }[] =
+        [];
       let extBasePath = "";
       if (extName) {
         const ext = readExtensionSource(agentDir, extName);
         if (ext) {
           extBasePath = ext.basePath;
-          extFiles = ext.files.map((f) => f.path);
-          extSource += `\n\n${"=".repeat(60)}\n# Extension Source: ${extName}\n${"=".repeat(60)}\n`;
-          extSource += `\nBase path: ${ext.basePath}\n`;
+          extFileDetails = ext.files.map((f) => ({
+            path: f.path,
+            size: Buffer.byteLength(f.content, "utf-8"),
+            preview: f.content
+              .split("\n")
+              .slice(0, PREVIEW_LINES_SRC)
+              .join("\n"),
+          }));
+          extSource += `# Extension: ${extName}\nBase path: ${ext.basePath}\n`;
           for (const file of ext.files) {
-            extSource += `\n--- ${file.path} ---\n\n${file.content}\n`;
+            extSource += `\n## ${file.path}\n\n${file.content}\n`;
           }
         } else {
           ctx.ui.notify(
@@ -310,7 +355,7 @@ export default function (pi: ExtensionAPI) {
             display: true,
             details: {
               extName,
-              files: extFiles,
+              files: extFileDetails,
               basePath: extBasePath,
               totalBytes: Buffer.byteLength(extSource, "utf-8"),
             },
