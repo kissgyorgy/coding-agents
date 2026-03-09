@@ -6275,6 +6275,23 @@ export const MODELS = {
 			contextWindow: 262144,
 			maxTokens: 65536,
 		} satisfies Model<"openai-completions">,
+		"mimo-v2-flash-free": {
+			id: "mimo-v2-flash-free",
+			name: "MiMo V2 Flash Free",
+			api: "openai-completions",
+			provider: "opencode",
+			baseUrl: "https://opencode.ai/zen/v1",
+			reasoning: true,
+			input: ["text"],
+			cost: {
+				input: 0,
+				output: 0,
+				cacheRead: 0,
+				cacheWrite: 0,
+			},
+			contextWindow: 262144,
+			maxTokens: 65536,
+		} satisfies Model<"openai-completions">,
 		"minimax-m2.1": {
 			id: "minimax-m2.1",
 			name: "MiniMax M2.1",
