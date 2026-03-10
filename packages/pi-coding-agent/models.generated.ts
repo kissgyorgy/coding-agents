@@ -9727,7 +9727,7 @@ export const MODELS = {
 				cacheRead: 0,
 				cacheWrite: 0,
 			},
-			contextWindow: 262144,
+			contextWindow: 131072,
 			maxTokens: 4096,
 		} satisfies Model<"openai-completions">,
 		"qwen/qwen3-next-80b-a3b-instruct:free": {
@@ -10622,7 +10622,7 @@ export const MODELS = {
 			api: "anthropic-messages",
 			provider: "vercel-ai-gateway",
 			baseUrl: "https://ai-gateway.vercel.sh",
-			reasoning: true,
+			reasoning: false,
 			input: ["text"],
 			cost: {
 				input: 0.5,
@@ -11805,23 +11805,6 @@ export const MODELS = {
 			},
 			contextWindow: 131072,
 			maxTokens: 131072,
-		} satisfies Model<"anthropic-messages">,
-		"openai/codex-mini": {
-			id: "openai/codex-mini",
-			name: "Codex Mini",
-			api: "anthropic-messages",
-			provider: "vercel-ai-gateway",
-			baseUrl: "https://ai-gateway.vercel.sh",
-			reasoning: true,
-			input: ["text", "image"],
-			cost: {
-				input: 1.5,
-				output: 6,
-				cacheRead: 0.375,
-				cacheWrite: 0,
-			},
-			contextWindow: 200000,
-			maxTokens: 100000,
 		} satisfies Model<"anthropic-messages">,
 		"openai/gpt-4-turbo": {
 			id: "openai/gpt-4-turbo",
