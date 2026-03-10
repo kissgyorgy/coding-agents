@@ -2,9 +2,9 @@ name: Update packages
 
 on:
   schedule:
-    - cron: '0 5 * * *'
-    - cron: '30 11 * * *'
-    - cron: '30 17 * * *'
+    - cron: "0 5 * * *"
+    - cron: "30 11 * * *"
+    - cron: "30 17 * * *"
   workflow_dispatch:
 
 jobs:
@@ -22,7 +22,7 @@ jobs:
       - uses: cachix/cachix-action@v16
         with:
           name: coding-agents
-          authToken: '${{ secrets.CACHIX_AUTH_TOKEN }}'
+          authToken: "${{ secrets.CACHIX_AUTH_TOKEN }}"
           skipPush: true
 
       - name: Install tools
@@ -41,5 +41,17 @@ jobs:
 
       - name: Build and push to cachix
         run: |
-          nix build .#claude-code .#claude-code-ui .#gemini-cli .#ccusage .#codex .#pi-coding-agent
-          cachix push coding-agents ./result*
+          failed=()
+          for pkg in claude-code claude-code-ui gemini-cli ccusage codex pi-coding-agent; do
+            echo "::group::Building $pkg"
+            if nix build .#"$pkg" 2>&1; then
+              cachix push coding-agents ./result*
+            else
+              echo "::warning::Failed to build $pkg, skipping"
+              failed+=("$pkg")
+            fi
+            echo "::endgroup::"
+          done
+          if [[ ${#failed[@]} -gt 0 ]]; then
+            echo "::warning::Failed to build: ${failed[*]}"
+          fi

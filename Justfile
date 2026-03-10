@@ -21,9 +21,9 @@ update:
     exit $failed
 
 update-claude-code: (_update-pkg "claude-code" "anthropics/claude-code")
-update-codex: (_update-pkg "codex" "openai/codex")
-update-gemini-cli: (_update-pkg "gemini-cli" "google-gemini/gemini-cli")
-update-crush: (_update-pkg "crush" "charmbracelet/crush")
+update-codex: (_update-pkg "codex" "openai/codex" "" "true")
+update-gemini-cli: (_update-pkg "gemini-cli" "google-gemini/gemini-cli" "" "true")
+update-crush: (_update-pkg "crush" "charmbracelet/crush" "" "true")
 
 update-pi-coding-agent: (_update-pkg "pi-coding-agent" "badlogic/pi-mono" "_pi-post-update") update-pi-models
 
@@ -36,7 +36,7 @@ _pi-post-update:
     today=$(date +%Y%m%d)
     sed -i "s/modelsDate = \"[0-9]*\"/modelsDate = \"$today\"/" "$pkg_dir/default.nix"
 
-_update-pkg pkg repo pre_commit="":
+_update-pkg pkg repo pre_commit="" check_assets="":
     #!/usr/bin/env bash
     set -euo pipefail
     pkg="{{pkg}}"
@@ -46,6 +46,13 @@ _update-pkg pkg repo pre_commit="":
     if [[ "$current" == "$latest" ]]; then
         echo "$pkg: already at $current"
         exit 0
+    fi
+    if [[ -n "{{check_assets}}" ]]; then
+        asset_count=$(gh release view "v$latest" --repo "$repo" --json assets -q '.assets | length')
+        if [[ "$asset_count" == "0" ]]; then
+            echo "$pkg: release v$latest has no assets, skipping"
+            exit 0
+        fi
     fi
     nix-update --flake --version "$latest" packages.x86_64-linux."$pkg"
     if git diff --quiet -- packages/"$pkg"*; then
