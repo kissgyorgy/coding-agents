@@ -36,16 +36,17 @@ _update-pkg pkg repo pre_commit="" check_assets="":
     set -euo pipefail
     pkg="{{pkg}}"
     repo="{{repo}}"
-    latest=$(gh release list --repo "$repo" --exclude-pre-releases --limit 1 --json tagName -q '.[0].tagName' | sed 's/^v//')
+    tag=$(gh release list --repo "$repo" --exclude-pre-releases --limit 1 --json tagName -q '.[0].tagName')
+    latest=${tag#v}
     current=$(nix eval --raw .#"$pkg".version)
     if [[ "$current" == "$latest" ]]; then
         echo "$pkg: already at $current"
         exit 0
     fi
     if [[ -n "{{check_assets}}" ]]; then
-        asset_count=$(gh release view "v$latest" --repo "$repo" --json assets -q '.assets | length')
+        asset_count=$(gh release view "$tag" --repo "$repo" --json assets -q '.assets | length')
         if [[ "$asset_count" == "0" ]]; then
-            echo "$pkg: release v$latest has no assets, skipping"
+            echo "$pkg: release $tag has no assets, skipping"
             exit 0
         fi
     fi
