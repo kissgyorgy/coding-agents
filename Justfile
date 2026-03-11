@@ -7,18 +7,13 @@ build *args:
     for pkg in ${args:-$all}; do attrs+=" .#$pkg"; done
     nix build $attrs
 
-# Update all packages in parallel
+# Update all packages sequentially
 update:
-    #!/usr/bin/env bash
-    set -euo pipefail
-    pids=()
-    for task in update-claude-code update-codex update-gemini-cli update-crush update-pi-coding-agent; do
-        just $task &
-        pids+=($!)
-    done
-    failed=0
-    for pid in "${pids[@]}"; do wait $pid || ((failed++)); done
-    exit $failed
+    just update-claude-code
+    just update-codex
+    just update-gemini-cli
+    just update-crush
+    just update-pi-coding-agent
 
 update-claude-code: (_update-pkg "claude-code" "anthropics/claude-code")
 update-codex: (_update-pkg "codex" "openai/codex" "" "true")

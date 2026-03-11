@@ -34,7 +34,7 @@ that list (e.g. `playwright-cli`, `vibe-kanban`), use `nix build .#<name>`.
 just update
 ```
 
-This fetches the latest GitHub release for each package in parallel, runs
+This fetches the latest GitHub release for each package sequentially, runs
 `nix-update` to patch the version and hash in the corresponding `.nix` file,
 and commits each change.
 
