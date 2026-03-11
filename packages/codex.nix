@@ -2,11 +2,11 @@
 
 stdenv.mkDerivation rec {
   pname = "codex";
-  version = "rust-v0.112.0";
+  version = "rust-v0.114.0";
 
   src = fetchurl {
     url = "https://github.com/openai/codex/releases/download/${version}/codex-x86_64-unknown-linux-gnu.tar.gz";
-    hash = "sha256-kBa5ivxOHRA4El5bUDaw16fGC2vPE+2AqjYzXEDXm24=";
+    hash = "sha256-8YKU1NpnVunlrU3GKzAwt6dalOXlAi87+kohp9PFKuA=";
   };
 
   nativeBuildInputs = [ autoPatchelfHook ];
