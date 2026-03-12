@@ -9269,7 +9269,7 @@ export const MODELS = {
 				cacheWrite: 0,
 			},
 			contextWindow: 262144,
-			maxTokens: 65536,
+			maxTokens: 32000,
 		} satisfies Model<"openai-completions">,
 		"openrouter/hunter-alpha": {
 			id: "openrouter/hunter-alpha",
@@ -9286,7 +9286,7 @@ export const MODELS = {
 				cacheWrite: 0,
 			},
 			contextWindow: 1048576,
-			maxTokens: 65536,
+			maxTokens: 32000,
 		} satisfies Model<"openai-completions">,
 		"prime-intellect/intellect-3": {
 			id: "prime-intellect/intellect-3",
