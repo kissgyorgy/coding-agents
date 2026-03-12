@@ -1,7 +1,7 @@
 { lib, buildNpmPackage, fetchFromGitHub, nodejs_22, makeBinaryWrapper, autoPatchelfHook, stdenv }:
 
 let
-  modelsDate = "20260311";
+  modelsDate = "20260312";
 in
 
 buildNpmPackage rec {
