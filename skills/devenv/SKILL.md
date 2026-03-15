@@ -14,7 +14,6 @@ For setting up specific programming languages, services, package managers, see:
 - **[services.md](services.md)** - Complete services configuration guide
 - **[django.md](django.md)** - Django project setup and patterns
 
-
 ## Initialize a New Environment
 
 ```bash
@@ -22,6 +21,7 @@ devenv init
 ```
 
 This creates:
+
 - `devenv.yaml` - Input configuration
 - `devenv.nix` - Environment definition (where you configure everything)
 - `.envrc` - direnv integration
@@ -29,6 +29,13 @@ This creates:
 
 Remove comments from .gitignore after init.
 
+**IMPORTANT:** devenv 2.0's `direnv-export` does not run tasks (like `devenv:python:uv`
+for venv activation). After `devenv init`, replace the generated `.envrc` with the
+fixed version from this skill:
+
+```bash
+cp /home/walkman/.pi/agent/skills/devenv/envrc .envrc
+```
 
 Edit `devenv.yaml` and replace the inputs section:
 
@@ -59,8 +66,8 @@ Search for packages:
 ```bash
 devenv search <package-name>
 ```
-Only works after `devenv init`
 
+Only works after `devenv init`
 
 ## Update Lock File
 

@@ -1,0 +1,18 @@
+#!/usr/bin/env bash
+
+export DIRENV_WARN_TIMEOUT=20s
+
+eval "$(devenv direnvrc)"
+
+use devenv
+
+# Run devenv tasks (direnv-export skips them)
+export DEVENV_TASK_OUTPUT=$(devenv tasks run devenv:enterShell --mode before --no-tui --quiet 2>/dev/null)
+eval "$(python3 -c '
+import json, os
+data = json.loads(os.environ["DEVENV_TASK_OUTPUT"])
+for task in data.values():
+    for k, v in task.get("devenv", {}).get("env", {}).items():
+        print(f"export {k}={v!r}")
+')"
+unset DEVENV_TASK_OUTPUT
