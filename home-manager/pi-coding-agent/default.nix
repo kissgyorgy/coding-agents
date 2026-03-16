@@ -25,6 +25,6 @@ in
       if cfg.promptsDir != null then symlink cfg.promptsDir else ./prompts;
     home.file.".pi/agent/skills".source =
       if skillsDir != null then symlink skillsDir else ../../skills;
-    home.packages = [ pkgs.pi-coding-agent ];
+    home.packages = with pkgs;[ pi-coding-agent wl-clipboard ];
   };
 }
