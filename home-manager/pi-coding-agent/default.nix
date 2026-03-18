@@ -2,6 +2,7 @@
 let
   cfg = config.coding-agents.pi-coding-agent;
   skillsDir = config.coding-agents.skillsDir;
+  agentsMdPath = config.coding-agents.agentsMdPath;
   symlink = config.lib.file.mkOutOfStoreSymlink;
 in
 {
@@ -19,6 +20,8 @@ in
     };
   };
   config = lib.mkIf cfg.enable {
+    home.file.".pi/agent/AGENTS.md".source =
+      if agentsMdPath != null then symlink agentsMdPath else ../global-agents.md;
     home.file.".pi/agent/extensions".source =
       if cfg.extensionsDir != null then symlink cfg.extensionsDir else ./extensions;
     home.file.".pi/agent/prompts".source =

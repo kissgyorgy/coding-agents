@@ -28,20 +28,6 @@ nix eval --raw .#claude-code.version
 Note: `just build` defaults to a subset of packages. To build packages not in
 that list (e.g. `playwright-cli`, `vibe-kanban`), use `nix build .#<name>`.
 
-### Update all packages to latest releases
-
-```bash
-just update
-```
-
-This fetches the latest GitHub release for each package sequentially, runs
-`nix-update` to patch the version and hash in the corresponding `.nix` file,
-and commits each change.
-
-```bash
-# Update pi-coding-agent model definitions separately
-just update-pi-models
-```
 
 ## Architecture
 

@@ -2,6 +2,7 @@
 let
   cfg = config.coding-agents.crush;
   skillsDir = config.coding-agents.skillsDir;
+  agentsMdPath = config.coding-agents.agentsMdPath;
   symlink = config.lib.file.mkOutOfStoreSymlink;
   settings = import ./settings.nix;
   settingsJSON = pkgs.writeText "crush.json" (builtins.toJSON settings);
@@ -15,6 +16,8 @@ in
     home.file = {
       ".config/crush/skills".source =
         if skillsDir != null then symlink skillsDir else ../../skills;
+      ".config/crush/AGENTS.md".source =
+        if agentsMdPath != null then symlink agentsMdPath else ../global-agents.md;
       ".config/crush/crush.json".source = settingsJSON;
     };
 
