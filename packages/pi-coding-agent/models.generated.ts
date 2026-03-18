@@ -257,7 +257,7 @@ export const MODELS = {
 				cacheRead: 0.5,
 				cacheWrite: 6.25,
 			},
-			contextWindow: 1000000,
+			contextWindow: 200000,
 			maxTokens: 128000,
 		} satisfies Model<"bedrock-converse-stream">,
 		"anthropic.claude-sonnet-4-20250514-v1:0": {
@@ -308,7 +308,7 @@ export const MODELS = {
 				cacheRead: 0.3,
 				cacheWrite: 3.75,
 			},
-			contextWindow: 1000000,
+			contextWindow: 200000,
 			maxTokens: 64000,
 		} satisfies Model<"bedrock-converse-stream">,
 		"deepseek.r1-v1:0": {
@@ -410,7 +410,7 @@ export const MODELS = {
 				cacheRead: 0.5,
 				cacheWrite: 6.25,
 			},
-			contextWindow: 1000000,
+			contextWindow: 200000,
 			maxTokens: 128000,
 		} satisfies Model<"bedrock-converse-stream">,
 		"eu.anthropic.claude-sonnet-4-20250514-v1:0": {
@@ -461,7 +461,7 @@ export const MODELS = {
 				cacheRead: 0.3,
 				cacheWrite: 3.75,
 			},
-			contextWindow: 1000000,
+			contextWindow: 200000,
 			maxTokens: 64000,
 		} satisfies Model<"bedrock-converse-stream">,
 		"global.anthropic.claude-haiku-4-5-20251001-v1:0": {
@@ -512,7 +512,7 @@ export const MODELS = {
 				cacheRead: 0.5,
 				cacheWrite: 6.25,
 			},
-			contextWindow: 1000000,
+			contextWindow: 200000,
 			maxTokens: 128000,
 		} satisfies Model<"bedrock-converse-stream">,
 		"global.anthropic.claude-sonnet-4-20250514-v1:0": {
@@ -563,7 +563,7 @@ export const MODELS = {
 				cacheRead: 0.3,
 				cacheWrite: 3.75,
 			},
-			contextWindow: 1000000,
+			contextWindow: 200000,
 			maxTokens: 64000,
 		} satisfies Model<"bedrock-converse-stream">,
 		"google.gemma-3-27b-it": {
@@ -1294,7 +1294,7 @@ export const MODELS = {
 				cacheRead: 0.5,
 				cacheWrite: 6.25,
 			},
-			contextWindow: 1000000,
+			contextWindow: 200000,
 			maxTokens: 128000,
 		} satisfies Model<"bedrock-converse-stream">,
 		"us.anthropic.claude-sonnet-4-20250514-v1:0": {
@@ -1345,7 +1345,7 @@ export const MODELS = {
 				cacheRead: 0.3,
 				cacheWrite: 3.75,
 			},
-			contextWindow: 1000000,
+			contextWindow: 200000,
 			maxTokens: 64000,
 		} satisfies Model<"bedrock-converse-stream">,
 		"writer.palmyra-x4-v1:0": {
@@ -2302,6 +2302,40 @@ export const MODELS = {
 				cacheWrite: 0,
 			},
 			contextWindow: 272000,
+			maxTokens: 128000,
+		} satisfies Model<"azure-openai-responses">,
+		"gpt-5.4-mini": {
+			id: "gpt-5.4-mini",
+			name: "GPT-5.4 mini",
+			api: "azure-openai-responses",
+			provider: "azure-openai-responses",
+			baseUrl: "",
+			reasoning: true,
+			input: ["text", "image"],
+			cost: {
+				input: 0.75,
+				output: 4.5,
+				cacheRead: 0.075,
+				cacheWrite: 0,
+			},
+			contextWindow: 400000,
+			maxTokens: 128000,
+		} satisfies Model<"azure-openai-responses">,
+		"gpt-5.4-nano": {
+			id: "gpt-5.4-nano",
+			name: "GPT-5.4 nano",
+			api: "azure-openai-responses",
+			provider: "azure-openai-responses",
+			baseUrl: "",
+			reasoning: true,
+			input: ["text", "image"],
+			cost: {
+				input: 0.2,
+				output: 1.25,
+				cacheRead: 0.02,
+				cacheWrite: 0,
+			},
+			contextWindow: 400000,
 			maxTokens: 128000,
 		} satisfies Model<"azure-openai-responses">,
 		"gpt-5.4-pro": {
@@ -5506,6 +5540,40 @@ export const MODELS = {
 			contextWindow: 272000,
 			maxTokens: 128000,
 		} satisfies Model<"openai-responses">,
+		"gpt-5.4-mini": {
+			id: "gpt-5.4-mini",
+			name: "GPT-5.4 mini",
+			api: "openai-responses",
+			provider: "openai",
+			baseUrl: "https://api.openai.com/v1",
+			reasoning: true,
+			input: ["text", "image"],
+			cost: {
+				input: 0.75,
+				output: 4.5,
+				cacheRead: 0.075,
+				cacheWrite: 0,
+			},
+			contextWindow: 400000,
+			maxTokens: 128000,
+		} satisfies Model<"openai-responses">,
+		"gpt-5.4-nano": {
+			id: "gpt-5.4-nano",
+			name: "GPT-5.4 nano",
+			api: "openai-responses",
+			provider: "openai",
+			baseUrl: "https://api.openai.com/v1",
+			reasoning: true,
+			input: ["text", "image"],
+			cost: {
+				input: 0.2,
+				output: 1.25,
+				cacheRead: 0.02,
+				cacheWrite: 0,
+			},
+			contextWindow: 400000,
+			maxTokens: 128000,
+		} satisfies Model<"openai-responses">,
 		"gpt-5.4-pro": {
 			id: "gpt-5.4-pro",
 			name: "GPT-5.4 Pro",
@@ -7036,13 +7104,13 @@ export const MODELS = {
 			reasoning: true,
 			input: ["text"],
 			cost: {
-				input: 0.26,
-				output: 0.38,
-				cacheRead: 0.13,
+				input: 0.255,
+				output: 0.39999999999999997,
+				cacheRead: 0,
 				cacheWrite: 0,
 			},
 			contextWindow: 163840,
-			maxTokens: 4096,
+			maxTokens: 163840,
 		} satisfies Model<"openai-completions">,
 		"deepseek/deepseek-v3.2-exp": {
 			id: "deepseek/deepseek-v3.2-exp",
@@ -7633,7 +7701,7 @@ export const MODELS = {
 			cost: {
 				input: 0.3,
 				output: 0.8999999999999999,
-				cacheRead: 0,
+				cacheRead: 0.03,
 				cacheWrite: 0,
 			},
 			contextWindow: 256000,
@@ -7650,7 +7718,7 @@ export const MODELS = {
 			cost: {
 				input: 0.39999999999999997,
 				output: 2,
-				cacheRead: 0,
+				cacheRead: 0.04,
 				cacheWrite: 0,
 			},
 			contextWindow: 262144,
@@ -7667,7 +7735,7 @@ export const MODELS = {
 			cost: {
 				input: 0.39999999999999997,
 				output: 2,
-				cacheRead: 0,
+				cacheRead: 0.04,
 				cacheWrite: 0,
 			},
 			contextWindow: 131072,
@@ -7684,7 +7752,7 @@ export const MODELS = {
 			cost: {
 				input: 0.09999999999999999,
 				output: 0.3,
-				cacheRead: 0,
+				cacheRead: 0.01,
 				cacheWrite: 0,
 			},
 			contextWindow: 131072,
@@ -7701,7 +7769,7 @@ export const MODELS = {
 			cost: {
 				input: 0.19999999999999998,
 				output: 0.19999999999999998,
-				cacheRead: 0,
+				cacheRead: 0.02,
 				cacheWrite: 0,
 			},
 			contextWindow: 262144,
@@ -7718,7 +7786,7 @@ export const MODELS = {
 			cost: {
 				input: 0.09999999999999999,
 				output: 0.09999999999999999,
-				cacheRead: 0,
+				cacheRead: 0.01,
 				cacheWrite: 0,
 			},
 			contextWindow: 131072,
@@ -7735,7 +7803,7 @@ export const MODELS = {
 			cost: {
 				input: 0.15,
 				output: 0.15,
-				cacheRead: 0,
+				cacheRead: 0.015,
 				cacheWrite: 0,
 			},
 			contextWindow: 262144,
@@ -7752,7 +7820,7 @@ export const MODELS = {
 			cost: {
 				input: 2,
 				output: 6,
-				cacheRead: 0,
+				cacheRead: 0.19999999999999998,
 				cacheWrite: 0,
 			},
 			contextWindow: 128000,
@@ -7769,7 +7837,7 @@ export const MODELS = {
 			cost: {
 				input: 2,
 				output: 6,
-				cacheRead: 0,
+				cacheRead: 0.19999999999999998,
 				cacheWrite: 0,
 			},
 			contextWindow: 131072,
@@ -7786,7 +7854,7 @@ export const MODELS = {
 			cost: {
 				input: 2,
 				output: 6,
-				cacheRead: 0,
+				cacheRead: 0.19999999999999998,
 				cacheWrite: 0,
 			},
 			contextWindow: 131072,
@@ -7803,7 +7871,7 @@ export const MODELS = {
 			cost: {
 				input: 0.5,
 				output: 1.5,
-				cacheRead: 0,
+				cacheRead: 0.049999999999999996,
 				cacheWrite: 0,
 			},
 			contextWindow: 262144,
@@ -7820,7 +7888,7 @@ export const MODELS = {
 			cost: {
 				input: 0.39999999999999997,
 				output: 2,
-				cacheRead: 0,
+				cacheRead: 0.04,
 				cacheWrite: 0,
 			},
 			contextWindow: 131072,
@@ -7837,7 +7905,7 @@ export const MODELS = {
 			cost: {
 				input: 0.39999999999999997,
 				output: 2,
-				cacheRead: 0,
+				cacheRead: 0.04,
 				cacheWrite: 0,
 			},
 			contextWindow: 131072,
@@ -7871,7 +7939,7 @@ export const MODELS = {
 			cost: {
 				input: 0.19999999999999998,
 				output: 0.6,
-				cacheRead: 0,
+				cacheRead: 0.02,
 				cacheWrite: 0,
 			},
 			contextWindow: 32768,
@@ -7905,7 +7973,7 @@ export const MODELS = {
 			cost: {
 				input: 0.15,
 				output: 0.6,
-				cacheRead: 0,
+				cacheRead: 0.015,
 				cacheWrite: 0,
 			},
 			contextWindow: 262144,
@@ -7956,7 +8024,7 @@ export const MODELS = {
 			cost: {
 				input: 0.09999999999999999,
 				output: 0.3,
-				cacheRead: 0,
+				cacheRead: 0.01,
 				cacheWrite: 0,
 			},
 			contextWindow: 32768,
@@ -7973,7 +8041,7 @@ export const MODELS = {
 			cost: {
 				input: 2,
 				output: 6,
-				cacheRead: 0,
+				cacheRead: 0.19999999999999998,
 				cacheWrite: 0,
 			},
 			contextWindow: 65536,
@@ -8007,7 +8075,7 @@ export const MODELS = {
 			cost: {
 				input: 2,
 				output: 6,
-				cacheRead: 0,
+				cacheRead: 0.19999999999999998,
 				cacheWrite: 0,
 			},
 			contextWindow: 131072,
@@ -8024,7 +8092,7 @@ export const MODELS = {
 			cost: {
 				input: 0.09999999999999999,
 				output: 0.3,
-				cacheRead: 0,
+				cacheRead: 0.01,
 				cacheWrite: 0,
 			},
 			contextWindow: 32000,
@@ -10509,7 +10577,7 @@ export const MODELS = {
 				cacheRead: 0.119,
 				cacheWrite: 0,
 			},
-			contextWindow: 202752,
+			contextWindow: 80000,
 			maxTokens: 131072,
 		} satisfies Model<"openai-completions">,
 		"z-ai/glm-5-turbo": {
