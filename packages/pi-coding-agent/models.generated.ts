@@ -7242,12 +7242,12 @@ export const MODELS = {
 			input: ["text"],
 			cost: {
 				input: 0.21,
-				output: 0.7899999999999999,
-				cacheRead: 0.1300000002,
+				output: 0.78,
+				cacheRead: 0.105,
 				cacheWrite: 0,
 			},
 			contextWindow: 163840,
-			maxTokens: 4096,
+			maxTokens: 65536,
 		} satisfies Model<"openai-completions">,
 		"deepseek/deepseek-v3.2": {
 			id: "deepseek/deepseek-v3.2",
@@ -10692,13 +10692,13 @@ export const MODELS = {
 			reasoning: true,
 			input: ["text"],
 			cost: {
-				input: 0.39999999999999997,
+				input: 0.39,
 				output: 1.75,
-				cacheRead: 0.08,
+				cacheRead: 0.195,
 				cacheWrite: 0,
 			},
 			contextWindow: 202752,
-			maxTokens: 4096,
+			maxTokens: 65535,
 		} satisfies Model<"openai-completions">,
 		"z-ai/glm-4.7-flash": {
 			id: "z-ai/glm-4.7-flash",
