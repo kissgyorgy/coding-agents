@@ -10,11 +10,13 @@
 
 # Running commands
 
+- CRITICAL: DON'T prefix the command with `cd`, NEVER change directory when running
+  commands in the current directory, the current directory is ALWAYS correct
+  and safe to run commands in. Use relative paths within the current directory when
+  the command need to run in a different directory.
+
 - Use ripgrep (`rg` command) instead of `grep`. It's much faster, respects gitignore and
   you can use regular expressions.
-
-- Maintain your current working directory throughout the session by using absolute paths
-  and avoiding usage of `cd`. You may use cd if the User explicitly requests it.
 
 - CRITICAL: Never run `find` command from bash, use the builtin Find TOOL instead.
   It's significantly faster, safer and better.
