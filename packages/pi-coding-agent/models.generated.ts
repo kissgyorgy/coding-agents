@@ -5951,6 +5951,23 @@ export const MODELS = {
 			contextWindow: 272000,
 			maxTokens: 128000,
 		} satisfies Model<"openai-codex-responses">,
+		"gpt-5.4-mini": {
+			id: "gpt-5.4-mini",
+			name: "GPT-5.4 Mini",
+			api: "openai-codex-responses",
+			provider: "openai-codex",
+			baseUrl: "https://chatgpt.com/backend-api",
+			reasoning: true,
+			input: ["text", "image"],
+			cost: {
+				input: 0.75,
+				output: 4.5,
+				cacheRead: 0.075,
+				cacheWrite: 0,
+			},
+			contextWindow: 272000,
+			maxTokens: 128000,
+		} satisfies Model<"openai-codex-responses">,
 	},
 	"opencode": {
 		"big-pickle": {
@@ -13047,6 +13064,23 @@ export const MODELS = {
 			},
 			contextWindow: 262144,
 			maxTokens: 32000,
+		} satisfies Model<"anthropic-messages">,
+		"xiaomi/mimo-v2-pro": {
+			id: "xiaomi/mimo-v2-pro",
+			name: "MiMo V2 Pro",
+			api: "anthropic-messages",
+			provider: "vercel-ai-gateway",
+			baseUrl: "https://ai-gateway.vercel.sh",
+			reasoning: true,
+			input: ["text"],
+			cost: {
+				input: 1,
+				output: 3,
+				cacheRead: 0.19999999999999998,
+				cacheWrite: 0,
+			},
+			contextWindow: 1000000,
+			maxTokens: 128000,
 		} satisfies Model<"anthropic-messages">,
 		"zai/glm-4.5": {
 			id: "zai/glm-4.5",
