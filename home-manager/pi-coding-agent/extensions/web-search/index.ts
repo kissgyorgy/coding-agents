@@ -28,7 +28,7 @@ import {
 import {
   Container,
   fuzzyFilter,
-  getEditorKeybindings,
+  getKeybindings,
   Input,
   Spacer,
   Text,
@@ -332,9 +332,9 @@ export default function (pi: ExtensionAPI) {
             render: (w: number) => container.render(w),
             invalidate: () => container.invalidate(),
             handleInput: (data: string) => {
-              const kb = getEditorKeybindings();
+              const kb = getKeybindings();
 
-              if (kb.matches(data, "selectUp")) {
+              if (kb.matches(data, "tui.select.up")) {
                 if (filteredModels.length === 0) return;
                 selectedIndex =
                   selectedIndex === 0
@@ -342,7 +342,7 @@ export default function (pi: ExtensionAPI) {
                     : selectedIndex - 1;
                 updateList();
                 tui.requestRender();
-              } else if (kb.matches(data, "selectDown")) {
+              } else if (kb.matches(data, "tui.select.down")) {
                 if (filteredModels.length === 0) return;
                 selectedIndex =
                   selectedIndex === filteredModels.length - 1
@@ -350,10 +350,10 @@ export default function (pi: ExtensionAPI) {
                     : selectedIndex + 1;
                 updateList();
                 tui.requestRender();
-              } else if (kb.matches(data, "selectConfirm")) {
+              } else if (kb.matches(data, "tui.select.confirm")) {
                 const selected = filteredModels[selectedIndex];
                 if (selected) done(selected);
-              } else if (kb.matches(data, "selectCancel")) {
+              } else if (kb.matches(data, "tui.select.cancel")) {
                 done(null);
               } else {
                 searchInput.handleInput(data);
