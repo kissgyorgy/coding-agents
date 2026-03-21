@@ -13628,9 +13628,9 @@ export const MODELS = {
 			contextWindow: 2000000,
 			maxTokens: 30000,
 		} satisfies Model<"openai-completions">,
-		"grok-4.20-beta-latest-non-reasoning": {
-			id: "grok-4.20-beta-latest-non-reasoning",
-			name: "Grok 4.20 Beta (Non-Reasoning)",
+		"grok-4.20-0309-non-reasoning": {
+			id: "grok-4.20-0309-non-reasoning",
+			name: "Grok 4.20 (Non-Reasoning)",
 			api: "openai-completions",
 			provider: "xai",
 			baseUrl: "https://api.x.ai/v1",
@@ -13645,9 +13645,9 @@ export const MODELS = {
 			contextWindow: 2000000,
 			maxTokens: 30000,
 		} satisfies Model<"openai-completions">,
-		"grok-4.20-beta-latest-reasoning": {
-			id: "grok-4.20-beta-latest-reasoning",
-			name: "Grok 4.20 Beta (Reasoning)",
+		"grok-4.20-0309-reasoning": {
+			id: "grok-4.20-0309-reasoning",
+			name: "Grok 4.20 (Reasoning)",
 			api: "openai-completions",
 			provider: "xai",
 			baseUrl: "https://api.x.ai/v1",
