@@ -2578,7 +2578,7 @@ export const MODELS = {
 				cacheRead: 0,
 				cacheWrite: 0,
 			},
-			contextWindow: 128000,
+			contextWindow: 144000,
 			maxTokens: 32000,
 		} satisfies Model<"anthropic-messages">,
 		"claude-opus-4.5": {
@@ -2596,7 +2596,7 @@ export const MODELS = {
 				cacheRead: 0,
 				cacheWrite: 0,
 			},
-			contextWindow: 128000,
+			contextWindow: 160000,
 			maxTokens: 32000,
 		} satisfies Model<"anthropic-messages">,
 		"claude-opus-4.6": {
@@ -2632,7 +2632,7 @@ export const MODELS = {
 				cacheRead: 0,
 				cacheWrite: 0,
 			},
-			contextWindow: 128000,
+			contextWindow: 216000,
 			maxTokens: 16000,
 		} satisfies Model<"anthropic-messages">,
 		"claude-sonnet-4.5": {
@@ -2650,7 +2650,7 @@ export const MODELS = {
 				cacheRead: 0,
 				cacheWrite: 0,
 			},
-			contextWindow: 128000,
+			contextWindow: 144000,
 			maxTokens: 32000,
 		} satisfies Model<"anthropic-messages">,
 		"claude-sonnet-4.6": {
@@ -2763,7 +2763,7 @@ export const MODELS = {
 				cacheRead: 0,
 				cacheWrite: 0,
 			},
-			contextWindow: 64000,
+			contextWindow: 128000,
 			maxTokens: 16384,
 		} satisfies Model<"openai-completions">,
 		"gpt-4o": {
@@ -2782,8 +2782,8 @@ export const MODELS = {
 				cacheRead: 0,
 				cacheWrite: 0,
 			},
-			contextWindow: 64000,
-			maxTokens: 16384,
+			contextWindow: 128000,
+			maxTokens: 4096,
 		} satisfies Model<"openai-completions">,
 		"gpt-5": {
 			id: "gpt-5",
@@ -2818,7 +2818,7 @@ export const MODELS = {
 				cacheRead: 0,
 				cacheWrite: 0,
 			},
-			contextWindow: 128000,
+			contextWindow: 264000,
 			maxTokens: 64000,
 		} satisfies Model<"openai-responses">,
 		"gpt-5.1": {
@@ -2836,7 +2836,7 @@ export const MODELS = {
 				cacheRead: 0,
 				cacheWrite: 0,
 			},
-			contextWindow: 128000,
+			contextWindow: 264000,
 			maxTokens: 64000,
 		} satisfies Model<"openai-responses">,
 		"gpt-5.1-codex": {
@@ -2854,7 +2854,7 @@ export const MODELS = {
 				cacheRead: 0,
 				cacheWrite: 0,
 			},
-			contextWindow: 128000,
+			contextWindow: 400000,
 			maxTokens: 128000,
 		} satisfies Model<"openai-responses">,
 		"gpt-5.1-codex-max": {
@@ -2872,7 +2872,7 @@ export const MODELS = {
 				cacheRead: 0,
 				cacheWrite: 0,
 			},
-			contextWindow: 128000,
+			contextWindow: 400000,
 			maxTokens: 128000,
 		} satisfies Model<"openai-responses">,
 		"gpt-5.1-codex-mini": {
@@ -2890,7 +2890,7 @@ export const MODELS = {
 				cacheRead: 0,
 				cacheWrite: 0,
 			},
-			contextWindow: 128000,
+			contextWindow: 400000,
 			maxTokens: 128000,
 		} satisfies Model<"openai-responses">,
 		"gpt-5.2": {
@@ -7837,12 +7837,12 @@ export const MODELS = {
 			input: ["text"],
 			cost: {
 				input: 0.19999999999999998,
-				output: 1.2,
-				cacheRead: 0,
+				output: 1.17,
+				cacheRead: 0.09999999999999999,
 				cacheWrite: 0,
 			},
 			contextWindow: 196608,
-			maxTokens: 196608,
+			maxTokens: 65536,
 		} satisfies Model<"openai-completions">,
 		"minimax/minimax-m2.5:free": {
 			id: "minimax/minimax-m2.5:free",
