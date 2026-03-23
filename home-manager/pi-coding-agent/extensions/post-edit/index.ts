@@ -1,5 +1,5 @@
 import type { ExtensionAPI } from "@mariozechner/pi-coding-agent";
-import { createWriteTool } from "@mariozechner/pi-coding-agent";
+import { createWriteToolDefinition } from "@mariozechner/pi-coding-agent";
 import type { ExecFileException } from "node:child_process";
 import { readFileSync, writeFileSync } from "node:fs";
 import { formatContent } from "./format-file";
@@ -54,7 +54,7 @@ export default function (pi: ExtensionAPI) {
 
   // Override the built-in write tool to format content before writing.
   // Fixes the file on disk — message_end can't do this due to the race.
-  const builtinWrite = createWriteTool(process.cwd());
+  const builtinWrite = createWriteToolDefinition(process.cwd());
 
   pi.registerTool({
     ...builtinWrite,
@@ -69,7 +69,7 @@ export default function (pi: ExtensionAPI) {
         );
       }
 
-      return builtinWrite.execute(toolCallId, params, signal, onUpdate);
+      return builtinWrite.execute(toolCallId, params, signal, onUpdate, ctx);
     },
   });
 
