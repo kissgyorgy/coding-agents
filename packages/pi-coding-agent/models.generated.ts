@@ -8329,13 +8329,13 @@ export const MODELS = {
 			reasoning: false,
 			input: ["text"],
 			cost: {
-				input: 0.55,
-				output: 2.2,
+				input: 0.5700000000000001,
+				output: 2.3,
 				cacheRead: 0,
 				cacheWrite: 0,
 			},
-			contextWindow: 131000,
-			maxTokens: 4096,
+			contextWindow: 131072,
+			maxTokens: 131072,
 		} satisfies Model<"openai-completions">,
 		"moonshotai/kimi-k2-0905": {
 			id: "moonshotai/kimi-k2-0905",
@@ -10816,8 +10816,8 @@ export const MODELS = {
 				cacheRead: 0.119,
 				cacheWrite: 0,
 			},
-			contextWindow: 80000,
-			maxTokens: 131072,
+			contextWindow: 202752,
+			maxTokens: 4096,
 		} satisfies Model<"openai-completions">,
 		"z-ai/glm-5-turbo": {
 			id: "z-ai/glm-5-turbo",
