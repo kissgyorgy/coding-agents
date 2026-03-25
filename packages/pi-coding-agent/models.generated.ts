@@ -10292,6 +10292,23 @@ export const MODELS = {
 			contextWindow: 131072,
 			maxTokens: 131072,
 		} satisfies Model<"openai-completions">,
+		"reka/reka-edge": {
+			id: "reka/reka-edge",
+			name: "Reka Edge",
+			api: "openai-completions",
+			provider: "openrouter",
+			baseUrl: "https://openrouter.ai/api/v1",
+			reasoning: false,
+			input: ["text", "image"],
+			cost: {
+				input: 0.19999999999999998,
+				output: 0.19999999999999998,
+				cacheRead: 0,
+				cacheWrite: 0,
+			},
+			contextWindow: 16384,
+			maxTokens: 16384,
+		} satisfies Model<"openai-completions">,
 		"relace/relace-search": {
 			id: "relace/relace-search",
 			name: "Relace: Relace Search",
