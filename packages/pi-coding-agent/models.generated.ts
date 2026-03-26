@@ -10374,8 +10374,8 @@ export const MODELS = {
 				cacheRead: 0.02,
 				cacheWrite: 0,
 			},
-			contextWindow: 256000,
-			maxTokens: 256000,
+			contextWindow: 262144,
+			maxTokens: 4096,
 		} satisfies Model<"openai-completions">,
 		"stepfun/step-3.5-flash:free": {
 			id: "stepfun/step-3.5-flash:free",
