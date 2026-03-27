@@ -7,7 +7,7 @@ import {
 } from "@mariozechner/pi-coding-agent";
 import { Text } from "@mariozechner/pi-tui";
 import { Type } from "@sinclair/typebox";
-import { Readability, isProbablyReaderable } from "@mozilla/readability";
+import { Readability } from "@mozilla/readability";
 import { JSDOM } from "jsdom";
 import TurndownService from "turndown";
 
@@ -36,21 +36,7 @@ async function fetchPage(
   return { html, finalUrl: response.url };
 }
 
-function extractContent(
-  html: string,
-  url: string,
-): { title: string; markdown: string; excerpt: string } | null {
-  const dom = new JSDOM(html, { url });
-  const document = dom.window.document;
-
-  if (!isProbablyReaderable(document)) {
-    return null;
-  }
-
-  const reader = new Readability(document);
-  const article = reader.parse();
-  if (!article) return null;
-
+function createTurndown(): TurndownService {
   const turndown = new TurndownService({
     headingStyle: "atx",
     codeBlockStyle: "fenced",
@@ -64,12 +50,7 @@ function extractContent(
   turndown.remove("canvas");
   turndown.remove("style");
   turndown.remove("script");
-  turndown.remove("noscript");
-  turndown.remove("nav");
-  turndown.remove("footer");
-  turndown.remove("header");
 
-  // Drop image-only links (e.g. vote arrows on HN)
   turndown.addRule("emptyLinks", {
     filter: (node) => {
       if (node.nodeName !== "A") return false;
@@ -79,17 +60,71 @@ function extractContent(
     replacement: () => "",
   });
 
-  let markdown = turndown.turndown(article.content);
-  // Drop spacer/tracking pixel images (tiny files, data URIs, empty alts with trivial srcs)
-  markdown = markdown.replace(/!\[\]\([^)]*?\.gif\)/g, "");
-  markdown = markdown.replace(/!\[\]\(data:[^)]*\)/g, "");
-  markdown = markdown.replace(/\n{3,}/g, "\n\n");
+  return turndown;
+}
 
-  return {
-    title: article.title,
-    markdown,
-    excerpt: article.excerpt,
-  };
+function cleanMarkdown(raw: string): string {
+  let md = raw;
+  md = md.replace(/!\[\]\([^)]*?\.gif\)/g, "");
+  md = md.replace(/!\[\]\(data:[^)]*\)/g, "");
+  md = md.replace(/\n{3,}/g, "\n\n");
+  return md.trim();
+}
+
+function extractContent(
+  html: string,
+  url: string,
+): { title: string; markdown: string; excerpt: string } | null {
+  const dom = new JSDOM(html, { url });
+  const document = dom.window.document;
+
+  // Try Readability first (best for articles)
+  const reader = new Readability(document.cloneNode(true) as any);
+  const article = reader.parse();
+  if (article && article.textContent.trim().length > 50) {
+    const turndown = createTurndown();
+    turndown.remove("noscript");
+    turndown.remove("nav");
+    turndown.remove("footer");
+    turndown.remove("header");
+    const markdown = cleanMarkdown(turndown.turndown(article.content));
+    return {
+      title: article.title,
+      markdown,
+      excerpt: article.excerpt,
+    };
+  }
+
+  // Fallback: convert the whole <body> to markdown, stripping nav/header/footer
+  const body = document.body;
+  if (!body) return null;
+
+  for (const sel of [
+    "nav",
+    "footer",
+    "header",
+    "aside",
+    "[role=navigation]",
+    "[role=banner]",
+    "[role=contentinfo]",
+  ]) {
+    for (const el of Array.from(body.querySelectorAll(sel))) {
+      el.remove();
+    }
+  }
+
+  const turndown = createTurndown();
+  const markdown = cleanMarkdown(turndown.turndown(body.innerHTML));
+  if (markdown.length < 20) return null;
+
+  const title = document.querySelector("title")?.textContent?.trim() || "";
+  const metaDesc =
+    document
+      .querySelector('meta[name="description"]')
+      ?.getAttribute("content")
+      ?.trim() || "";
+
+  return { title, markdown, excerpt: metaDesc };
 }
 
 export default function (pi: ExtensionAPI) {
