@@ -1,0 +1,110 @@
+const BINARY_CONTENT_TYPES = [
+  "image/",
+  "video/",
+  "audio/",
+  "font/",
+  "application/octet-stream",
+  "application/zip",
+  "application/gzip",
+  "application/x-tar",
+  "application/x-7z-compressed",
+  "application/x-rar-compressed",
+  "application/x-bzip2",
+  "application/x-xz",
+  "application/java-archive",
+  "application/vnd.android.package-archive",
+  "application/x-executable",
+  "application/x-mach-binary",
+  "application/x-sharedlib",
+  "application/wasm",
+  "application/x-deb",
+  "application/x-rpm",
+  "application/x-iso9660-image",
+  "application/x-apple-diskimage",
+  "application/font-",
+  "application/vnd.ms-fontobject",
+];
+
+const BINARY_EXTENSIONS = new Set([
+  ".zip",
+  ".tar",
+  ".gz",
+  ".tgz",
+  ".bz2",
+  ".xz",
+  ".7z",
+  ".rar",
+  ".zst",
+  ".exe",
+  ".bin",
+  ".msi",
+  ".dll",
+  ".so",
+  ".dylib",
+  ".a",
+  ".o",
+  ".iso",
+  ".dmg",
+  ".img",
+  ".deb",
+  ".rpm",
+  ".snap",
+  ".flatpak",
+  ".appimage",
+  ".jpg",
+  ".jpeg",
+  ".png",
+  ".gif",
+  ".webp",
+  ".bmp",
+  ".ico",
+  ".tiff",
+  ".tif",
+  ".avif",
+  ".heic",
+  ".heif",
+  ".raw",
+  ".cr2",
+  ".nef",
+  ".psd",
+  ".mp3",
+  ".mp4",
+  ".avi",
+  ".mkv",
+  ".mov",
+  ".wmv",
+  ".flv",
+  ".webm",
+  ".wav",
+  ".flac",
+  ".ogg",
+  ".aac",
+  ".m4a",
+  ".wma",
+  ".woff",
+  ".woff2",
+  ".ttf",
+  ".otf",
+  ".eot",
+  ".pyc",
+  ".class",
+  ".wasm",
+  ".sqlite",
+  ".db",
+]);
+
+export function isBinaryContentType(contentType: string): boolean {
+  const ct = contentType.toLowerCase();
+  return BINARY_CONTENT_TYPES.some((prefix) => ct.includes(prefix));
+}
+
+export function isBinaryUrl(url: string): boolean {
+  try {
+    const pathname = new URL(url).pathname.toLowerCase();
+    const dot = pathname.lastIndexOf(".");
+    if (dot === -1) return false;
+    return BINARY_EXTENSIONS.has(pathname.slice(dot));
+  } catch {
+    return false;
+  }
+}

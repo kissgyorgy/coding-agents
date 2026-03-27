@@ -11,18 +11,27 @@ import { Readability } from "@mozilla/readability";
 import { JSDOM } from "jsdom";
 import TurndownService from "turndown";
 import { extractText, getDocumentProxy } from "unpdf";
+import { isBinaryContentType, isBinaryUrl } from "./binary.ts";
 
 const USER_AGENT =
   "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36";
 
 type FetchResult =
   | { type: "html"; html: string; finalUrl: string }
-  | { type: "pdf"; buffer: ArrayBuffer; finalUrl: string };
+  | { type: "pdf"; buffer: ArrayBuffer; finalUrl: string }
+  | { type: "raw"; text: string; finalUrl: string; contentType: string };
 
 async function fetchPage(
   url: string,
   signal?: AbortSignal,
 ): Promise<FetchResult> {
+  if (isBinaryUrl(url)) {
+    throw new Error(
+      `Refusing to download binary file (detected from URL extension). ` +
+        `Use curl to download this file directly.`,
+    );
+  }
+
   const response = await fetch(url, {
     headers: {
       "User-Agent": USER_AGENT,
@@ -41,13 +50,28 @@ async function fetchPage(
   const contentType = response.headers.get("content-type") || "";
   const finalUrl = response.url;
 
+  if (isBinaryContentType(contentType) || isBinaryUrl(finalUrl)) {
+    throw new Error(
+      `Refusing to download binary content (${contentType || "unknown type"}). ` +
+        `Use a browser or curl to download this file directly.`,
+    );
+  }
+
   if (contentType.includes("application/pdf") || finalUrl.endsWith(".pdf")) {
     const buffer = await response.arrayBuffer();
     return { type: "pdf", buffer, finalUrl };
   }
 
-  const html = await response.text();
-  return { type: "html", html, finalUrl };
+  const text = await response.text();
+
+  if (
+    contentType.includes("text/html") ||
+    contentType.includes("application/xhtml")
+  ) {
+    return { type: "html", html: text, finalUrl };
+  }
+
+  return { type: "raw", text, finalUrl, contentType };
 }
 
 async function extractPdf(buffer: ArrayBuffer): Promise<string> {
@@ -99,7 +123,6 @@ function extractContent(
   const dom = new JSDOM(html, { url });
   const document = dom.window.document;
 
-  // Try Readability first (best for articles)
   const reader = new Readability(document.cloneNode(true) as any);
   const article = reader.parse();
   if (article && article.textContent.trim().length > 50) {
@@ -116,7 +139,6 @@ function extractContent(
     };
   }
 
-  // Fallback: convert the whole <body> to markdown, stripping nav/header/footer
   const body = document.body;
   if (!body) return null;
 
@@ -148,6 +170,21 @@ function extractContent(
   return { title, markdown, excerpt: metaDesc };
 }
 
+function truncateAndFormat(output: string): string {
+  const truncation = truncateHead(output, {
+    maxLines: DEFAULT_MAX_LINES,
+    maxBytes: DEFAULT_MAX_BYTES,
+  });
+
+  let final = truncation.content;
+  if (truncation.truncated) {
+    final +=
+      `\n\n[Output truncated: ${truncation.outputLines} of ${truncation.totalLines} lines ` +
+      `(${formatSize(truncation.outputBytes)} of ${formatSize(truncation.totalBytes)})]`;
+  }
+  return final;
+}
+
 export default function (pi: ExtensionAPI) {
   pi.registerTool({
     name: "fetch",
@@ -157,9 +194,12 @@ export default function (pi: ExtensionAPI) {
       "Use when you need to read the content of a specific URL. " +
       "Returns the article title and content in markdown format, " +
       "with boilerplate (navigation, ads, footers) removed. " +
-      "Also supports PDF URLs — extracts text content directly.",
+      "Also supports PDF URLs — extracts text content directly. " +
+      "For other text-based formats (JSON, XML, plain text, etc.) returns raw content as-is. " +
+      "Binary files (images, video, archives) are rejected.",
     promptSnippet:
-      "Fetch a URL and extract its main content as clean markdown. Also reads PDFs.",
+      "Fetch a URL and extract its main content as clean markdown. Also reads PDFs. " +
+      "Non-HTML/PDF text content is returned raw. Binary files are rejected.",
     parameters: Type.Object({
       url: Type.String({ description: "The URL to fetch" }),
     }),
@@ -209,9 +249,6 @@ export default function (pi: ExtensionAPI) {
         };
       }
 
-      let output: string;
-      let title: string;
-
       if (result.type === "pdf") {
         try {
           const text = await extractPdf(result.buffer);
@@ -226,8 +263,15 @@ export default function (pi: ExtensionAPI) {
               isError: true,
             };
           }
-          title = "PDF Document";
-          output = `Source: ${result.finalUrl}\n\n---\n\n${text}`;
+          const output = `Source: ${result.finalUrl}\n\n---\n\n${text}`;
+          return {
+            content: [{ type: "text", text: truncateAndFormat(output) }],
+            details: {
+              url: result.finalUrl,
+              title: "PDF Document",
+              extracted: true,
+            },
+          };
         } catch (err: any) {
           return {
             content: [
@@ -236,47 +280,45 @@ export default function (pi: ExtensionAPI) {
             isError: true,
           };
         }
-      } else {
-        const extracted = extractContent(result.html, result.finalUrl);
-
-        if (!extracted) {
-          return {
-            content: [
-              {
-                type: "text",
-                text: `Could not extract content from ${result.finalUrl} — the page is not reader-friendly (may require JavaScript rendering, or is not an article).`,
-              },
-            ],
-            isError: true,
-          };
-        }
-
-        title = extracted.title;
-        output = `# ${extracted.title}\n\n`;
-        if (extracted.excerpt) {
-          output += `> ${extracted.excerpt}\n\n`;
-        }
-        output += `Source: ${result.finalUrl}\n\n---\n\n`;
-        output += extracted.markdown;
       }
 
-      const truncation = truncateHead(output, {
-        maxLines: DEFAULT_MAX_LINES,
-        maxBytes: DEFAULT_MAX_BYTES,
-      });
-
-      let finalOutput = truncation.content;
-      if (truncation.truncated) {
-        finalOutput +=
-          `\n\n[Output truncated: ${truncation.outputLines} of ${truncation.totalLines} lines ` +
-          `(${formatSize(truncation.outputBytes)} of ${formatSize(truncation.totalBytes)})]`;
+      if (result.type === "raw") {
+        const output = `Source: ${result.finalUrl}\nContent-Type: ${result.contentType}\n\n---\n\n${result.text}`;
+        return {
+          content: [{ type: "text", text: truncateAndFormat(output) }],
+          details: {
+            url: result.finalUrl,
+            title: result.finalUrl,
+            extracted: false,
+          },
+        };
       }
+
+      const extracted = extractContent(result.html, result.finalUrl);
+      if (!extracted) {
+        return {
+          content: [
+            {
+              type: "text",
+              text: `Could not extract content from ${result.finalUrl} — the page is not reader-friendly (may require JavaScript rendering, or is not an article).`,
+            },
+          ],
+          isError: true,
+        };
+      }
+
+      let output = `# ${extracted.title}\n\n`;
+      if (extracted.excerpt) {
+        output += `> ${extracted.excerpt}\n\n`;
+      }
+      output += `Source: ${result.finalUrl}\n\n---\n\n`;
+      output += extracted.markdown;
 
       return {
-        content: [{ type: "text", text: finalOutput }],
+        content: [{ type: "text", text: truncateAndFormat(output) }],
         details: {
           url: result.finalUrl,
-          title,
+          title: extracted.title,
           extracted: true,
         },
       };
