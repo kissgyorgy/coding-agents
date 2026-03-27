@@ -6,7 +6,7 @@ buildNpmPackage {
 
   src = ../../home-manager/pi-coding-agent/extensions/fetch;
 
-  npmDepsHash = "sha256-sV0EW4/4tqMyqidF2f2m8WAgHiR5Ih08Mp76mCgFw2E=";
+  npmDepsHash = "sha256-iyNm9uhfrhRjA3quBZdmUm9T41Ug/qvZF4dPPMl8OZI=";
 
   dontBuild = true;
 

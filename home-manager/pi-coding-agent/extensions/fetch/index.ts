@@ -10,18 +10,24 @@ import { Type } from "@sinclair/typebox";
 import { Readability } from "@mozilla/readability";
 import { JSDOM } from "jsdom";
 import TurndownService from "turndown";
+import { extractText, getDocumentProxy } from "unpdf";
 
 const USER_AGENT =
   "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36";
 
+type FetchResult =
+  | { type: "html"; html: string; finalUrl: string }
+  | { type: "pdf"; buffer: ArrayBuffer; finalUrl: string };
+
 async function fetchPage(
   url: string,
   signal?: AbortSignal,
-): Promise<{ html: string; finalUrl: string }> {
+): Promise<FetchResult> {
   const response = await fetch(url, {
     headers: {
       "User-Agent": USER_AGENT,
-      Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+      Accept:
+        "text/html,application/xhtml+xml,application/xml;q=0.9,application/pdf,*/*;q=0.8",
       "Accept-Language": "en-US,en;q=0.9",
     },
     redirect: "follow",
@@ -32,8 +38,23 @@ async function fetchPage(
     throw new Error(`HTTP ${response.status}: ${response.statusText}`);
   }
 
+  const contentType = response.headers.get("content-type") || "";
+  const finalUrl = response.url;
+
+  if (contentType.includes("application/pdf") || finalUrl.endsWith(".pdf")) {
+    const buffer = await response.arrayBuffer();
+    return { type: "pdf", buffer, finalUrl };
+  }
+
   const html = await response.text();
-  return { html, finalUrl: response.url };
+  return { type: "html", html, finalUrl };
+}
+
+async function extractPdf(buffer: ArrayBuffer): Promise<string> {
+  const pdf = await getDocumentProxy(new Uint8Array(buffer));
+  const { text } = await extractText(pdf, { mergePages: false });
+  const pages = text as unknown as string[];
+  return pages.join("\n\n");
 }
 
 function createTurndown(): TurndownService {
@@ -135,8 +156,10 @@ export default function (pi: ExtensionAPI) {
       "Fetch a web page and extract its main content as clean markdown. " +
       "Use when you need to read the content of a specific URL. " +
       "Returns the article title and content in markdown format, " +
-      "with boilerplate (navigation, ads, footers) removed.",
-    promptSnippet: "Fetch a URL and extract its main content as clean markdown",
+      "with boilerplate (navigation, ads, footers) removed. " +
+      "Also supports PDF URLs — extracts text content directly.",
+    promptSnippet:
+      "Fetch a URL and extract its main content as clean markdown. Also reads PDFs.",
     parameters: Type.Object({
       url: Type.String({ description: "The URL to fetch" }),
     }),
@@ -173,10 +196,9 @@ export default function (pi: ExtensionAPI) {
         content: [{ type: "text", text: `Fetching ${url}...` }],
       });
 
-      let html: string;
-      let finalUrl: string;
+      let result: FetchResult;
       try {
-        ({ html, finalUrl } = await fetchPage(url, signal));
+        result = await fetchPage(url, signal);
       } catch (err: any) {
         if (err.name === "AbortError") {
           return { content: [{ type: "text", text: "Fetch cancelled." }] };
@@ -187,26 +209,56 @@ export default function (pi: ExtensionAPI) {
         };
       }
 
-      const extracted = extractContent(html, finalUrl);
+      let output: string;
+      let title: string;
 
-      if (!extracted) {
-        return {
-          content: [
-            {
-              type: "text",
-              text: `Could not extract article content from ${finalUrl} — the page is not reader-friendly (may require JavaScript rendering, or is not an article).`,
-            },
-          ],
-          isError: true,
-        };
-      }
+      if (result.type === "pdf") {
+        try {
+          const text = await extractPdf(result.buffer);
+          if (text.trim().length < 20) {
+            return {
+              content: [
+                {
+                  type: "text",
+                  text: `PDF at ${result.finalUrl} contains no extractable text (may be scanned/image-only).`,
+                },
+              ],
+              isError: true,
+            };
+          }
+          title = "PDF Document";
+          output = `Source: ${result.finalUrl}\n\n---\n\n${text}`;
+        } catch (err: any) {
+          return {
+            content: [
+              { type: "text", text: `PDF extraction error: ${err.message}` },
+            ],
+            isError: true,
+          };
+        }
+      } else {
+        const extracted = extractContent(result.html, result.finalUrl);
 
-      let output = `# ${extracted.title}\n\n`;
-      if (extracted.excerpt) {
-        output += `> ${extracted.excerpt}\n\n`;
+        if (!extracted) {
+          return {
+            content: [
+              {
+                type: "text",
+                text: `Could not extract content from ${result.finalUrl} — the page is not reader-friendly (may require JavaScript rendering, or is not an article).`,
+              },
+            ],
+            isError: true,
+          };
+        }
+
+        title = extracted.title;
+        output = `# ${extracted.title}\n\n`;
+        if (extracted.excerpt) {
+          output += `> ${extracted.excerpt}\n\n`;
+        }
+        output += `Source: ${result.finalUrl}\n\n---\n\n`;
+        output += extracted.markdown;
       }
-      output += `Source: ${finalUrl}\n\n---\n\n`;
-      output += extracted.markdown;
 
       const truncation = truncateHead(output, {
         maxLines: DEFAULT_MAX_LINES,
@@ -223,8 +275,8 @@ export default function (pi: ExtensionAPI) {
       return {
         content: [{ type: "text", text: finalOutput }],
         details: {
-          url: finalUrl,
-          title: extracted.title,
+          url: result.finalUrl,
+          title,
           extracted: true,
         },
       };
