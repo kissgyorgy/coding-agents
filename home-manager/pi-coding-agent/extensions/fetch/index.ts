@@ -16,6 +16,49 @@ import { isBinaryContentType, isBinaryUrl } from "./binary.ts";
 const USER_AGENT =
   "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36";
 
+const MAX_DOWNLOAD_BYTES = 5 * 1024 * 1024; // 5 MB
+const MAX_PDF_BYTES = 10 * 1024 * 1024; // 10 MB
+
+async function readBodyBytes(
+  body: ReadableStream<Uint8Array>,
+  maxBytes: number,
+): Promise<{ bytes: Uint8Array; truncated: boolean }> {
+  const reader = body.getReader();
+  const chunks: Uint8Array[] = [];
+  let total = 0;
+  let truncated = false;
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done || !value) break;
+    total += value.byteLength;
+    if (total > maxBytes) {
+      const excess = total - maxBytes;
+      chunks.push(value.slice(0, value.byteLength - excess));
+      truncated = true;
+      reader.cancel();
+      break;
+    }
+    chunks.push(value);
+  }
+
+  const result = new Uint8Array(Math.min(total, maxBytes));
+  let offset = 0;
+  for (const chunk of chunks) {
+    result.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+  return { bytes: result, truncated };
+}
+
+async function readBodyText(
+  body: ReadableStream<Uint8Array>,
+  maxBytes: number,
+): Promise<string> {
+  const { bytes } = await readBodyBytes(body, maxBytes);
+  return new TextDecoder().decode(bytes);
+}
+
 type FetchResult =
   | { type: "html"; html: string; finalUrl: string }
   | { type: "pdf"; buffer: ArrayBuffer; finalUrl: string }
@@ -57,12 +100,33 @@ async function fetchPage(
     );
   }
 
-  if (contentType.includes("application/pdf") || finalUrl.endsWith(".pdf")) {
-    const buffer = await response.arrayBuffer();
-    return { type: "pdf", buffer, finalUrl };
+  const contentLength = parseInt(
+    response.headers.get("content-length") || "0",
+    10,
+  );
+
+  const isPdf =
+    contentType.includes("application/pdf") || finalUrl.endsWith(".pdf");
+
+  if (isPdf) {
+    if (contentLength > MAX_PDF_BYTES) {
+      throw new Error(
+        `PDF too large (${formatSize(contentLength)}, max ${formatSize(MAX_PDF_BYTES)}). ` +
+          `Use curl to download it directly.`,
+      );
+    }
+    const { bytes } = await readBodyBytes(response.body!, MAX_PDF_BYTES);
+    return { type: "pdf", buffer: bytes.buffer, finalUrl };
   }
 
-  const text = await response.text();
+  if (contentLength > MAX_DOWNLOAD_BYTES) {
+    throw new Error(
+      `Response too large (${formatSize(contentLength)}, max ${formatSize(MAX_DOWNLOAD_BYTES)}). ` +
+        `Use curl to download it directly.`,
+    );
+  }
+
+  const text = await readBodyText(response.body!, MAX_DOWNLOAD_BYTES);
 
   if (
     contentType.includes("text/html") ||
