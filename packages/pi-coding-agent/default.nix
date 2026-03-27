@@ -1,7 +1,8 @@
-{ lib, buildNpmPackage, fetchFromGitHub, nodejs_22, makeBinaryWrapper, autoPatchelfHook, stdenv }:
+{ lib, buildNpmPackage, callPackage, fetchFromGitHub, nodejs_22, makeBinaryWrapper, autoPatchelfHook, stdenv }:
 
 let
   modelsDate = "20260326";
+  fetchExtensionDeps = callPackage ./fetch-extension-deps.nix { };
 in
 
 buildNpmPackage rec {
@@ -93,7 +94,8 @@ buildNpmPackage rec {
     # Create the pi wrapper
     makeBinaryWrapper ${nodejs_22}/bin/node $out/bin/pi \
       --add-flags "$pkgDir/dist/cli.js" \
-      --set PI_PACKAGE_DIR "$pkgDir"
+      --set PI_PACKAGE_DIR "$pkgDir" \
+      --prefix NODE_PATH : "${fetchExtensionDeps}/node_modules"
 
     runHook postInstall
   '';
