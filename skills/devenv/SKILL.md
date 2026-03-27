@@ -118,7 +118,7 @@ Key files devenv manages:
 ## Complete Example
 
 ```nix
-{ pkgs, ... }: {
+{ pkgs, config, ... }: {
   # Python with uv
   languages.python = {
     enable = true;
@@ -153,20 +153,15 @@ Key files devenv manages:
     REDIS_URL = "redis://localhost:6379";
   };
 
-  # Processes
+  # Processes (devenv 2.0 native process manager with dependency support)
   processes = {
     web = {
       exec = "python manage.py runserver 0.0.0.0:8000";
-      process-compose.depends_on = {
-        postgres.condition = "process_healthy";
-        redis.condition = "process_healthy";
-      };
+      after = [ "devenv:processes:postgres" "devenv:processes:redis" ];
     };
     worker = {
       exec = "celery -A myapp worker";
-      process-compose.depends_on = {
-        redis.condition = "process_healthy";
-      };
+      after = [ "devenv:processes:redis" ];
     };
   };
 
