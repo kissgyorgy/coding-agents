@@ -4,7 +4,7 @@
  * Uses the Anthropic Messages streaming format (not OpenAI Responses API),
  * so provides a custom parseSSE implementation.
  */
-import type { SearchBackend, SearchResult } from "./types";
+import type { AuthResult, SearchBackend, SearchResult } from "./types";
 
 const ANTHROPIC_API_VERSION = "2023-06-01";
 
@@ -13,23 +13,28 @@ export function anthropic(model: string): SearchBackend {
   return {
     name: `${provider}/${model}`,
 
-    async getApiKey(ctx) {
+    async getAuth(ctx): Promise<AuthResult | undefined> {
       const resolved = ctx.modelRegistry.find(provider, model);
       if (resolved) {
-        const key = await ctx.modelRegistry.getApiKey(resolved);
-        if (key) return key;
+        const auth = await ctx.modelRegistry.getApiKeyAndHeaders(resolved);
+        if (auth.ok) return { apiKey: auth.apiKey, headers: auth.headers };
       }
-      return (ctx.modelRegistry as any).getApiKeyForProvider?.(provider);
+      const key = await (ctx.modelRegistry as any).getApiKeyForProvider?.(
+        provider,
+      );
+      if (key) return { apiKey: key };
+      return undefined;
     },
 
-    buildRequest(apiKey, query, instructions, ctx) {
+    buildRequest(auth, query, instructions, ctx) {
       const resolved = ctx.modelRegistry.find(provider, model);
       const baseUrl = resolved?.baseUrl || "https://api.anthropic.com";
 
       return {
         url: `${baseUrl}/v1/messages`,
         headers: {
-          "x-api-key": apiKey,
+          ...auth.headers,
+          "x-api-key": auth.apiKey,
           "anthropic-version": ANTHROPIC_API_VERSION,
           "Content-Type": "application/json",
         },

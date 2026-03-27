@@ -422,8 +422,8 @@ export default function (pi: ExtensionAPI) {
     },
 
     async execute(toolCallId, params, signal, onUpdate, ctx) {
-      const apiKey = await backend.getApiKey(ctx);
-      if (!apiKey) {
+      const auth = await backend.getAuth(ctx);
+      if (!auth) {
         return {
           content: [
             {
@@ -436,7 +436,7 @@ export default function (pi: ExtensionAPI) {
       }
 
       const req = backend.buildRequest(
-        apiKey,
+        auth,
         params.query,
         SEARCH_INSTRUCTIONS,
         ctx,

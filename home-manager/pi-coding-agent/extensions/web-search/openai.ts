@@ -1,7 +1,7 @@
 /**
  * OpenAI API backend — direct Responses API with OPENAI_API_KEY or provider key.
  */
-import type { SearchBackend } from "./types";
+import type { AuthResult, SearchBackend } from "./types";
 
 const OPENAI_BASE_URL = "https://api.openai.com/v1";
 
@@ -10,24 +10,29 @@ export function openai(model: string): SearchBackend {
   return {
     name: `${provider}/${model}`,
 
-    async getApiKey(ctx) {
+    async getAuth(ctx): Promise<AuthResult | undefined> {
       const envKey = process.env.OPENAI_API_KEY?.trim();
-      if (envKey) return envKey;
+      if (envKey) return { apiKey: envKey };
 
       const resolved = ctx.modelRegistry.find(provider, model);
       if (resolved) {
-        const key = await ctx.modelRegistry.getApiKey(resolved);
-        if (key) return key;
+        const auth = await ctx.modelRegistry.getApiKeyAndHeaders(resolved);
+        if (auth.ok) return { apiKey: auth.apiKey, headers: auth.headers };
       }
 
-      return (ctx.modelRegistry as any).getApiKeyForProvider?.(provider);
+      const key = await (ctx.modelRegistry as any).getApiKeyForProvider?.(
+        provider,
+      );
+      if (key) return { apiKey: key };
+      return undefined;
     },
 
-    buildRequest(apiKey, query, instructions) {
+    buildRequest(auth, query, instructions) {
       return {
         url: `${OPENAI_BASE_URL}/responses`,
         headers: {
-          Authorization: `Bearer ${apiKey}`,
+          ...auth.headers,
+          Authorization: `Bearer ${auth.apiKey}`,
           Accept: "text/event-stream",
           "Content-Type": "application/json",
         },

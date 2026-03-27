@@ -6,13 +6,18 @@
 // Backend interface
 // ---------------------------------------------------------------------------
 
+export interface AuthResult {
+  apiKey: string;
+  headers?: Record<string, string>;
+}
+
 export interface SearchBackend {
   /** Human-readable name for error messages. */
   name: string;
-  /** Obtain an API key from the model registry. */
-  getApiKey(ctx: any): Promise<string | undefined>;
+  /** Obtain an API key (and optional extra headers) from the model registry. */
+  getAuth(ctx: any): Promise<AuthResult | undefined>;
   buildRequest(
-    apiKey: string,
+    auth: AuthResult,
     query: string,
     instructions: string,
     ctx: any,

@@ -2,7 +2,7 @@
  * OpenAI Subscription backend — ChatGPT Codex endpoint with JWT auth.
  */
 import * as os from "node:os";
-import type { SearchBackend } from "./types";
+import type { AuthResult, SearchBackend } from "./types";
 
 const CODEX_BASE_URL = "https://chatgpt.com/backend-api";
 const JWT_CLAIM_PATH = "https://api.openai.com/auth";
@@ -22,19 +22,23 @@ export function openaiSubscription(model: string): SearchBackend {
   return {
     name: `${provider}/${model}`,
 
-    async getApiKey(ctx) {
+    async getAuth(ctx): Promise<AuthResult | undefined> {
       const codexModel = ctx.modelRegistry.find(provider, model);
       if (codexModel) {
-        const key = await ctx.modelRegistry.getApiKey(codexModel);
-        if (key) return key;
+        const auth = await ctx.modelRegistry.getApiKeyAndHeaders(codexModel);
+        if (auth.ok) return { apiKey: auth.apiKey, headers: auth.headers };
       }
-      return (ctx.modelRegistry as any).getApiKeyForProvider?.(provider);
+      const key = await (ctx.modelRegistry as any).getApiKeyForProvider?.(
+        provider,
+      );
+      if (key) return { apiKey: key };
+      return undefined;
     },
 
-    buildRequest(apiKey, query, instructions) {
+    buildRequest(auth, query, instructions) {
       let accountId: string;
       try {
-        accountId = extractAccountId(apiKey);
+        accountId = extractAccountId(auth.apiKey);
       } catch (e: any) {
         return { error: e.message };
       }
@@ -44,7 +48,8 @@ export function openaiSubscription(model: string): SearchBackend {
       return {
         url: `${CODEX_BASE_URL}/codex/responses`,
         headers: {
-          Authorization: `Bearer ${apiKey}`,
+          ...auth.headers,
+          Authorization: `Bearer ${auth.apiKey}`,
           "chatgpt-account-id": accountId,
           "OpenAI-Beta": "responses=experimental",
           originator: "pi",
