@@ -7853,13 +7853,13 @@ export const MODELS = {
 			reasoning: true,
 			input: ["text"],
 			cost: {
-				input: 0.1755,
-				output: 1.125,
-				cacheRead: 0.09,
+				input: 0.16,
+				output: 1.1,
+				cacheRead: 0.08,
 				cacheWrite: 0,
 			},
-			contextWindow: 196600,
-			maxTokens: 196600,
+			contextWindow: 196608,
+			maxTokens: 65536,
 		} satisfies Model<"openai-completions">,
 		"minimax/minimax-m2.5:free": {
 			id: "minimax/minimax-m2.5:free",
@@ -10222,7 +10222,7 @@ export const MODELS = {
 				cacheWrite: 0,
 			},
 			contextWindow: 256000,
-			maxTokens: 65536,
+			maxTokens: 32768,
 		} satisfies Model<"openai-completions">,
 		"qwen/qwen3.5-flash-02-23": {
 			id: "qwen/qwen3.5-flash-02-23",
@@ -10371,11 +10371,11 @@ export const MODELS = {
 			cost: {
 				input: 0.09999999999999999,
 				output: 0.3,
-				cacheRead: 0.02,
+				cacheRead: 0,
 				cacheWrite: 0,
 			},
 			contextWindow: 262144,
-			maxTokens: 4096,
+			maxTokens: 65536,
 		} satisfies Model<"openai-completions">,
 		"stepfun/step-3.5-flash:free": {
 			id: "stepfun/step-3.5-flash:free",
@@ -10581,9 +10581,9 @@ export const MODELS = {
 			contextWindow: 2000000,
 			maxTokens: 30000,
 		} satisfies Model<"openai-completions">,
-		"x-ai/grok-4.20-beta": {
-			id: "x-ai/grok-4.20-beta",
-			name: "xAI: Grok 4.20 Beta",
+		"x-ai/grok-4.20": {
+			id: "x-ai/grok-4.20",
+			name: "xAI: Grok 4.20",
 			api: "openai-completions",
 			provider: "openrouter",
 			baseUrl: "https://openrouter.ai/api/v1",
