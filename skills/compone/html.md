@@ -140,7 +140,6 @@ html.Var[...]            # <var>
 html.Wbr(...)            # <wbr> (self-closing)
 ```
 
-
 ## Component Composition
 
 Build complex components from simpler ones:
@@ -168,6 +167,41 @@ def Modal(title: str, show_close: bool = True, children=None):
     ]
 ```
 
+## Modifying Element Attributes
+
+Elements have `.append()` and `.replace()` methods to derive new elements with modified attributes.
+Access current attributes with `.props`.
+
+### `.append()` — Add to existing attributes
+
+Appends values to existing attributes (space-separated for `class`):
+
+```python
+el = html.Input(type="text", class_="base")
+el2 = el.append(class_="extra")
+str(el2)  # <input type="text" class="base extra" />
+```
+
+### `.replace()` — Override attributes
+
+Replaces attribute values entirely:
+
+```python
+el = html.Div(class_="old", id="box")
+el2 = el.replace(class_="new")
+str(el2)  # <div class="new" id="box"></div>
+```
+
+### `.props` — Read current attributes
+
+```python
+el = html.Div(class_="card", id="main")
+el.props  # {'class_': ['card'], 'id': 'main'}
+```
+
+Note: `class_` values are stored as lists (since multiple classes are common).
+
+These methods return **new elements** — the original is not mutated.
 
 ## Escaping and Raw HTML
 
