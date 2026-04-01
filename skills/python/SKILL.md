@@ -5,14 +5,17 @@ description: Write clean, readable Pythonic code. Use this skill any time you wr
 
 # General guidelines
 
-
 # Coding Style
+
 - Always write clean, readable, well separated, well organized, Pythonic code.
 - Don't run linters or formatters, they will run automatically after every edit by the harness.
 - When using `datetime`, import it like this: `import datetime as dt`
-
+- CRITICAL: ALWAYS put ALL imports at the top of the file, NEVER inside
+  functions, methods, or any other block. No exceptions. Use `TYPE_CHECKING` guard
+  for type-only imports to avoid circular dependencies.
 
 # Type hints
+
 - ALWAYS type hint every function and method signature precisely even in tests.
 - "" -> None" return values are not necessary, they are just noise.
 - No need to type hint variables from functions call return values inside function bodies, they are inferred from the method return type,
@@ -21,9 +24,8 @@ description: Write clean, readable Pythonic code. Use this skill any time you wr
   know exist for sure.
 - Use the new pipe operator for `Optional` variables like this: `value | None`
 
-
-
 # Testing
+
 - ALWAYS use `pytest` for all tests
 - ALWAYS assert on whole ouptut or full results in tests, not just tiny parts
 - For mocking, use pytest `monkeypatch` fixture, NEVER `unittest.mock` and NEVER
@@ -35,7 +37,6 @@ description: Write clean, readable Pythonic code. Use this skill any time you wr
   use real objects and assert on full results. When absolutely necessary and can't be avoided, use `pytest.monkeypatch`,
   when the test setup would be too difficult or the code have side effects, but consider writing a fake.
 - ALWAYS assert on the full result of the function call, never just list lengths or containment, except where that's the point.
-
 
 # Managing dependencies
 
