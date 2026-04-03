@@ -7,13 +7,22 @@ build *args:
     for pkg in ${args:-$all}; do attrs+=" .#$pkg"; done
     nix build $attrs
 
-# Update all packages sequentially
+# Update all packages sequentially (continues on individual failures)
 update:
-    just update-claude-code
-    just update-codex
-    just update-gemini-cli
-    just update-crush
-    just update-pi-coding-agent
+    #!/usr/bin/env bash
+    set -uo pipefail
+    failed=()
+    for pkg in claude-code codex gemini-cli crush pi-coding-agent; do
+        echo "==> Updating $pkg"
+        if ! just update-"$pkg"; then
+            echo "==> FAILED: $pkg"
+            failed+=("$pkg")
+        fi
+    done
+    if [[ ${#failed[@]} -gt 0 ]]; then
+        echo "\nThe following updates failed: ${failed[*]}"
+        exit 1
+    fi
 
 update-claude-code: (_update-pkg "claude-code" "anthropics/claude-code")
 update-codex: (_update-pkg "codex" "openai/codex" "" "true")
