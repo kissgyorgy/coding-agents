@@ -75,13 +75,12 @@ update-pi-models:
     #!/usr/bin/env bash
     set -euo pipefail
     pkg_dir="packages/pi-coding-agent"
-    upstream_version=$(grep 'version = ' "$pkg_dir/default.nix" | head -1 | sed 's/.*"\(.*\)".*/\1/')
+    src=$(nix build .#pi-coding-agent.src --no-link --print-out-paths)
 
     tmpdir=$(mktemp -d)
     trap "rm -rf $tmpdir" EXIT
-
-    echo "Cloning pi-mono v$upstream_version..."
-    git clone --depth 1 --branch "v$upstream_version" https://github.com/badlogic/pi-mono.git "$tmpdir/pi-mono"
+    cp -r "$src/." "$tmpdir/pi-mono"
+    chmod -R u+w "$tmpdir/pi-mono"
 
     echo "Installing dependencies..."
     cd "$tmpdir/pi-mono"
@@ -89,7 +88,6 @@ update-pi-models:
 
     echo "Generating models..."
     npm run --prefix packages/ai generate-models
-
 
     cp packages/ai/src/models.generated.ts "$OLDPWD/$pkg_dir/models.generated.ts"
     cd "$OLDPWD"
