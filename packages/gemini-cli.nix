@@ -1,24 +1,57 @@
-{ lib, stdenv, fetchurl, nodejs_20, makeBinaryWrapper }:
+{ lib, buildNpmPackage, fetchFromGitHub, nodejs_20, makeBinaryWrapper }:
 
-stdenv.mkDerivation rec {
+buildNpmPackage rec {
   pname = "gemini-cli";
-  version = "0.35.3";
+  version = "0.36.0";
 
-  src = fetchurl {
-    url = "https://github.com/google-gemini/gemini-cli/releases/download/v${version}/gemini.js";
-    hash = "sha256-I94yM/wkzCCnJhshvc2CUN00xIXJcSKUjK/EWDAbNR8=";
+  src = fetchFromGitHub {
+    owner = "google-gemini";
+    repo = "gemini-cli";
+    rev = "v${version}";
+    hash = "sha256-eSGznx64xN/2/TPkLTx57Ar56FogYSzUkINBduhMn/8=";
   };
 
-  dontUnpack = true;
+  nodejs = nodejs_20;
+  npmDepsHash = "sha256-ztpKe7kgQAgfCBiIBlzPDa5muOI+9kESwrzBLqwz3V0=";
+
   nativeBuildInputs = [ makeBinaryWrapper ];
 
+  npmFlags = [ "--ignore-scripts" ];
+
+  postPatch = ''
+    substituteInPlace package.json \
+      --replace-fail '"prepare": "husky && npm run bundle"' '"prepare": ""'
+  '';
+
+  buildPhase = ''
+    runHook preBuild
+
+    mkdir -p packages/cli/src/generated packages/core/src/generated
+    cat > packages/cli/src/generated/git-commit.ts << 'GENEOF'
+    export const GIT_COMMIT_INFO = 'v${version}';
+    export const CLI_VERSION = '${version}';
+    GENEOF
+    cp packages/cli/src/generated/git-commit.ts packages/core/src/generated/git-commit.ts
+
+    npm run build --workspace=@google/gemini-cli-devtools
+    npm run build --workspace=@google/gemini-cli-core
+    node esbuild.config.js
+    node scripts/copy_bundle_assets.js
+
+    runHook postBuild
+  '';
+
   installPhase = ''
+    runHook preInstall
+
     mkdir -p $out/lib/gemini-cli
-    cp $src $out/lib/gemini-cli/gemini.js
+    cp -r bundle/* $out/lib/gemini-cli/
 
     mkdir -p $out/bin
-    makeBinaryWrapper ${nodejs_20}/bin/node $out/bin/gemini \
+    makeBinaryWrapper ${nodejs}/bin/node $out/bin/gemini \
       --add-flags "$out/lib/gemini-cli/gemini.js"
+
+    runHook postInstall
   '';
 
   meta = {
