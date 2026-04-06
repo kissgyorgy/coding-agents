@@ -28,7 +28,6 @@ nix eval --raw .#claude-code.version
 Note: `just build` defaults to a subset of packages. To build packages not in
 that list (e.g. `playwright-cli`, `vibe-kanban`), use `nix build .#<name>`.
 
-
 ## Architecture
 
 ### Nix Flake Structure
@@ -86,7 +85,6 @@ Each agent has a subdirectory with a `default.nix` that:
 
 Shared domain knowledge documents installed into every agent's skills directory.
 Each skill has a `SKILL.md` entry point and supporting markdown files.
-Current skills: `devenv`, `compone`, `writing-plans`, `frontend-design`, `playwright-cli`.
 
 ### Automatic Updates (`.github/workflows/update.yml`)
 
@@ -94,8 +92,13 @@ Runs 3× daily via cron. Executes `just update` which checks GitHub releases for
 newer versions, updates package files with `nix-update`, commits, pushes, and
 pushes built results to a Cachix binary cache.
 
+### Global Agent Instructions (`home-manager/global-agents.md`)
+
+A shared instructions file deployed as the top-level agent prompt for Claude Code (`~/.claude/CLAUDE.md`), Codex (`~/.codex/AGENTS.md`), and Gemini CLI (`~/.gemini/GEMINI.md`). Controlled via `coding-agents.agentsMdPath` option.
+
 ### Notes
 
 - If you update or add a package, don't forget to update README.md too!
-- The pi agent folder ~/.pi/agent/extensions is symlinked to ./home-manager/pi-agent/extensions,
-  so when you are working with extensions there, you are working in this repo.
+- The pi agent folder `~/.pi/agent/extensions` is symlinked to `./home-manager/pi-coding-agent/extensions`, so when you are working with extensions there, you are working in this repo.
+- `packages/pi-agent/` and `packages/emdash.nix` exist but are not wired into `flake.nix`.
+- `vibe-kanban` and `playwright-cli` are packages only (no Home Manager module).
