@@ -63,10 +63,16 @@ export default function (pi: ExtensionAPI) {
         const result = await formatContent(params.path, params.content);
         if (result.changed) params.content = result.content;
       } catch (error: unknown) {
-        ctx.ui.notify(
-          `post-edit: formatting ${params.path} failed: ${getErrorMessage(error)}`,
-          "error",
+        const msg = `post-edit: formatting ${params.path} failed: ${getErrorMessage(error)}`;
+        const result = await builtinWrite.execute(
+          toolCallId,
+          params,
+          signal,
+          onUpdate,
+          ctx,
         );
+        result.content.push({ type: "text", text: msg });
+        return result;
       }
 
       return builtinWrite.execute(toolCallId, params, signal, onUpdate, ctx);
@@ -98,10 +104,8 @@ export default function (pi: ExtensionAPI) {
         ],
       };
     } catch (error: unknown) {
-      ctx.ui.notify(
-        `post-edit: formatting ${filePath} failed: ${getErrorMessage(error)}`,
-        "error",
-      );
+      const msg = `post-edit: formatting ${filePath} failed: ${getErrorMessage(error)}`;
+      return { content: [{ type: "text" as const, text: msg }] };
     }
   });
 }
