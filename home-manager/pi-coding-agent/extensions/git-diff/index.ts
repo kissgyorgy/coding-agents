@@ -10,6 +10,7 @@ import {
   truncateToWidth,
   visibleWidth,
 } from "@mariozechner/pi-tui";
+import { handleReloadShortcut } from "../reload-shortcut/editor.js";
 import { parseDiff, type DiffFile } from "./parser.js";
 
 const PANEL_FRACTION = 0.4;
@@ -293,6 +294,11 @@ export default function (pi: ExtensionAPI) {
 }
 
 class ConstrainedEditor extends CustomEditor {
+  handleInput(data: string): void {
+    if (handleReloadShortcut(data, this.onSubmit)) return;
+    super.handleInput(data);
+  }
+
   render(width: number): string[] {
     const pw = panelCols(width);
     return super.render(Math.max(40, width - pw));

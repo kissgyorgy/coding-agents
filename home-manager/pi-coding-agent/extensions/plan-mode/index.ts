@@ -31,6 +31,7 @@ import {
   truncateToWidth,
   visibleWidth,
 } from "@mariozechner/pi-tui";
+import { handleReloadShortcut } from "../reload-shortcut/editor.js";
 import {
   extractDoneSteps,
   extractTodoItems,
@@ -1036,6 +1037,8 @@ ${todoList}
 
   class PlanEditor extends CustomEditor {
     handleInput(data: string): void {
+      if (handleReloadShortcut(data, this.onSubmit)) return;
+
       // Tab on empty editor in plan mode: show /plan:* command completions
       if (
         matchesKey(data, Key.tab) &&
@@ -1101,9 +1104,11 @@ ${todoList}
 
     // Register plan-aware editor for Ctrl+G interception
     editorCtx = ctx;
-    ctx.ui.setEditorComponent(
-      (tui, theme, kb) => new PlanEditor(tui, theme, kb),
-    );
+    setTimeout(() => {
+      ctx.ui.setEditorComponent(
+        (tui, theme, kb) => new PlanEditor(tui, theme, kb),
+      );
+    }, 0);
 
     if (pi.getFlag("plan") === true) {
       planModeEnabled = true;
