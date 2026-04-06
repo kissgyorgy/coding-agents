@@ -80,6 +80,7 @@ Each agent has a subdirectory with a `default.nix` that:
 
 - `extensions/` — Custom Pi extensions (plan-mode, tmux-mirror, web-search, explorer-mode, post-edit, etc.)
 - `prompts/` — Custom prompt templates (e.g. `init.md`)
+- CRITICAL: `home-manager/pi-coding-agent/extensions` is symlinked to `~/.pi/agent/extensions`. Editing either path edits the same files in this repo.
 
 ### Skills (`skills/`)
 
@@ -99,6 +100,6 @@ A shared instructions file deployed as the top-level agent prompt for Claude Cod
 ### Notes
 
 - If you update or add a package, don't forget to update README.md too!
-- The pi agent folder `~/.pi/agent/extensions` is symlinked to `./home-manager/pi-coding-agent/extensions`, so when you are working with extensions there, you are working in this repo.
+- CRITICAL: `home-manager/pi-coding-agent/extensions` and `~/.pi/agent/extensions` are the same files via symlink. If you edit Pi extensions through `~/.pi/agent/extensions`, you are editing this repo.
 - `packages/pi-agent/` and `packages/emdash.nix` exist but are not wired into `flake.nix`.
 - `vibe-kanban` and `playwright-cli` are packages only (no Home Manager module).
