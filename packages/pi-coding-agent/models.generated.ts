@@ -6600,23 +6600,6 @@ export const MODELS = {
 			contextWindow: 204800,
 			maxTokens: 128000,
 		} satisfies Model<"openai-completions">,
-		"qwen3.6-plus-free": {
-			id: "qwen3.6-plus-free",
-			name: "Qwen3.6 Plus Free",
-			api: "openai-completions",
-			provider: "opencode",
-			baseUrl: "https://opencode.ai/zen/v1",
-			reasoning: true,
-			input: ["text"],
-			cost: {
-				input: 0,
-				output: 0,
-				cacheRead: 0,
-				cacheWrite: 0,
-			},
-			contextWindow: 1048576,
-			maxTokens: 64000,
-		} satisfies Model<"openai-completions">,
 	},
 	"opencode-go": {
 		"glm-5": {
@@ -8468,11 +8451,11 @@ export const MODELS = {
 			cost: {
 				input: 0.39999999999999997,
 				output: 2,
-				cacheRead: 0.15,
+				cacheRead: 0,
 				cacheWrite: 0,
 			},
-			contextWindow: 131072,
-			maxTokens: 4096,
+			contextWindow: 262144,
+			maxTokens: 262144,
 		} satisfies Model<"openai-completions">,
 		"moonshotai/kimi-k2-thinking": {
 			id: "moonshotai/kimi-k2-thinking",
@@ -8483,12 +8466,12 @@ export const MODELS = {
 			reasoning: true,
 			input: ["text"],
 			cost: {
-				input: 0.47,
-				output: 2,
-				cacheRead: 0.14100000000000001,
+				input: 0.6,
+				output: 2.5,
+				cacheRead: 0,
 				cacheWrite: 0,
 			},
-			contextWindow: 131072,
+			contextWindow: 262144,
 			maxTokens: 4096,
 		} satisfies Model<"openai-completions">,
 		"moonshotai/kimi-k2.5": {
