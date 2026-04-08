@@ -33,6 +33,42 @@ export default function (pi: ExtensionAPI) {
   let termH = 40;
   let savedCtx: ExtensionContext | null = null;
 
+  async function getCommitDiff(): Promise<string> {
+    // 1. Commits not yet pushed to upstream tracking branch
+    const upstream = await pi.exec("git", [
+      "log",
+      "-p",
+      "--format=",
+      "@{upstream}..HEAD",
+    ]);
+    if (upstream.code === 0 && upstream.stdout.trim()) return upstream.stdout;
+
+    // 2. Commits diverging from main / master via merge-base
+    for (const base of ["main", "master"]) {
+      const verify = await pi.exec("git", ["rev-parse", "--verify", base]);
+      if (verify.code !== 0) continue;
+      const mb = await pi.exec("git", ["merge-base", "HEAD", base]);
+      if (mb.code !== 0 || !mb.stdout.trim()) continue;
+      const diff = await pi.exec("git", [
+        "log",
+        "-p",
+        "--format=",
+        `${mb.stdout.trim()}..HEAD`,
+      ]);
+      if (diff.code === 0 && diff.stdout.trim()) return diff.stdout;
+    }
+
+    // 3. Fall back to last 10 commits
+    const last = await pi.exec("git", [
+      "log",
+      "-p",
+      "--format=",
+      "-10",
+      "HEAD",
+    ]);
+    return last.code === 0 ? last.stdout : "";
+  }
+
   async function getDiff(): Promise<string> {
     const staged = await pi.exec("git", ["diff", "--cached"]);
     const unstaged = await pi.exec("git", ["diff"]);
@@ -75,8 +111,13 @@ export default function (pi: ExtensionAPI) {
   async function refreshDiff(): Promise<void> {
     if (!diffPanel || !tuiRef) return;
     const raw = await getDiff();
-    const files = parseDiff(raw);
-    diffPanel.setFiles(files);
+    if (raw.trim()) {
+      diffPanel.setFiles(parseDiff(raw));
+      diffPanel.setIsClean(false);
+    } else {
+      diffPanel.setFiles(parseDiff(await getCommitDiff()));
+      diffPanel.setIsClean(true);
+    }
     tuiRef.requestRender();
   }
 
@@ -313,6 +354,7 @@ interface FileSection {
 
 class DiffPanel {
   private files: DiffFile[] = [];
+  private isClean = false;
   private expanded = new Set<number>();
   private cursor = 0;
   private scroll = 0;
@@ -339,6 +381,13 @@ class DiffPanel {
     this.focused = v;
     this.cachedOutput = null;
     this.cachedKey = null;
+  }
+
+  setIsClean(v: boolean): void {
+    if (v !== this.isClean) {
+      this.isClean = v;
+      this.markDirty();
+    }
   }
 
   setFiles(files: DiffFile[]): void {
@@ -522,6 +571,28 @@ class DiffPanel {
       0,
     );
 
+    if (this.isClean) {
+      const label = th.fg(
+        "accent",
+        th.bold("Git worktree is clean, showing commit diffs"),
+      );
+      const stats = [
+        fileCount
+          ? th.fg("dim", `${fileCount} file${fileCount === 1 ? "" : "s"} `)
+          : "",
+        totalAdds ? th.fg("toolDiffAdded", `+${totalAdds} `) : "",
+        totalDels ? th.fg("toolDiffRemoved", `-${totalDels} `) : "",
+      ]
+        .filter(Boolean)
+        .join("");
+      const left = ` ${label} `;
+      const gap = Math.max(
+        0,
+        innerW - visibleWidth(left) - visibleWidth(stats),
+      );
+      return this.pad(left + " ".repeat(gap) + stats, innerW);
+    }
+
     const left = ` ${th.fg("accent", th.bold("Git Diff"))} `;
     let right: string;
     if (fileCount > 0) {
@@ -546,7 +617,12 @@ class DiffPanel {
     const dim = (c: string) => th.fg("dim", c);
 
     if (this.files.length === 0) {
-      lines.push(this.pad(dim(" No changes"), innerW));
+      lines.push(
+        this.pad(
+          dim(this.isClean ? " No commits ahead" : " No changes"),
+          innerW,
+        ),
+      );
       return lines;
     }
 
