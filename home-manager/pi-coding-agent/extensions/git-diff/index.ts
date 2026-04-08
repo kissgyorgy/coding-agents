@@ -364,6 +364,7 @@ class DiffPanel {
   private contentLines: string[] = [];
   private contentWidth: number | null = null;
   private fileSections: FileSection[] = [];
+  private fileStats: Array<{ adds: number; dels: number }> = [];
   private cachedOutput: string[] | null = null;
   private cachedKey: string | null = null;
   private titleLine: string | null = null;
@@ -403,6 +404,16 @@ class DiffPanel {
     }
     this.expanded = newExpanded;
     this.files = files;
+    this.fileStats = files.map((f) => ({
+      adds: f.hunks.reduce(
+        (n, h) => n + h.lines.filter((l) => l.type === "add").length,
+        0,
+      ),
+      dels: f.hunks.reduce(
+        (n, h) => n + h.lines.filter((l) => l.type === "remove").length,
+        0,
+      ),
+    }));
     if (this.cursor >= files.length)
       this.cursor = Math.max(0, files.length - 1);
     this.markDirty();
@@ -426,8 +437,8 @@ class DiffPanel {
       Math.min(this.cursor + delta, this.files.length - 1),
     );
     if (newCursor === this.cursor) return;
-    this.cursor = newCursor;
-    this.markDirty();
+    this.patchCursor(newCursor);
+    this.scrollToCursor();
   }
 
   toggleFoldCurrent(): void {
@@ -459,7 +470,6 @@ class DiffPanel {
   }
 
   private syncCursorToScroll(): void {
-    // Update cursor to match which file is at the scroll position
     let newCursor = 0;
     for (let i = this.fileSections.length - 1; i >= 0; i--) {
       if (this.fileSections[i].headerLine <= this.scroll) {
@@ -468,12 +478,34 @@ class DiffPanel {
       }
     }
     if (newCursor !== this.cursor) {
-      this.cursor = newCursor;
-      this.markDirty();
+      this.patchCursor(newCursor);
     } else {
       this.cachedOutput = null;
       this.cachedKey = null;
     }
+  }
+
+  private patchCursor(newCursor: number): void {
+    const oldCursor = this.cursor;
+    this.cursor = newCursor;
+    if (this.contentWidth !== null) {
+      const oldSection = this.fileSections[oldCursor];
+      const newSection = this.fileSections[newCursor];
+      if (oldSection && oldSection.headerLine < this.contentLines.length) {
+        this.contentLines[oldSection.headerLine] = this.buildHeaderLine(
+          oldCursor,
+          false,
+        );
+      }
+      if (newSection && newSection.headerLine < this.contentLines.length) {
+        this.contentLines[newSection.headerLine] = this.buildHeaderLine(
+          newCursor,
+          true,
+        );
+      }
+    }
+    this.cachedOutput = null;
+    this.cachedKey = null;
   }
 
   private scrollToCursor(): void {
@@ -521,32 +553,31 @@ class DiffPanel {
     if (this.cachedOutput && this.cachedKey === key) return this.cachedOutput;
 
     const hFill = "─".repeat(innerW);
+    const borderV = b("│");
     const out: string[] = [];
 
     out.push(b("╭" + hFill + "╮"));
-    out.push(b("│") + this.titleLine! + b("│"));
+    out.push(borderV + this.titleLine! + borderV);
     out.push(b("├" + hFill + "┤"));
 
     const total = this.contentLines.length;
-    const visible = this.contentLines.slice(
-      this.scroll,
-      this.scroll + this.maxVisible,
-    );
-    for (const line of visible) {
-      out.push(b("│") + line + b("│"));
+    const visEnd = Math.min(this.scroll + this.maxVisible, total);
+    for (let i = this.scroll; i < visEnd; i++) {
+      out.push(borderV + this.contentLines[i] + borderV);
     }
+    const visCount = visEnd - this.scroll;
 
-    for (let i = visible.length; i < this.maxVisible; i++) {
-      out.push(b("│") + " ".repeat(innerW) + b("│"));
+    const emptyRow = borderV + " ".repeat(innerW) + borderV;
+    for (let i = visCount; i < this.maxVisible; i++) {
+      out.push(emptyRow);
     }
 
     out.push(b("├" + hFill + "┤"));
-    const end = Math.min(this.scroll + visible.length, total);
-    const info = total > 0 ? ` ${this.scroll + 1}–${end}/${total}` : "";
+    const info = total > 0 ? ` ${this.scroll + 1}–${visEnd}/${total}` : "";
     const help = this.focused
       ? `j/k ↑↓ scroll · PgDn/Up · n/m file · Enter fold · a names/preview/full · Esc back${info}`
       : `Alt+F focus · Alt+j/k scroll · Alt+e fold${info}`;
-    out.push(b("│") + this.pad(th.fg("dim", ` ${help}`), innerW) + b("│"));
+    out.push(borderV + this.pad(th.fg("dim", ` ${help}`), innerW) + borderV);
     out.push(b("╰" + hFill + "╯"));
 
     this.cachedOutput = out;
@@ -560,24 +591,8 @@ class DiffPanel {
 
   private buildTitle(th: Theme, innerW: number): string {
     const fileCount = this.files.length;
-    const totalAdds = this.files.reduce(
-      (n, f) =>
-        n +
-        f.hunks.reduce(
-          (m, h) => m + h.lines.filter((l) => l.type === "add").length,
-          0,
-        ),
-      0,
-    );
-    const totalDels = this.files.reduce(
-      (n, f) =>
-        n +
-        f.hunks.reduce(
-          (m, h) => m + h.lines.filter((l) => l.type === "remove").length,
-          0,
-        ),
-      0,
-    );
+    const totalAdds = this.fileStats.reduce((n, s) => n + s.adds, 0);
+    const totalDels = this.fileStats.reduce((n, s) => n + s.dels, 0);
 
     if (this.isClean) {
       const label = th.fg(
@@ -619,6 +634,36 @@ class DiffPanel {
     return this.pad(left + " ".repeat(gap) + right, innerW);
   }
 
+  private buildHeaderLine(fi: number, active: boolean, width?: number): string {
+    const th = this.theme;
+    const innerW = width ?? this.contentWidth!;
+    const file = this.files[fi];
+    const isExpanded = this.expanded.has(fi);
+    const foldIcon = isExpanded ? "▼" : this.namesOnly ? "─" : "▶";
+    const icon =
+      file.status === "new" ? "+" : file.status === "deleted" ? "−" : "~";
+    const color =
+      file.status === "new"
+        ? "toolDiffAdded"
+        : file.status === "deleted"
+          ? "toolDiffRemoved"
+          : "warning";
+    const { adds, dels } = this.fileStats[fi];
+    const stats = [
+      adds ? th.fg("toolDiffAdded", `+${adds}`) : "",
+      dels ? th.fg("toolDiffRemoved", `-${dels}`) : "",
+    ]
+      .filter(Boolean)
+      .join(" ");
+    const foldColor = active ? "accent" : "dim";
+    const pathColor = active ? "accent" : "text";
+    const marker = active ? th.fg("accent", "▌") : " ";
+    const header =
+      `${marker}${th.fg(foldColor as any, foldIcon)} ${th.fg(color as any, icon)} ${th.fg(pathColor as any, th.bold(file.path))}` +
+      (stats ? `  ${stats}` : "");
+    return this.pad(header, innerW);
+  }
+
   private buildContent(th: Theme, innerW: number): string[] {
     const lines: string[] = [];
     this.fileSections = [];
@@ -643,71 +688,44 @@ class DiffPanel {
 
       const headerLine = lines.length;
 
-      const foldIcon = isExpanded ? "▼" : this.namesOnly ? "─" : "▶";
-      const icon =
-        file.status === "new" ? "+" : file.status === "deleted" ? "−" : "~";
-      const color =
-        file.status === "new"
-          ? "toolDiffAdded"
-          : file.status === "deleted"
-            ? "toolDiffRemoved"
-            : "warning";
+      lines.push(this.buildHeaderLine(fi, isActive, innerW));
 
-      const adds = file.hunks.reduce(
-        (n, h) => n + h.lines.filter((l) => l.type === "add").length,
-        0,
-      );
-      const dels = file.hunks.reduce(
-        (n, h) => n + h.lines.filter((l) => l.type === "remove").length,
-        0,
-      );
-      const stats = [
-        adds ? th.fg("toolDiffAdded", `+${adds}`) : "",
-        dels ? th.fg("toolDiffRemoved", `-${dels}`) : "",
-      ]
-        .filter(Boolean)
-        .join(" ");
-
-      const foldColor = isActive ? "accent" : "dim";
-      const pathColor = isActive ? "accent" : "text";
-      const marker = isActive ? th.fg("accent", "▌") : " ";
-      const header =
-        `${marker}${th.fg(foldColor as any, foldIcon)} ${th.fg(color as any, icon)} ${th.fg(pathColor as any, th.bold(file.path))}` +
-        (stats ? `  ${stats}` : "");
-      lines.push(this.pad(header, innerW));
-
-      const diffLines: string[] = [];
-      for (const hunk of file.hunks) {
-        diffLines.push(this.pad(dim(`  @@ ${hunk.header} @@`), innerW));
-        for (const line of hunk.lines) {
-          let styled: string;
-          if (line.type === "add") {
-            const ln = String(line.newNum ?? "").padStart(4);
-            styled = `  ${dim(ln)}  ${th.fg("toolDiffAdded", `+ ${line.content}`)}`;
-          } else if (line.type === "remove") {
-            const ln = String(line.oldNum ?? "").padStart(4);
-            styled = `  ${dim(ln)}  ${th.fg("toolDiffRemoved", `- ${line.content}`)}`;
-          } else {
-            const ln = String(line.newNum ?? "").padStart(4);
-            styled = `  ${dim(ln)}  ${th.fg("toolDiffContext", `  ${line.content}`)}`;
+      if (isExpanded || !this.namesOnly) {
+        const diffLines: string[] = [];
+        for (const hunk of file.hunks) {
+          diffLines.push(this.pad(dim(`  @@ ${hunk.header} @@`), innerW));
+          for (const line of hunk.lines) {
+            let styled: string;
+            if (line.type === "add") {
+              const ln = String(line.newNum ?? "").padStart(4);
+              styled = `  ${dim(ln)}  ${th.fg("toolDiffAdded", `+ ${line.content}`)}`;
+            } else if (line.type === "remove") {
+              const ln = String(line.oldNum ?? "").padStart(4);
+              styled = `  ${dim(ln)}  ${th.fg("toolDiffRemoved", `- ${line.content}`)}`;
+            } else {
+              const ln = String(line.newNum ?? "").padStart(4);
+              styled = `  ${dim(ln)}  ${th.fg("toolDiffContext", `  ${line.content}`)}`;
+            }
+            diffLines.push(truncateToWidth(styled, innerW, "…", true));
           }
-          diffLines.push(truncateToWidth(styled, innerW, "…", true));
         }
-      }
 
-      if (isExpanded) {
-        lines.push(...diffLines);
-      } else if (!this.namesOnly) {
-        const preview = diffLines.slice(0, FOLD_PREVIEW);
-        lines.push(...preview);
-        const remaining = diffLines.length - preview.length;
-        if (remaining > 0) {
-          lines.push(
-            this.pad(
-              dim(`  ··· ${remaining} more line${remaining === 1 ? "" : "s"}`),
-              innerW,
-            ),
-          );
+        if (isExpanded) {
+          lines.push(...diffLines);
+        } else {
+          const preview = diffLines.slice(0, FOLD_PREVIEW);
+          lines.push(...preview);
+          const remaining = diffLines.length - preview.length;
+          if (remaining > 0) {
+            lines.push(
+              this.pad(
+                dim(
+                  `  ··· ${remaining} more line${remaining === 1 ? "" : "s"}`,
+                ),
+                innerW,
+              ),
+            );
+          }
         }
       }
 
