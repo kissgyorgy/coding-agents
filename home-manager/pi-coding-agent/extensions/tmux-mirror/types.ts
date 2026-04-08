@@ -71,6 +71,9 @@ export interface MirrorBackend {
   /** Block until the shell signals prompt ready. Returns true if signaled. */
   waitForPrompt(timeoutMs: number): Promise<boolean>;
 
+  /** Block until all precmd functions (including direnv etc.) have completed. */
+  waitForReady(timeoutMs: number): Promise<boolean>;
+
   /** Unblock a pending waitForPrompt (used when stopping the activity loop). */
   unblockWait(): Promise<void>;
 

@@ -93,34 +93,34 @@ export default function (pi: ExtensionAPI) {
       const shell = await backend.getShellName();
       const hook = backend.generateHookCode(shell);
 
-      for (let attempt = 0; attempt < 3; attempt++) {
+      for (let attempt = 0; attempt < 2; attempt++) {
         await backend.prepareForHook();
 
         await backend.sendText(` ${hook} && clear`);
         await backend.sendEnter();
 
-        const signaled = await backend.waitForPrompt(5000);
+        // __pi_precmd fires first in the precmd chain (before direnv etc.)
+        const signaled = await backend.waitForPrompt(60000);
         const { seq } = await backend.readRc();
-        const hookFired = seq > 0 || signaled;
+        if (!(seq > 0 || signaled)) continue;
 
-        if (hookFired) {
-          await sleep(500);
-          const pane = (await backend.capturePane(50)).trimEnd();
-          const paneLines = pane.split("\n");
-          let h = 0;
-          for (let i = paneLines.length - 1; i >= 0; i--) {
-            if (paneLines[i].trim()) h++;
-            else break;
-          }
-          promptHeight = Math.max(1, h);
-          const lastLine = paneLines[paneLines.length - 1].trim();
-          const sym = lastLine.match(/^\S+/);
-          if (sym) promptSymbol = sym[0];
-          hookInstalled = true;
-          return true;
+        // __pi_ready fires last in the precmd chain (after direnv etc.)
+        // so the prompt is fully drawn when this returns
+        await backend.waitForReady(60000);
+
+        const pane = (await backend.capturePane(50)).trimEnd();
+        const paneLines = pane.split("\n");
+        let h = 0;
+        for (let i = paneLines.length - 1; i >= 0; i--) {
+          if (paneLines[i].trim()) h++;
+          else break;
         }
-
-        await sleep(1000);
+        promptHeight = Math.min(Math.max(1, h), 4);
+        const lastLine = paneLines[paneLines.length - 1].trim();
+        const sym = lastLine.match(/^\S+/);
+        if (sym) promptSymbol = sym[0];
+        hookInstalled = true;
+        return true;
       }
 
       return false;
@@ -262,15 +262,15 @@ export default function (pi: ExtensionAPI) {
         const remaining = Math.min(deadline - Date.now(), 5000);
         if (remaining <= 0) break;
 
-        const signaled = await backend.waitForPrompt(remaining);
+        await backend.waitForPrompt(remaining);
 
-        if (signaled) {
-          const { seq, rc } = await backend.readRc();
-          if (seq > seqBefore) {
-            exitCode = rc;
-            completed = true;
-            break;
-          }
+        // Always check RC regardless of signal — handles cases where the
+        // FIFO signal was missed or stolen by the activity loop
+        const { seq, rc } = await backend.readRc();
+        if (seq > seqBefore) {
+          exitCode = rc;
+          completed = true;
+          break;
         }
 
         if (!(await backend.paneAlive())) {
@@ -284,10 +284,9 @@ export default function (pi: ExtensionAPI) {
 
       if (!completed) {
         await backend.sendCtrlC();
-        await sleep(500);
+        await backend.waitForPrompt(5000);
       }
 
-      await sleep(200);
       const after = await backend.capturePane();
       let output = extractOutput(before, after);
 
@@ -552,8 +551,12 @@ export default function (pi: ExtensionAPI) {
 
     // ── register event handlers ────────────────────────────
 
-    pi.on("agent_start", () => {
+    pi.on("agent_start", async () => {
       agentRunning = true;
+      // Release any pending activity loop FIFO reader so runCommand
+      // is the sole reader. The await yields to the event loop,
+      // letting the activity loop see agentRunning=true and stop.
+      await backend.unblockWait();
     });
 
     pi.on("agent_end", () => {

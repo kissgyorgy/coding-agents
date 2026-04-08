@@ -22,6 +22,7 @@ export class KittyBackend implements MirrorBackend {
   private readonly sessionId: string;
   private readonly rcFile: string;
   private readonly signalFifo: string;
+  private readonly readyFifo: string;
 
   constructor(exec: ExecFn, onReset?: () => void) {
     this.exec = exec;
@@ -31,6 +32,7 @@ export class KittyBackend implements MirrorBackend {
     this.sessionId = randomUUID().slice(0, 8);
     this.rcFile = `/tmp/pi-mirror-rc-${this.sessionId}`;
     this.signalFifo = `/tmp/pi-mirror-signal-${this.sessionId}`;
+    this.readyFifo = `/tmp/pi-mirror-ready-${this.sessionId}`;
   }
 
   // ── kitty primitives ───────────────────────────────────
@@ -104,6 +106,9 @@ export class KittyBackend implements MirrorBackend {
     } catch {}
     try {
       unlinkSync(this.signalFifo);
+    } catch {}
+    try {
+      unlinkSync(this.readyFifo);
     } catch {}
     this.onReset?.();
   }
@@ -235,14 +240,16 @@ export class KittyBackend implements MirrorBackend {
         envSetup,
         `typeset -gi __pi_seq=0`,
         `__pi_precmd() { local rc=$?; echo "$((++__pi_seq)) $rc" > ${this.rcFile}; (echo > ${this.signalFifo} &) 2>/dev/null; return $rc; }`,
-        `precmd_functions=(__pi_precmd $precmd_functions)`,
+        `__pi_ready() { (echo > ${this.readyFifo} &) 2>/dev/null; }`,
+        `precmd_functions=(__pi_precmd $precmd_functions __pi_ready)`,
       ].join("; ");
     } else {
       return [
         envSetup,
         `__pi_seq=0`,
         `__pi_pcmd() { local rc=$?; echo "$((++__pi_seq)) $rc" > ${this.rcFile}; (echo > ${this.signalFifo} &) 2>/dev/null; return $rc; }`,
-        `PROMPT_COMMAND="__pi_pcmd;\${PROMPT_COMMAND}"`,
+        `__pi_rdy() { (echo > ${this.readyFifo} &) 2>/dev/null; }`,
+        `PROMPT_COMMAND="__pi_pcmd;\${PROMPT_COMMAND};__pi_rdy"`,
       ].join("; ");
     }
   }
@@ -254,7 +261,11 @@ export class KittyBackend implements MirrorBackend {
     try {
       unlinkSync(this.signalFifo);
     } catch {}
+    try {
+      unlinkSync(this.readyFifo);
+    } catch {}
     await this.exec("mkfifo", [this.signalFifo], { timeout: 2000 });
+    await this.exec("mkfifo", [this.readyFifo], { timeout: 2000 });
   }
 
   async readRc(): Promise<{ seq: number; rc: number }> {
@@ -280,10 +291,24 @@ export class KittyBackend implements MirrorBackend {
     }
   }
 
+  async waitForReady(timeoutMs: number): Promise<boolean> {
+    try {
+      const r = await this.exec("cat", [this.readyFifo], {
+        timeout: timeoutMs,
+      });
+      return r.code === 0;
+    } catch {
+      return false;
+    }
+  }
+
   async unblockWait(): Promise<void> {
     await this.exec(
       "bash",
-      ["-c", `(echo > ${this.signalFifo} &) 2>/dev/null`],
+      [
+        "-c",
+        `(echo > ${this.signalFifo} &; echo > ${this.readyFifo} &) 2>/dev/null`,
+      ],
       { timeout: 2000 },
     ).catch(() => {});
   }
@@ -294,6 +319,9 @@ export class KittyBackend implements MirrorBackend {
     } catch {}
     try {
       unlinkSync(this.signalFifo);
+    } catch {}
+    try {
+      unlinkSync(this.readyFifo);
     } catch {}
   }
 }

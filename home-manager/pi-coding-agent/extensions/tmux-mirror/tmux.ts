@@ -8,6 +8,7 @@ import type { ExecFn, MirrorBackend } from "./types.js";
 import { sleep } from "./types.js";
 
 const WAIT_CHANNEL = "pi-prompt";
+const READY_CHANNEL = "pi-ready";
 const ENV_PANE_ID = "PI_MIRROR_PANE";
 const ENV_LAST_RC = "PI_LAST_RC";
 
@@ -216,14 +217,16 @@ export class TmuxBackend implements MirrorBackend {
         envSetup,
         `typeset -gi __pi_seq=0`,
         `__pi_precmd() { local rc=$?; tmux set-environment ${ENV_LAST_RC} "$((++__pi_seq)) $rc"; tmux wait-for -S ${WAIT_CHANNEL} 2>/dev/null; return $rc; }`,
-        `precmd_functions=(__pi_precmd $precmd_functions)`,
+        `__pi_ready() { tmux wait-for -S ${READY_CHANNEL} 2>/dev/null; }`,
+        `precmd_functions=(__pi_precmd $precmd_functions __pi_ready)`,
       ].join("; ");
     } else {
       return [
         envSetup,
         `__pi_seq=0`,
         `__pi_pcmd() { local rc=$?; tmux set-environment ${ENV_LAST_RC} "$((++__pi_seq)) $rc"; tmux wait-for -S ${WAIT_CHANNEL} 2>/dev/null; return $rc; }`,
-        `PROMPT_COMMAND="__pi_pcmd;\${PROMPT_COMMAND}"`,
+        `__pi_rdy() { tmux wait-for -S ${READY_CHANNEL} 2>/dev/null; }`,
+        `PROMPT_COMMAND="__pi_pcmd;\${PROMPT_COMMAND};__pi_rdy"`,
       ].join("; ");
     }
   }
@@ -254,8 +257,20 @@ export class TmuxBackend implements MirrorBackend {
     }
   }
 
+  async waitForReady(timeoutMs: number): Promise<boolean> {
+    try {
+      const r = await this.exec("tmux", ["wait-for", READY_CHANNEL], {
+        timeout: timeoutMs,
+      });
+      return r.code === 0;
+    } catch {
+      return false;
+    }
+  }
+
   async unblockWait(): Promise<void> {
     await this.tmux("wait-for", "-S", WAIT_CHANNEL).catch(() => {});
+    await this.tmux("wait-for", "-S", READY_CHANNEL).catch(() => {});
   }
 
   cleanup(): void {
