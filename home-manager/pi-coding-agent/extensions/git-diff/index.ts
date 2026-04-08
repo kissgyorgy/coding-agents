@@ -355,6 +355,7 @@ interface FileSection {
 class DiffPanel {
   private files: DiffFile[] = [];
   private isClean = false;
+  private namesOnly = false;
   private expanded = new Set<number>();
   private cursor = 0;
   private scroll = 0;
@@ -440,12 +441,19 @@ class DiffPanel {
   }
 
   toggleAllFolds(): void {
-    if (this.expanded.size > 0) {
+    if (this.namesOnly) {
+      // names-only → collapsed (preview)
+      this.namesOnly = false;
       this.expanded.clear();
-    } else {
+    } else if (this.expanded.size === 0) {
+      // collapsed → expanded
       for (let i = 0; i < this.files.length; i++) {
         this.expanded.add(i);
       }
+    } else {
+      // expanded → names-only
+      this.namesOnly = true;
+      this.expanded.clear();
     }
     this.markDirty();
   }
@@ -536,7 +544,7 @@ class DiffPanel {
     const end = Math.min(this.scroll + visible.length, total);
     const info = total > 0 ? ` ${this.scroll + 1}–${end}/${total}` : "";
     const help = this.focused
-      ? `j/k ↑↓ scroll · PgDn/Up · n/m file · Enter fold · Esc back${info}`
+      ? `j/k ↑↓ scroll · PgDn/Up · n/m file · Enter fold · a names/preview/full · Esc back${info}`
       : `Alt+F focus · Alt+j/k scroll · Alt+e fold${info}`;
     out.push(b("│") + this.pad(th.fg("dim", ` ${help}`), innerW) + b("│"));
     out.push(b("╰" + hFill + "╯"));
@@ -635,7 +643,7 @@ class DiffPanel {
 
       const headerLine = lines.length;
 
-      const foldIcon = isExpanded ? "▼" : "▶";
+      const foldIcon = isExpanded ? "▼" : this.namesOnly ? "─" : "▶";
       const icon =
         file.status === "new" ? "+" : file.status === "deleted" ? "−" : "~";
       const color =
@@ -689,7 +697,7 @@ class DiffPanel {
 
       if (isExpanded) {
         lines.push(...diffLines);
-      } else {
+      } else if (!this.namesOnly) {
         const preview = diffLines.slice(0, FOLD_PREVIEW);
         lines.push(...preview);
         const remaining = diffLines.length - preview.length;
