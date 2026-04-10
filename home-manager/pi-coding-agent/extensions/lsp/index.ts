@@ -608,7 +608,9 @@ export default function (pi: ExtensionAPI) {
     promptSnippet:
       "LSP operations (hover, definition, references, rename, symbols, diagnostics) for nix, python, typescript, and go",
     promptGuidelines: [
-      "Use the lsp tool for refactoring operations like rename, finding references, and go-to-definition instead of grep-based approaches when working with nix, python, typescript, or go files.",
+      "ALWAYS use the lsp tool FOR ANY coding related action instead grep-based approaches.",
+      "IMPORTANT: USE lsp tool instead of read or ripgrep for searching code snippets, functions, variables or symbols in code.",
+      "Use 'definition' with a 'query' parameter to look up a symbol by name and see its implementation body. 'workspace_symbol' only lists names and locations — prefer 'definition' when you need the code.",
       "Before renaming a symbol, use 'references' to see all usages, then use 'rename' to apply the workspace edit returned by the language server.",
       "Line and character numbers for the lsp tool are 1-based (matching what the read tool shows).",
     ],
@@ -732,18 +734,8 @@ export default function (pi: ExtensionAPI) {
 
             if (!match?.location)
               throw new Error(`Symbol not found: ${params.query}`);
-            const loc = match.location;
             resultText = await formatDefinitionWithImplementation(
-              [
-                {
-                  targetUri: loc.uri,
-                  targetRange: loc.range,
-                  targetSelectionRange: {
-                    start: loc.range.start,
-                    end: loc.range.start,
-                  },
-                },
-              ],
+              [match.location],
               client,
             );
           }
@@ -823,10 +815,54 @@ export default function (pi: ExtensionAPI) {
         maxBytes: DEFAULT_MAX_BYTES,
       });
 
+      const lines = resultText.split("\n");
+      const headerLine = lines[0] ?? "";
+      let inCodeBlock = false;
+      const sigLines: string[] = [];
+      for (const line of lines.slice(1)) {
+        const trimmed = line.trim();
+        if (trimmed.startsWith("``")) {
+          if (inCodeBlock) break;
+          inCodeBlock = true;
+          continue;
+        }
+        if (!inCodeBlock) continue;
+        if (!trimmed) continue;
+        sigLines.push(line);
+        if (
+          trimmed.endsWith("{") ||
+          trimmed.endsWith(")") ||
+          trimmed.endsWith(";") ||
+          trimmed.endsWith(":")
+        )
+          break;
+      }
+      const summary =
+        sigLines.length > 0
+          ? headerLine + "\n" + sigLines.join("\n")
+          : headerLine;
+
       return {
         content: [{ type: "text", text: truncation.content }],
-        details: { language, action },
+        details: { language, action, summary },
       };
+    },
+
+    renderResult(result, options, theme) {
+      const textContent = result.content
+        .filter((c): c is { type: "text"; text: string } => c.type === "text")
+        .map((c) => c.text)
+        .join("");
+
+      if (!options.expanded) {
+        const summary =
+          (result.details as { summary?: string }).summary ??
+          textContent.split("\n")[0] ??
+          "";
+        return new Text(theme.fg("toolOutput", summary), 0, 0);
+      }
+
+      return new Text(theme.fg("toolOutput", textContent), 0, 0);
     },
   });
 
