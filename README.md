@@ -114,6 +114,6 @@ integration.
 
 #### `coding-agents.pi-coding-agent`
 
-- **`enable`** — Install Pi, `nil`, `basedpyright`, `typescript-language-server`, `typescript`, and link shared skills and extensions
+- **`enable`** — Install Pi, `nil`, `basedpyright`, `typescript-language-server`, `typescript`, `gopls`, `go`, and link shared skills and extensions
 - **`extensionsDir`** — Path to a custom extensions directory
   (defaults to built-in extensions including tmux-mirror, plan-mode, and more)

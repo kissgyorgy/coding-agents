@@ -54,6 +54,13 @@ const LANGUAGE_CONFIGS: Record<string, (cwd: string) => LspServerConfig[]> = {
       rootUri: pathToFileURL(cwd).href,
     },
   ],
+  go: (cwd) => [
+    {
+      command: "gopls",
+      args: ["serve"],
+      rootUri: pathToFileURL(cwd).href,
+    },
+  ],
 };
 
 export function getSupportedLanguages(): string[] {
@@ -366,6 +373,7 @@ export class LspClient {
     )
       return "javascript";
     if (filePath.endsWith(".jsx")) return "javascriptreact";
+    if (filePath.endsWith(".go")) return "go";
     return this.language;
   }
 

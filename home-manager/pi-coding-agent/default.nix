@@ -35,6 +35,8 @@ in
       basedpyright
       typescript-language-server
       typescript
+      gopls
+      go
     ];
   };
 }

@@ -452,6 +452,10 @@ export default function (pi: ExtensionAPI) {
       );
     }
 
+    if (language === "go") {
+      return findNearestContainingDir(fileDir, ctx.cwd, ["go.mod"]) ?? fileDir;
+    }
+
     return ctx.cwd;
   }
 
@@ -481,9 +485,9 @@ export default function (pi: ExtensionAPI) {
     label: "LSP",
     description: `Language Server Protocol tool. Starts LSP servers on demand and provides editor-like features: hover info, go-to-definition, find references, rename symbols, list document/workspace symbols, completions, and diagnostics. Supported languages: ${getSupportedLanguages().join(", ")}. Line and character numbers are 1-based.`,
     promptSnippet:
-      "LSP operations (hover, definition, references, rename, symbols, diagnostics) for nix, python, and typescript",
+      "LSP operations (hover, definition, references, rename, symbols, diagnostics) for nix, python, typescript, and go",
     promptGuidelines: [
-      "Use the lsp tool for refactoring operations like rename, finding references, and go-to-definition instead of grep-based approaches when working with nix, python, or typescript files.",
+      "Use the lsp tool for refactoring operations like rename, finding references, and go-to-definition instead of grep-based approaches when working with nix, python, typescript, or go files.",
       "Before renaming a symbol, use 'references' to see all usages, then use 'rename' to apply the workspace edit returned by the language server.",
       "Line and character numbers for the lsp tool are 1-based (matching what the read tool shows).",
     ],
