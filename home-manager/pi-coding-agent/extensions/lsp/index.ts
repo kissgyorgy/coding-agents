@@ -1,7 +1,7 @@
 import { StringEnum } from "@mariozechner/pi-ai";
-import { existsSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
 import { dirname, extname, join, resolve } from "node:path";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import type {
   ExtensionAPI,
   ExtensionContext,
@@ -79,26 +79,29 @@ const LspParams = Type.Object({
   file: Type.Optional(
     Type.String({
       description:
-        "File path (relative to cwd). Required for: hover, definition, references, rename, document_symbols, completion, diagnostics",
+        "File path (relative to cwd). Required for: hover, references, rename, document_symbols, completion, diagnostics. Optional for definition (uses query instead).",
     }),
   ),
   line: Type.Optional(
     Type.Number({
       description:
-        "1-based line number. Required for: hover, definition, references, rename, completion",
+        "1-based line number. Required for: hover, references, rename, completion. Optional for definition (uses query instead).",
     }),
   ),
   character: Type.Optional(
     Type.Number({
       description:
-        "1-based column number. Required for: hover, definition, references, rename, completion",
+        "1-based column number. Required for: hover, references, rename, completion. Optional for definition (uses query instead).",
     }),
   ),
   new_name: Type.Optional(
     Type.String({ description: "New name for rename action" }),
   ),
   query: Type.Optional(
-    Type.String({ description: "Search query for workspace_symbol action" }),
+    Type.String({
+      description:
+        "Symbol name for definition (when file not provided) or search query for workspace_symbol",
+    }),
   ),
 });
 
@@ -211,11 +214,131 @@ function getRangeText(path: string, range: Range): string | null {
   }
 }
 
+type SymbolInformation = {
+  name: string;
+  kind: number;
+  location?: Location;
+  containerName?: string;
+};
+
+function findBestSymbolMatch(
+  symbols: unknown,
+  query: string,
+): SymbolInformation | null {
+  const items = Array.isArray(symbols) ? symbols : [];
+  if (items.length === 0) return null;
+
+  const exact = items.filter((s: SymbolInformation) => s.name === query);
+  if (exact.length > 0) return exact[0] as SymbolInformation;
+
+  const lower = query.toLowerCase();
+  const caseMatch = items.filter(
+    (s: SymbolInformation) => s.name.toLowerCase() === lower,
+  );
+  if (caseMatch.length > 0) return caseMatch[0] as SymbolInformation;
+
+  return items[0] as SymbolInformation;
+}
+
+async function findSymbolInOpenFiles(
+  client: LspClient,
+  query: string,
+): Promise<SymbolInformation | null> {
+  const paths = client.getOpenDocumentPaths();
+  const lower = query.toLowerCase();
+  let best: SymbolInformation | null = null;
+
+  for (const path of paths) {
+    let rawSymbols: unknown;
+    try {
+      rawSymbols = await client.documentSymbols(path);
+    } catch {
+      continue;
+    }
+
+    const symbols = Array.isArray(rawSymbols) ? rawSymbols : [];
+    const visit = (items: DocumentSymbol[]) => {
+      for (const sym of items) {
+        const loc: Location | undefined =
+          sym.location ??
+          (sym.range
+            ? {
+                uri: pathToFileURL(path).href,
+                range: sym.range,
+              }
+            : undefined);
+        if (sym.name === query && loc) {
+          best = { name: sym.name, kind: sym.kind, location: loc };
+          return;
+        }
+        if (sym.name.toLowerCase() === lower && !best && loc) {
+          best = { name: sym.name, kind: sym.kind, location: loc };
+        }
+        if (sym.children) visit(sym.children);
+      }
+    };
+    visit(symbols as DocumentSymbol[]);
+    if (best?.name === query) return best;
+  }
+
+  return best;
+}
+
 function languageFromPath(path: string): string {
   const ext = extname(path);
   if (ext === ".py" || ext === ".pyi") return "python";
   if (ext === ".nix") return "nix";
+  if (ext === ".ts" || ext === ".mts" || ext === ".cts") return "typescript";
+  if (ext === ".tsx") return "typescriptreact";
+  if (ext === ".js" || ext === ".mjs" || ext === ".cjs") return "javascript";
+  if (ext === ".jsx") return "javascriptreact";
+  if (ext === ".go") return "go";
   return "text";
+}
+
+const SKIP_DIRS = new Set([
+  "node_modules",
+  ".git",
+  "dist",
+  "build",
+  "out",
+  "__pycache__",
+  ".nix",
+  "vendor",
+  "claudetmp",
+]);
+
+function findSourceFiles(
+  rootDir: string,
+  extensions: Set<string>,
+  maxFiles = 50,
+  maxDepth = 5,
+): string[] {
+  const results: string[] = [];
+
+  function scan(dir: string, depth: number) {
+    if (results.length >= maxFiles || depth > maxDepth) return;
+    let entries;
+    try {
+      entries = readdirSync(dir, { withFileTypes: true });
+    } catch {
+      return;
+    }
+    for (const entry of entries) {
+      if (results.length >= maxFiles) return;
+      if (entry.isDirectory() && !SKIP_DIRS.has(entry.name)) {
+        scan(join(dir, entry.name), depth + 1);
+      } else if (entry.isFile()) {
+        const ext = extname(entry.name);
+        if (extensions.has(ext)) {
+          results.push(join(dir, entry.name));
+        }
+      }
+    }
+  }
+
+  scan(rootDir, 0);
+  return results;
 }
 
 function getLineOffsets(content: string): number[] {
@@ -432,28 +555,26 @@ export default function (pi: ExtensionAPI) {
     ctx: ExtensionContext,
     file?: string,
   ): string {
-    if (!file) return ctx.cwd;
-
-    const normalized = file.startsWith("@") ? file.slice(1) : file;
-    const absoluteFile = resolve(ctx.cwd, normalized);
-    const fileDir = dirname(absoluteFile);
+    const startDir = file
+      ? dirname(resolve(ctx.cwd, file.startsWith("@") ? file.slice(1) : file))
+      : ctx.cwd;
 
     if (language === "python") {
-      return fileDir;
+      return startDir;
     }
 
     if (language === "typescript") {
-      return (
-        findNearestContainingDir(fileDir, ctx.cwd, [
-          "tsconfig.json",
-          "jsconfig.json",
-          "package.json",
-        ]) ?? fileDir
-      );
+      const configDir = findNearestContainingDir(startDir, "/", [
+        "tsconfig.json",
+        "jsconfig.json",
+        "package.json",
+      ]);
+      if (configDir) return configDir;
+      return startDir;
     }
 
     if (language === "go") {
-      return findNearestContainingDir(fileDir, ctx.cwd, ["go.mod"]) ?? fileDir;
+      return findNearestContainingDir(startDir, "/", ["go.mod"]) ?? startDir;
     }
 
     return ctx.cwd;
@@ -560,10 +681,72 @@ export default function (pi: ExtensionAPI) {
         }
 
         case "definition": {
-          const file = requireFile(params.file);
-          const pos = requirePosition(params.line, params.character);
-          const result = await client.definition(file, pos.line, pos.character);
-          resultText = await formatDefinitionWithImplementation(result, client);
+          if (params.file) {
+            const file = requireFile(params.file);
+            const pos = requirePosition(params.line, params.character);
+            const result = await client.definition(
+              file,
+              pos.line,
+              pos.character,
+            );
+            resultText = await formatDefinitionWithImplementation(
+              result,
+              client,
+            );
+          } else {
+            if (!params.query)
+              throw new Error(
+                "'query' (symbol name) is required for definition when 'file' is not provided",
+              );
+
+            const exts =
+              language === "typescript"
+                ? new Set([".ts", ".tsx", ".js", ".jsx", ".mts", ".mjs"])
+                : language === "go"
+                  ? new Set([".go"])
+                  : language === "python"
+                    ? new Set([".py", ".pyi"])
+                    : new Set();
+
+            const workspaceRoot = getWorkspaceRoot(language, ctx);
+            const client = await getServer(language, workspaceRoot);
+
+            if (client.openDocumentCount() === 0) {
+              for (const f of findSourceFiles(workspaceRoot, exts)) {
+                await client.ensureDocumentOpen(f);
+              }
+            }
+
+            let match: SymbolInformation | null = null;
+
+            try {
+              const symbols = await client.workspaceSymbol(params.query);
+              match = findBestSymbolMatch(symbols, params.query);
+            } catch {
+              // workspace/symbol may fail without project config (e.g. tsserver)
+            }
+
+            if (!match) {
+              match = await findSymbolInOpenFiles(client, params.query);
+            }
+
+            if (!match?.location)
+              throw new Error(`Symbol not found: ${params.query}`);
+            const loc = match.location;
+            resultText = await formatDefinitionWithImplementation(
+              [
+                {
+                  targetUri: loc.uri,
+                  targetRange: loc.range,
+                  targetSelectionRange: {
+                    start: loc.range.start,
+                    end: loc.range.start,
+                  },
+                },
+              ],
+              client,
+            );
+          }
           break;
         }
 

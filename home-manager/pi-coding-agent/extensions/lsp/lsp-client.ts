@@ -77,6 +77,20 @@ export class LspClient {
   private configs: LspServerConfig[];
   private config: LspServerConfig | null = null;
   private openDocuments = new Set<string>();
+
+  openDocumentCount(): number {
+    return this.openDocuments.size;
+  }
+
+  getOpenDocumentPaths(): string[] {
+    return [...this.openDocuments].map((uri) => {
+      try {
+        return new URL(uri).pathname;
+      } catch {
+        return uri;
+      }
+    });
+  }
   private diagnostics = new Map<string, unknown[]>();
 
   constructor(language: string, cwd: string) {
@@ -325,7 +339,6 @@ export class LspClient {
         },
       });
       this.openDocuments.add(uri);
-      await new Promise((resolveOpen) => setTimeout(resolveOpen, 200));
     }
 
     return uri;
@@ -352,7 +365,6 @@ export class LspClient {
       },
     });
     this.openDocuments.add(uri);
-    await new Promise((resolveOpen) => setTimeout(resolveOpen, 200));
     return uri;
   }
 
