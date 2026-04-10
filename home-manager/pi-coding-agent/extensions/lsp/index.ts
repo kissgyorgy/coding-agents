@@ -1,6 +1,6 @@
 import { StringEnum } from "@mariozechner/pi-ai";
-import { readFileSync } from "node:fs";
-import { dirname, extname, resolve } from "node:path";
+import { existsSync, readFileSync, writeFileSync } from "node:fs";
+import { dirname, extname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import type {
   ExtensionAPI,
@@ -10,6 +10,7 @@ import {
   truncateHead,
   DEFAULT_MAX_BYTES,
   DEFAULT_MAX_LINES,
+  withFileMutationQueue,
 } from "@mariozechner/pi-coding-agent";
 import { Text } from "@mariozechner/pi-tui";
 import { Type } from "@sinclair/typebox";
@@ -52,6 +53,22 @@ type DocumentSymbol = {
   selectionRange?: Range;
   children?: DocumentSymbol[];
   location?: Location;
+};
+
+type TextEdit = {
+  range: Range;
+  newText: string;
+};
+
+type WorkspaceEdit = {
+  changes?: Record<string, TextEdit[]>;
+  documentChanges?: (
+    | {
+        textDocument: { uri: string; version?: number | null };
+        edits: TextEdit[];
+      }
+    | { kind: string; uri?: string; oldUri?: string; newUri?: string }
+  )[];
 };
 
 const LspParams = Type.Object({
@@ -106,6 +123,26 @@ function uriToPath(uri: string): string {
     return fileURLToPath(uri);
   } catch {
     return uri;
+  }
+}
+
+function findNearestContainingDir(
+  startDir: string,
+  stopDir: string,
+  fileNames: string[],
+): string | null {
+  let current = resolve(startDir);
+  const limit = resolve(stopDir);
+
+  while (true) {
+    for (const fileName of fileNames) {
+      if (existsSync(join(current, fileName))) return current;
+    }
+    if (current === limit) return null;
+    const parent = dirname(current);
+    if (parent === current) return null;
+    if (!current.startsWith(limit)) return null;
+    current = parent;
   }
 }
 
@@ -181,6 +218,155 @@ function languageFromPath(path: string): string {
   return "text";
 }
 
+function getLineOffsets(content: string): number[] {
+  const offsets = [0];
+  for (let i = 0; i < content.length; i++) {
+    const char = content[i];
+    if (char === "\r") {
+      if (content[i + 1] === "\n") i++;
+      offsets.push(i + 1);
+    } else if (char === "\n") {
+      offsets.push(i + 1);
+    }
+  }
+  return offsets;
+}
+
+function getLineContentEnd(
+  content: string,
+  lineOffsets: number[],
+  line: number,
+): number {
+  let end =
+    line + 1 < lineOffsets.length ? lineOffsets[line + 1] : content.length;
+  if (end > 0 && content[end - 1] === "\n") end--;
+  if (end > 0 && content[end - 1] === "\r") end--;
+  return end;
+}
+
+function positionToOffset(
+  content: string,
+  lineOffsets: number[],
+  pos: Position,
+): number {
+  if (pos.line < 0 || pos.line >= lineOffsets.length) {
+    throw new Error(
+      `Invalid edit position ${pos.line + 1}:${pos.character + 1}`,
+    );
+  }
+
+  const lineStart = lineOffsets[pos.line];
+  const lineEnd = getLineContentEnd(content, lineOffsets, pos.line);
+  const clampedCharacter = Math.min(
+    pos.character,
+    Math.max(0, lineEnd - lineStart),
+  );
+  return lineStart + clampedCharacter;
+}
+
+function applyTextEdits(
+  content: string,
+  edits: TextEdit[],
+  path: string,
+): string {
+  const lineOffsets = getLineOffsets(content);
+  const normalized = edits.map((edit, index) => {
+    const start = positionToOffset(content, lineOffsets, edit.range.start);
+    const end = positionToOffset(content, lineOffsets, edit.range.end);
+    if (end < start) {
+      throw new Error(
+        `Invalid edit range in ${path} at ${edit.range.start.line + 1}:${edit.range.start.character + 1}`,
+      );
+    }
+    return { ...edit, start, end, index };
+  });
+
+  normalized.sort(
+    (a, b) => a.start - b.start || a.end - b.end || a.index - b.index,
+  );
+  for (let i = 1; i < normalized.length; i++) {
+    if (normalized[i].start < normalized[i - 1].end) {
+      throw new Error(`Overlapping rename edits in ${path}`);
+    }
+  }
+
+  normalized.sort(
+    (a, b) => b.start - a.start || b.end - a.end || b.index - a.index,
+  );
+
+  let updated = content;
+  for (const edit of normalized) {
+    updated =
+      updated.slice(0, edit.start) + edit.newText + updated.slice(edit.end);
+  }
+  return updated;
+}
+
+function collectWorkspaceEditChanges(
+  edit: WorkspaceEdit,
+): Map<string, TextEdit[]> {
+  const files = new Map<string, TextEdit[]>();
+
+  if (edit.changes) {
+    for (const [uri, edits] of Object.entries(edit.changes)) {
+      files.set(uriToPath(uri), [...edits]);
+    }
+  }
+
+  for (const change of edit.documentChanges ?? []) {
+    if (!("edits" in change)) {
+      throw new Error(`Unsupported workspace edit operation: ${change.kind}`);
+    }
+    const path = uriToPath(change.textDocument.uri);
+    const existing = files.get(path) ?? [];
+    existing.push(...change.edits);
+    files.set(path, existing);
+  }
+
+  return files;
+}
+
+async function withFileMutationQueues<T>(
+  paths: string[],
+  fn: () => Promise<T>,
+): Promise<T> {
+  const uniquePaths = [...new Set(paths)].sort();
+
+  const run = async (index: number): Promise<T> => {
+    if (index >= uniquePaths.length) return fn();
+    return withFileMutationQueue(uniquePaths[index], () => run(index + 1));
+  };
+
+  return run(0);
+}
+
+async function applyWorkspaceEdit(
+  edit: WorkspaceEdit,
+  client: LspClient,
+): Promise<void> {
+  const fileEdits = collectWorkspaceEditChanges(edit);
+  const paths = [...fileEdits.keys()];
+  if (paths.length === 0) return;
+
+  await withFileMutationQueues(paths, async () => {
+    const nextContents = new Map<string, string>();
+
+    for (const path of paths) {
+      const content = readFileSync(path, "utf8");
+      const next = applyTextEdits(content, fileEdits.get(path) ?? [], path);
+      nextContents.set(path, next);
+    }
+
+    for (const path of paths) {
+      writeFileSync(path, nextContents.get(path) ?? "", "utf8");
+    }
+
+    for (const path of paths) {
+      await client.refreshDocument(path);
+    }
+  });
+}
+
 async function formatDefinitionWithImplementation(
   result: unknown,
   client: LspClient,
@@ -246,10 +432,26 @@ export default function (pi: ExtensionAPI) {
     ctx: ExtensionContext,
     file?: string,
   ): string {
-    if (language === "python" && file) {
-      const normalized = file.startsWith("@") ? file.slice(1) : file;
-      return dirname(resolve(ctx.cwd, normalized));
+    if (!file) return ctx.cwd;
+
+    const normalized = file.startsWith("@") ? file.slice(1) : file;
+    const absoluteFile = resolve(ctx.cwd, normalized);
+    const fileDir = dirname(absoluteFile);
+
+    if (language === "python") {
+      return fileDir;
     }
+
+    if (language === "typescript") {
+      return (
+        findNearestContainingDir(fileDir, ctx.cwd, [
+          "tsconfig.json",
+          "jsconfig.json",
+          "package.json",
+        ]) ?? fileDir
+      );
+    }
+
     return ctx.cwd;
   }
 
@@ -279,10 +481,10 @@ export default function (pi: ExtensionAPI) {
     label: "LSP",
     description: `Language Server Protocol tool. Starts LSP servers on demand and provides editor-like features: hover info, go-to-definition, find references, rename symbols, list document/workspace symbols, completions, and diagnostics. Supported languages: ${getSupportedLanguages().join(", ")}. Line and character numbers are 1-based.`,
     promptSnippet:
-      "LSP operations (hover, definition, references, rename, symbols, diagnostics) for nix and python",
+      "LSP operations (hover, definition, references, rename, symbols, diagnostics) for nix, python, and typescript",
     promptGuidelines: [
-      "Use the lsp tool for refactoring operations like rename, finding references, and go-to-definition instead of grep-based approaches when working with nix or python files.",
-      "Before renaming a symbol, use 'references' to see all usages, then use 'rename' which returns a workspace edit describing all changes needed.",
+      "Use the lsp tool for refactoring operations like rename, finding references, and go-to-definition instead of grep-based approaches when working with nix, python, or typescript files.",
+      "Before renaming a symbol, use 'references' to see all usages, then use 'rename' to apply the workspace edit returned by the language server.",
       "Line and character numbers for the lsp tool are 1-based (matching what the read tool shows).",
     ],
     parameters: LspParams,
@@ -374,12 +576,23 @@ export default function (pi: ExtensionAPI) {
           const pos = requirePosition(params.line, params.character);
           if (!params.new_name)
             throw new Error("'new_name' parameter is required for rename");
-          const result = await client.rename(
+          const result = (await client.rename(
             file,
             pos.line,
             pos.character,
             params.new_name,
-          );
+          )) as WorkspaceEdit | null;
+          if (!result) {
+            resultText = "No rename changes generated.";
+            break;
+          }
+          try {
+            await applyWorkspaceEdit(result, client);
+          } catch (error) {
+            throw new Error(
+              `Failed to apply rename edits: ${error instanceof Error ? error.message : String(error)}`,
+            );
+          }
           resultText = formatRename(result);
           break;
         }

@@ -288,27 +288,29 @@ export function formatRename(result: unknown): string {
     for (const [uri, edits] of Object.entries(edit.changes)) {
       lines.push(`\n  ${uriToPath(uri)}: ${edits.length} edit(s)`);
       for (const e of edits) {
-        lines.push(`    line ${e.range.start.line + 1}: "${e.newText}"`);
+        lines.push(`    ${e.range.start.line + 1}: "${e.newText}"`);
       }
       totalEdits += edits.length;
     }
     lines.unshift(
-      `Rename would apply ${totalEdits} edit(s) in ${Object.keys(edit.changes).length} file(s):`,
+      `Applied ${totalEdits} edit(s) in ${Object.keys(edit.changes).length} file(s):`,
     );
   } else if (edit.documentChanges) {
     let totalEdits = 0;
+    let fileCount = 0;
     for (const change of edit.documentChanges) {
       if ("edits" in change) {
+        fileCount++;
         lines.push(
           `\n  ${uriToPath(change.textDocument.uri)}: ${change.edits.length} edit(s)`,
         );
         for (const e of change.edits) {
-          lines.push(`    line ${e.range.start.line + 1}: "${e.newText}"`);
+          lines.push(`    ${e.range.start.line + 1}: "${e.newText}"`);
         }
         totalEdits += change.edits.length;
       }
     }
-    lines.unshift(`Rename would apply ${totalEdits} edit(s):`);
+    lines.unshift(`Applied ${totalEdits} edit(s) in ${fileCount} file(s):`);
   }
 
   return lines.length > 0 ? lines.join("\n") : "No rename changes generated.";

@@ -33,6 +33,8 @@ in
       wl-clipboard
       nil
       basedpyright
+      typescript-language-server
+      typescript
     ];
   };
 }

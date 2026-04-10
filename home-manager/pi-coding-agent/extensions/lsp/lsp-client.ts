@@ -47,6 +47,13 @@ const LANGUAGE_CONFIGS: Record<string, (cwd: string) => LspServerConfig[]> = {
       },
     },
   ],
+  typescript: (cwd) => [
+    {
+      command: "typescript-language-server",
+      args: ["--stdio"],
+      rootUri: pathToFileURL(cwd).href,
+    },
+  ],
 };
 
 export function getSupportedLanguages(): string[] {
@@ -345,6 +352,20 @@ export class LspClient {
   private getLanguageId(filePath: string): string {
     if (filePath.endsWith(".nix")) return "nix";
     if (filePath.endsWith(".py") || filePath.endsWith(".pyi")) return "python";
+    if (
+      filePath.endsWith(".ts") ||
+      filePath.endsWith(".mts") ||
+      filePath.endsWith(".cts")
+    )
+      return "typescript";
+    if (filePath.endsWith(".tsx")) return "typescriptreact";
+    if (
+      filePath.endsWith(".js") ||
+      filePath.endsWith(".mjs") ||
+      filePath.endsWith(".cjs")
+    )
+      return "javascript";
+    if (filePath.endsWith(".jsx")) return "javascriptreact";
     return this.language;
   }
 
