@@ -9419,12 +9419,12 @@ export const MODELS = {
 			input: ["text"],
 			cost: {
 				input: 0.03,
-				output: 0.11,
-				cacheRead: 0.015,
+				output: 0.14,
+				cacheRead: 0,
 				cacheWrite: 0,
 			},
 			contextWindow: 131072,
-			maxTokens: 131072,
+			maxTokens: 4096,
 		} satisfies Model<"openai-completions">,
 		"openai/gpt-oss-20b:free": {
 			id: "openai/gpt-oss-20b:free",
@@ -10965,13 +10965,13 @@ export const MODELS = {
 			reasoning: true,
 			input: ["text"],
 			cost: {
-				input: 1.26,
-				output: 3.9600000000000004,
-				cacheRead: 0,
+				input: 0.95,
+				output: 3.15,
+				cacheRead: 0.475,
 				cacheWrite: 0,
 			},
 			contextWindow: 202752,
-			maxTokens: 4096,
+			maxTokens: 65535,
 		} satisfies Model<"openai-completions">,
 		"z-ai/glm-5v-turbo": {
 			id: "z-ai/glm-5v-turbo",
