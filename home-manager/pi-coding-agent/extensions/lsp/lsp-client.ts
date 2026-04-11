@@ -353,7 +353,6 @@ export class LspClient {
         },
       });
       this.openDocuments.add(uri);
-      await this.waitForDocumentDiagnostics(uri);
     }
 
     return uri;
