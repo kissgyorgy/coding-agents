@@ -244,12 +244,13 @@ async function findSymbolInOpenFiles(
     const symbols = Array.isArray(rawSymbols) ? rawSymbols : [];
     const visit = (items: DocumentSymbol[]) => {
       for (const sym of items) {
+        const nameRange = sym.selectionRange ?? sym.range;
         const loc: Location | undefined =
           sym.location ??
-          (sym.range
+          (nameRange
             ? {
                 uri: pathToFileURL(path).href,
-                range: sym.range,
+                range: nameRange,
               }
             : undefined);
         if (sym.name === query && loc) {
