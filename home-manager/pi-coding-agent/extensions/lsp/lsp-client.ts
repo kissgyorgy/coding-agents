@@ -54,6 +54,19 @@ export class LspClient {
     });
   }
   private diagnostics = new Map<string, unknown[]>();
+  private activeProgressTokens = new Set<string | number>();
+  private indexingWaiters: Array<{
+    resolve: () => void;
+    timer: ReturnType<typeof setTimeout>;
+  }> = [];
+  private diagnosticsReceivedUris = new Set<string>();
+  private diagnosticWaiters = new Map<
+    string,
+    Array<{
+      resolve: () => void;
+      timer: ReturnType<typeof setTimeout>;
+    }>
+  >();
 
   constructor(
     language: string,
@@ -108,6 +121,7 @@ export class LspClient {
       this.config = null;
       this.buffer = Buffer.alloc(0);
       this.rejectAllPending(new Error("LSP server stopped"));
+      this.clearProgressState();
       return;
     }
 
@@ -124,6 +138,7 @@ export class LspClient {
     this.config = null;
     this.openDocuments.clear();
     this.buffer = Buffer.alloc(0);
+    this.clearProgressState();
   }
 
   private async startWithConfig(config: LspServerConfig): Promise<void> {
@@ -186,6 +201,9 @@ export class LspClient {
           symbol: {},
           workspaceFolders: true,
         },
+        window: {
+          workDoneProgress: true,
+        },
       },
       rootUri: this.config.rootUri,
       workspaceFolders: [{ uri: this.config.rootUri, name: "workspace" }],
@@ -232,6 +250,38 @@ export class LspClient {
     if (msg.method === "textDocument/publishDiagnostics") {
       const params = msg.params as { uri: string; diagnostics: unknown[] };
       this.diagnostics.set(params.uri, params.diagnostics);
+      if (!this.diagnosticsReceivedUris.has(params.uri)) {
+        this.diagnosticsReceivedUris.add(params.uri);
+        const waiters = this.diagnosticWaiters.get(params.uri);
+        if (waiters) {
+          this.diagnosticWaiters.delete(params.uri);
+          for (const w of waiters) {
+            clearTimeout(w.timer);
+            w.resolve();
+          }
+        }
+      }
+      return;
+    }
+
+    if (msg.method === "$/progress") {
+      const params = msg.params as {
+        token: string | number;
+        value: { kind: string };
+      };
+      if (params.value.kind === "begin") {
+        this.activeProgressTokens.add(params.token);
+      } else if (params.value.kind === "end") {
+        this.activeProgressTokens.delete(params.token);
+        this.checkIndexingDone();
+      }
+      return;
+    }
+
+    if (msg.method && msg.id !== undefined) {
+      if (msg.method === "window/workDoneProgress/create") {
+        this.send({ jsonrpc: "2.0", id: msg.id, result: null });
+      }
       return;
     }
 
@@ -303,6 +353,7 @@ export class LspClient {
         },
       });
       this.openDocuments.add(uri);
+      await this.waitForDocumentDiagnostics(uri);
     }
 
     return uri;
@@ -419,11 +470,67 @@ export class LspClient {
     const absPath = resolve(filePath);
     const uri = pathToFileURL(absPath).href;
     await this.refreshDocument(filePath);
-    await new Promise((resolveDiag) => setTimeout(resolveDiag, 1000));
+    await this.waitForDocumentDiagnostics(uri);
     return this.diagnostics.get(uri) ?? [];
   }
 
   isRunning(): boolean {
     return this.process !== null && this.initialized;
+  }
+
+  private clearProgressState(): void {
+    this.activeProgressTokens.clear();
+    for (const waiter of this.indexingWaiters) {
+      clearTimeout(waiter.timer);
+      waiter.resolve();
+    }
+    this.indexingWaiters = [];
+  }
+
+  private checkIndexingDone(): void {
+    if (this.activeProgressTokens.size === 0) {
+      for (const waiter of this.indexingWaiters) {
+        clearTimeout(waiter.timer);
+        waiter.resolve();
+      }
+      this.indexingWaiters = [];
+    }
+  }
+
+  async waitForIndexing(timeoutMs = 30000): Promise<void> {
+    if (this.activeProgressTokens.size === 0) return;
+
+    return new Promise<void>((resolve) => {
+      let settled = false;
+      const settle = () => {
+        if (settled) return;
+        settled = true;
+        clearTimeout(timer);
+        resolve();
+      };
+      const timer = setTimeout(settle, timeoutMs);
+      this.indexingWaiters.push({ resolve: settle, timer });
+    });
+  }
+
+  private async waitForDocumentDiagnostics(
+    uri: string,
+    timeoutMs = 15000,
+  ): Promise<void> {
+    if (this.diagnosticsReceivedUris.has(uri)) return;
+
+    return new Promise<void>((resolve) => {
+      let settled = false;
+      const settle = () => {
+        if (settled) return;
+        settled = true;
+        clearTimeout(timer);
+        resolve();
+      };
+      const timer = setTimeout(settle, timeoutMs);
+      const waiters = this.diagnosticWaiters.get(uri) ?? [];
+      waiters.push({ resolve: settle, timer });
+      this.diagnosticWaiters.set(uri, waiters);
+    });
   }
 }

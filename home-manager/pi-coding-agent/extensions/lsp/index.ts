@@ -634,6 +634,8 @@ export default function (pi: ExtensionAPI) {
         );
       }
 
+      await client.waitForIndexing();
+
       onUpdate?.({
         content: [
           {
