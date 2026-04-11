@@ -16,19 +16,9 @@ interface Position {
   character: number;
 }
 
-interface MarkedString {
-  language: string;
-  value: string;
-}
-
 interface MarkupContent {
   kind: "plaintext" | "markdown";
   value: string;
-}
-
-interface HoverResult {
-  contents: string | MarkedString | MarkupContent | (string | MarkedString)[];
-  range?: Range;
 }
 
 interface LocationLink {
@@ -208,26 +198,6 @@ function formatLocationLinkWithPreview(loc: LocationLink): string[] {
   const lines = [`  ${path}:${posStr(range.start)}`];
   if (preview) lines.push(`    ${preview}`);
   return lines;
-}
-
-function extractHoverText(contents: HoverResult["contents"]): string {
-  if (typeof contents === "string") return contents;
-  if ("kind" in contents) return contents.value;
-  if ("language" in contents)
-    return `\`\`\`${contents.language}\n${contents.value}\n\`\`\``;
-  if (Array.isArray(contents))
-    return contents
-      .map((c) =>
-        typeof c === "string" ? c : `\`\`\`${c.language}\n${c.value}\n\`\`\``,
-      )
-      .join("\n\n");
-  return JSON.stringify(contents);
-}
-
-export function formatHover(result: unknown): string {
-  if (!result) return "No hover information available.";
-  const hover = result as HoverResult;
-  return extractHoverText(hover.contents);
 }
 
 export function formatDefinition(result: unknown): string {

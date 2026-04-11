@@ -184,7 +184,6 @@ export class LspClient {
       processId: process.pid,
       capabilities: {
         textDocument: {
-          hover: { contentFormat: ["markdown", "plaintext"] },
           definition: {},
           references: {},
           rename: { prepareSupport: true },
@@ -410,23 +409,6 @@ export class LspClient {
       if (id) return id;
     }
     return this.language;
-  }
-
-  async hover(
-    filePath: string,
-    line: number,
-    character: number,
-    signal?: AbortSignal,
-  ): Promise<unknown> {
-    const uri = await this.ensureDocumentOpen(filePath);
-    return this.request(
-      "textDocument/hover",
-      {
-        textDocument: { uri },
-        position: { line, character },
-      },
-      signal,
-    );
   }
 
   async definition(

@@ -21,7 +21,6 @@ import {
   type LanguagePlugin,
 } from "./languages";
 import {
-  formatHover,
   formatReferences,
   formatRename,
   formatDocumentSymbols,
@@ -31,7 +30,6 @@ import {
 } from "./formatters";
 
 const ACTIONS = [
-  "hover",
   "definition",
   "references",
   "rename",
@@ -84,19 +82,19 @@ const LspParams = Type.Object({
   file: Type.Optional(
     Type.String({
       description:
-        "File path (relative to cwd). Required for: hover, references, rename, document_symbols, completion, diagnostics. Optional for definition (uses query instead).",
+        "File path (relative to cwd). Required for: references, rename, document_symbols, completion, diagnostics. Optional for definition (uses query instead).",
     }),
   ),
   line: Type.Optional(
     Type.Number({
       description:
-        "1-based line number. Required for: hover, references, rename, completion. Optional for definition (uses query instead).",
+        "1-based line number. Required for: references, rename, completion. Optional for definition (uses query instead).",
     }),
   ),
   character: Type.Optional(
     Type.Number({
       description:
-        "1-based column number. Required for: hover, references, rename, completion. Optional for definition (uses query instead).",
+        "1-based column number. Required for: references, rename, completion. Optional for definition (uses query instead).",
     }),
   ),
   new_name: Type.Optional(
@@ -624,9 +622,9 @@ export default function (pi: ExtensionAPI) {
   pi.registerTool({
     name: "lsp",
     label: "LSP",
-    description: `Language Server Protocol tool. Starts LSP servers on demand and provides editor-like features: hover info, go-to-definition, find references, rename symbols, list document/workspace symbols, completions, and diagnostics. Supported languages: ${getSupportedLanguages().join(", ")}. Line and character numbers are 1-based. Both 'definition' and 'references' support 'query' to look up symbols by name without file/position.`,
+    description: `Language Server Protocol tool. Starts LSP servers on demand and provides editor-like features: go-to-definition, find references, rename symbols, list document/workspace symbols, completions, and diagnostics. Supported languages: ${getSupportedLanguages().join(", ")}. Line and character numbers are 1-based. Both 'definition' and 'references' support 'query' to look up symbols by name without file/position.`,
     promptSnippet:
-      "LSP operations (hover, definition, references, rename, symbols, diagnostics) for nix, python, typescript, and go",
+      "LSP operations (definition, references, rename, symbols, diagnostics) for nix, python, typescript, and go",
     promptGuidelines: [
       "ALWAYS use the lsp tool FOR ANY coding related action instead grep-based approaches.",
       "IMPORTANT: USE lsp tool instead of read or ripgrep for searching code snippets, functions, variables or symbols in code.",
@@ -696,19 +694,6 @@ export default function (pi: ExtensionAPI) {
       let resultText: string;
 
       switch (action as Action) {
-        case "hover": {
-          const file = requireFile(params.file);
-          const pos = requirePosition(params.line, params.character);
-          const result = await client.hover(
-            file,
-            pos.line,
-            pos.character,
-            signal,
-          );
-          resultText = formatHover(result);
-          break;
-        }
-
         case "definition": {
           if (params.file) {
             const file = requireFile(params.file);
