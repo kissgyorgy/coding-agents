@@ -308,17 +308,35 @@ export class LspClient {
     this.process.stdin.write(header + body);
   }
 
-  private request(method: string, params: unknown): Promise<unknown> {
+  private request(
+    method: string,
+    params: unknown,
+    signal?: AbortSignal,
+  ): Promise<unknown> {
     return new Promise((resolve, reject) => {
+      if (signal?.aborted) {
+        reject(new Error("Aborted"));
+        return;
+      }
+
       const id = this.nextId++;
       const timeout = setTimeout(() => {
         const pending = this.clearPendingRequest(id);
         if (!pending) return;
+        signal?.removeEventListener("abort", onAbort);
         pending.reject(
           new Error(`LSP request "${method}" timed out after 30s`),
         );
       }, 30000);
 
+      const onAbort = () => {
+        const pending = this.clearPendingRequest(id);
+        if (!pending) return;
+        clearTimeout(timeout);
+        pending.reject(new Error("Aborted"));
+      };
+
+      signal?.addEventListener("abort", onAbort, { once: true });
       this.pending.set(id, { resolve, reject, timeout });
 
       try {
@@ -326,6 +344,8 @@ export class LspClient {
       } catch (error) {
         const pending = this.clearPendingRequest(id);
         if (!pending) return;
+        signal?.removeEventListener("abort", onAbort);
+        clearTimeout(timeout);
         pending.reject(
           error instanceof Error ? error : new Error(String(error)),
         );
@@ -394,24 +414,34 @@ export class LspClient {
     filePath: string,
     line: number,
     character: number,
+    signal?: AbortSignal,
   ): Promise<unknown> {
     const uri = await this.ensureDocumentOpen(filePath);
-    return this.request("textDocument/hover", {
-      textDocument: { uri },
-      position: { line, character },
-    });
+    return this.request(
+      "textDocument/hover",
+      {
+        textDocument: { uri },
+        position: { line, character },
+      },
+      signal,
+    );
   }
 
   async definition(
     filePath: string,
     line: number,
     character: number,
+    signal?: AbortSignal,
   ): Promise<unknown> {
     const uri = await this.ensureDocumentOpen(filePath);
-    return this.request("textDocument/definition", {
-      textDocument: { uri },
-      position: { line, character },
-    });
+    return this.request(
+      "textDocument/definition",
+      {
+        textDocument: { uri },
+        position: { line, character },
+      },
+      signal,
+    );
   }
 
   async references(
@@ -419,13 +449,18 @@ export class LspClient {
     line: number,
     character: number,
     includeDeclaration = true,
+    signal?: AbortSignal,
   ): Promise<unknown> {
     const uri = await this.ensureDocumentOpen(filePath);
-    return this.request("textDocument/references", {
-      textDocument: { uri },
-      position: { line, character },
-      context: { includeDeclaration },
-    });
+    return this.request(
+      "textDocument/references",
+      {
+        textDocument: { uri },
+        position: { line, character },
+        context: { includeDeclaration },
+      },
+      signal,
+    );
   }
 
   async rename(
@@ -433,43 +468,63 @@ export class LspClient {
     line: number,
     character: number,
     newName: string,
+    signal?: AbortSignal,
   ): Promise<unknown> {
     const uri = await this.ensureDocumentOpen(filePath);
-    return this.request("textDocument/rename", {
-      textDocument: { uri },
-      position: { line, character },
-      newName,
-    });
+    return this.request(
+      "textDocument/rename",
+      {
+        textDocument: { uri },
+        position: { line, character },
+        newName,
+      },
+      signal,
+    );
   }
 
-  async documentSymbols(filePath: string): Promise<unknown> {
+  async documentSymbols(
+    filePath: string,
+    signal?: AbortSignal,
+  ): Promise<unknown> {
     const uri = await this.ensureDocumentOpen(filePath);
-    return this.request("textDocument/documentSymbol", {
-      textDocument: { uri },
-    });
+    return this.request(
+      "textDocument/documentSymbol",
+      {
+        textDocument: { uri },
+      },
+      signal,
+    );
   }
 
-  async workspaceSymbol(query: string): Promise<unknown> {
-    return this.request("workspace/symbol", { query });
+  async workspaceSymbol(query: string, signal?: AbortSignal): Promise<unknown> {
+    return this.request("workspace/symbol", { query }, signal);
   }
 
   async completion(
     filePath: string,
     line: number,
     character: number,
+    signal?: AbortSignal,
   ): Promise<unknown> {
     const uri = await this.ensureDocumentOpen(filePath);
-    return this.request("textDocument/completion", {
-      textDocument: { uri },
-      position: { line, character },
-    });
+    return this.request(
+      "textDocument/completion",
+      {
+        textDocument: { uri },
+        position: { line, character },
+      },
+      signal,
+    );
   }
 
-  async getDiagnostics(filePath: string): Promise<unknown[]> {
+  async getDiagnostics(
+    filePath: string,
+    signal?: AbortSignal,
+  ): Promise<unknown[]> {
     const absPath = resolve(filePath);
     const uri = pathToFileURL(absPath).href;
     await this.refreshDocument(filePath);
-    await this.waitForDocumentDiagnostics(uri);
+    await this.waitForDocumentDiagnostics(uri, 15000, signal);
     return this.diagnostics.get(uri) ?? [];
   }
 
@@ -496,39 +551,49 @@ export class LspClient {
     }
   }
 
-  async waitForIndexing(timeoutMs = 30000): Promise<void> {
+  async waitForIndexing(
+    timeoutMs = 30000,
+    signal?: AbortSignal,
+  ): Promise<void> {
     if (this.activeProgressTokens.size === 0) return;
 
-    return new Promise<void>((resolve) => {
+    return new Promise<void>((resolve, reject) => {
       let settled = false;
-      const settle = () => {
+      const settle = (fn: () => void) => {
         if (settled) return;
         settled = true;
         clearTimeout(timer);
-        resolve();
+        signal?.removeEventListener("abort", onAbort);
+        fn();
       };
-      const timer = setTimeout(settle, timeoutMs);
-      this.indexingWaiters.push({ resolve: settle, timer });
+      const onAbort = () => settle(() => reject(new Error("Aborted")));
+      signal?.addEventListener("abort", onAbort, { once: true });
+      const timer = setTimeout(() => settle(resolve), timeoutMs);
+      this.indexingWaiters.push({ resolve: () => settle(resolve), timer });
     });
   }
 
   private async waitForDocumentDiagnostics(
     uri: string,
     timeoutMs = 15000,
+    signal?: AbortSignal,
   ): Promise<void> {
     if (this.diagnosticsReceivedUris.has(uri)) return;
 
-    return new Promise<void>((resolve) => {
+    return new Promise<void>((resolve, reject) => {
       let settled = false;
-      const settle = () => {
+      const settle = (fn: () => void) => {
         if (settled) return;
         settled = true;
         clearTimeout(timer);
-        resolve();
+        signal?.removeEventListener("abort", onAbort);
+        fn();
       };
-      const timer = setTimeout(settle, timeoutMs);
+      const onAbort = () => settle(() => reject(new Error("Aborted")));
+      signal?.addEventListener("abort", onAbort, { once: true });
+      const timer = setTimeout(() => settle(resolve), timeoutMs);
       const waiters = this.diagnosticWaiters.get(uri) ?? [];
-      waiters.push({ resolve: settle, timer });
+      waiters.push({ resolve: () => settle(resolve), timer });
       this.diagnosticWaiters.set(uri, waiters);
     });
   }

@@ -634,7 +634,7 @@ export default function (pi: ExtensionAPI) {
         );
       }
 
-      await client.waitForIndexing();
+      await client.waitForIndexing(30000, signal);
 
       onUpdate?.({
         content: [
@@ -651,7 +651,12 @@ export default function (pi: ExtensionAPI) {
         case "hover": {
           const file = requireFile(params.file);
           const pos = requirePosition(params.line, params.character);
-          const result = await client.hover(file, pos.line, pos.character);
+          const result = await client.hover(
+            file,
+            pos.line,
+            pos.character,
+            signal,
+          );
           resultText = formatHover(result);
           break;
         }
@@ -664,6 +669,7 @@ export default function (pi: ExtensionAPI) {
               file,
               pos.line,
               pos.character,
+              signal,
             );
             resultText = await formatDefinitionWithImplementation(
               result,
@@ -683,6 +689,7 @@ export default function (pi: ExtensionAPI) {
 
             if (client.openDocumentCount() === 0) {
               for (const f of findSourceFiles(workspaceRoot, exts)) {
+                if (signal?.aborted) throw new Error("Aborted");
                 await client.ensureDocumentOpen(f);
               }
             }
@@ -690,7 +697,10 @@ export default function (pi: ExtensionAPI) {
             let match: SymbolInformation | null = null;
 
             try {
-              const symbols = await client.workspaceSymbol(params.query);
+              const symbols = await client.workspaceSymbol(
+                params.query,
+                signal,
+              );
               match = findBestSymbolMatch(symbols, params.query);
             } catch {
               // workspace/symbol may fail without project config (e.g. tsserver)
@@ -713,7 +723,13 @@ export default function (pi: ExtensionAPI) {
         case "references": {
           const file = requireFile(params.file);
           const pos = requirePosition(params.line, params.character);
-          const result = await client.references(file, pos.line, pos.character);
+          const result = await client.references(
+            file,
+            pos.line,
+            pos.character,
+            true,
+            signal,
+          );
           resultText = formatReferences(result);
           break;
         }
@@ -728,6 +744,7 @@ export default function (pi: ExtensionAPI) {
             pos.line,
             pos.character,
             params.new_name,
+            signal,
           )) as WorkspaceEdit | null;
           if (!result) {
             resultText = "No rename changes generated.";
@@ -746,13 +763,16 @@ export default function (pi: ExtensionAPI) {
 
         case "document_symbols": {
           const file = requireFile(params.file);
-          const result = await client.documentSymbols(file);
+          const result = await client.documentSymbols(file, signal);
           resultText = formatDocumentSymbols(result);
           break;
         }
 
         case "workspace_symbol": {
-          const result = await client.workspaceSymbol(params.query ?? "");
+          const result = await client.workspaceSymbol(
+            params.query ?? "",
+            signal,
+          );
           resultText = formatWorkspaceSymbol(result);
           break;
         }
@@ -760,14 +780,19 @@ export default function (pi: ExtensionAPI) {
         case "completion": {
           const file = requireFile(params.file);
           const pos = requirePosition(params.line, params.character);
-          const result = await client.completion(file, pos.line, pos.character);
+          const result = await client.completion(
+            file,
+            pos.line,
+            pos.character,
+            signal,
+          );
           resultText = formatCompletion(result);
           break;
         }
 
         case "diagnostics": {
           const file = requireFile(params.file);
-          const diags = await client.getDiagnostics(file);
+          const diags = await client.getDiagnostics(file, signal);
           resultText = formatDiagnostics(diags);
           break;
         }
