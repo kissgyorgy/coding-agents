@@ -1,5 +1,5 @@
 import { StringEnum } from "@mariozechner/pi-ai";
-import { existsSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
+import { readFileSync, readdirSync, writeFileSync } from "node:fs";
 import { dirname, extname, join, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import type {
@@ -14,7 +14,12 @@ import {
 } from "@mariozechner/pi-coding-agent";
 import { Text } from "@mariozechner/pi-tui";
 import { Type } from "@sinclair/typebox";
-import { LspClient, getSupportedLanguages } from "./lsp-client";
+import { LspClient } from "./lsp-client";
+import {
+  languages,
+  getSupportedLanguages,
+  type LanguagePlugin,
+} from "./languages";
 import {
   formatHover,
   formatReferences,
@@ -126,26 +131,6 @@ function uriToPath(uri: string): string {
     return fileURLToPath(uri);
   } catch {
     return uri;
-  }
-}
-
-function findNearestContainingDir(
-  startDir: string,
-  stopDir: string,
-  fileNames: string[],
-): string | null {
-  let current = resolve(startDir);
-  const limit = resolve(stopDir);
-
-  while (true) {
-    for (const fileName of fileNames) {
-      if (existsSync(join(current, fileName))) return current;
-    }
-    if (current === limit) return null;
-    const parent = dirname(current);
-    if (parent === current) return null;
-    if (!current.startsWith(limit)) return null;
-    current = parent;
   }
 }
 
@@ -284,15 +269,11 @@ async function findSymbolInOpenFiles(
   return best;
 }
 
-function languageFromPath(path: string): string {
-  const ext = extname(path);
-  if (ext === ".py" || ext === ".pyi") return "python";
-  if (ext === ".nix") return "nix";
-  if (ext === ".ts" || ext === ".mts" || ext === ".cts") return "typescript";
-  if (ext === ".tsx") return "typescriptreact";
-  if (ext === ".js" || ext === ".mjs" || ext === ".cjs") return "javascript";
-  if (ext === ".jsx") return "javascriptreact";
-  if (ext === ".go") return "go";
+function getLanguageForPath(path: string): string {
+  for (const plugin of Object.values(languages)) {
+    const id = plugin.languageIdForPath(path);
+    if (id) return id;
+  }
   return "text";
 }
 
@@ -537,7 +518,7 @@ async function formatDefinitionWithImplementation(
     const text = bodyRange ? getRangeText(path, bodyRange) : null;
     if (text) {
       sections.push(
-        `${path}:${bodyRange.start.line + 1}\n\n\`\`\`${languageFromPath(path)}\n${text}\n\`\`\``,
+        `${path}:${bodyRange.start.line + 1}\n\n\`\`\`${getLanguageForPath(path)}\n${text}\n\`\`\``,
       );
     } else {
       sections.push(`${path}:${selectionPos.line + 1}`);
@@ -559,24 +540,8 @@ export default function (pi: ExtensionAPI) {
       ? dirname(resolve(ctx.cwd, file.startsWith("@") ? file.slice(1) : file))
       : ctx.cwd;
 
-    if (language === "python") {
-      return startDir;
-    }
-
-    if (language === "typescript") {
-      const configDir = findNearestContainingDir(startDir, "/", [
-        "tsconfig.json",
-        "jsconfig.json",
-        "package.json",
-      ]);
-      if (configDir) return configDir;
-      return startDir;
-    }
-
-    if (language === "go") {
-      return findNearestContainingDir(startDir, "/", ["go.mod"]) ?? startDir;
-    }
-
+    const plugin = languages[language];
+    if (plugin) return plugin.getWorkspaceRoot(startDir, ctx);
     return ctx.cwd;
   }
 
@@ -588,7 +553,14 @@ export default function (pi: ExtensionAPI) {
     let client = servers.get(key);
     if (client?.isRunning()) return client;
 
-    client = new LspClient(language, workspaceRoot);
+    const plugin = languages[language];
+    if (!plugin) throw new Error(`Unsupported language: ${language}`);
+
+    client = new LspClient(
+      language,
+      plugin.getConfig(workspaceRoot),
+      languages,
+    );
     servers.set(key, client);
     await client.start();
     return client;
@@ -702,13 +674,7 @@ export default function (pi: ExtensionAPI) {
               );
 
             const exts =
-              language === "typescript"
-                ? new Set([".ts", ".tsx", ".js", ".jsx", ".mts", ".mjs"])
-                : language === "go"
-                  ? new Set([".go"])
-                  : language === "python"
-                    ? new Set([".py", ".pyi"])
-                    : new Set();
+              languages[language]?.fileExtensions ?? new Set<string>();
 
             const workspaceRoot = getWorkspaceRoot(language, ctx);
             const client = await getServer(language, workspaceRoot);

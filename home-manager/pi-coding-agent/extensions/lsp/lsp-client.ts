@@ -3,6 +3,13 @@ import { readFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 
+export interface LspServerConfig {
+  command: string;
+  args: string[];
+  rootUri: string;
+  settings?: unknown;
+}
+
 interface LspMessage {
   jsonrpc: "2.0";
   id?: number;
@@ -18,55 +25,6 @@ interface PendingRequest {
   timeout: ReturnType<typeof setTimeout>;
 }
 
-interface LspServerConfig {
-  command: string;
-  args: string[];
-  rootUri: string;
-  settings?: unknown;
-}
-
-const LANGUAGE_CONFIGS: Record<string, (cwd: string) => LspServerConfig[]> = {
-  nix: (cwd) => [
-    {
-      command: "nil",
-      args: ["--stdio"],
-      rootUri: pathToFileURL(cwd).href,
-    },
-  ],
-  python: (cwd) => [
-    {
-      command: "nix-shell",
-      args: ["-p", "basedpyright", "--run", "basedpyright-langserver --stdio"],
-      rootUri: pathToFileURL(cwd).href,
-      settings: {
-        basedpyright: {
-          analysis: {
-            diagnosticMode: "openFilesOnly",
-          },
-        },
-      },
-    },
-  ],
-  typescript: (cwd) => [
-    {
-      command: "typescript-language-server",
-      args: ["--stdio"],
-      rootUri: pathToFileURL(cwd).href,
-    },
-  ],
-  go: (cwd) => [
-    {
-      command: "gopls",
-      args: ["serve"],
-      rootUri: pathToFileURL(cwd).href,
-    },
-  ],
-};
-
-export function getSupportedLanguages(): string[] {
-  return Object.keys(LANGUAGE_CONFIGS);
-}
-
 export class LspClient {
   private process: ChildProcess | null = null;
   private nextId = 1;
@@ -77,6 +35,10 @@ export class LspClient {
   private configs: LspServerConfig[];
   private config: LspServerConfig | null = null;
   private openDocuments = new Set<string>();
+  private languagePlugins: Record<
+    string,
+    { languageIdForPath: (filePath: string) => string | null }
+  >;
 
   openDocumentCount(): number {
     return this.openDocuments.size;
@@ -93,15 +55,17 @@ export class LspClient {
   }
   private diagnostics = new Map<string, unknown[]>();
 
-  constructor(language: string, cwd: string) {
+  constructor(
+    language: string,
+    configs: LspServerConfig[],
+    languagePlugins: Record<
+      string,
+      { languageIdForPath: (filePath: string) => string | null }
+    >,
+  ) {
     this.language = language;
-    const configFactory = LANGUAGE_CONFIGS[language];
-    if (!configFactory) {
-      throw new Error(
-        `Unsupported language: ${language}. Supported: ${getSupportedLanguages().join(", ")}`,
-      );
-    }
-    this.configs = configFactory(cwd);
+    this.configs = configs;
+    this.languagePlugins = languagePlugins;
   }
 
   async start(): Promise<void> {
@@ -369,23 +333,10 @@ export class LspClient {
   }
 
   private getLanguageId(filePath: string): string {
-    if (filePath.endsWith(".nix")) return "nix";
-    if (filePath.endsWith(".py") || filePath.endsWith(".pyi")) return "python";
-    if (
-      filePath.endsWith(".ts") ||
-      filePath.endsWith(".mts") ||
-      filePath.endsWith(".cts")
-    )
-      return "typescript";
-    if (filePath.endsWith(".tsx")) return "typescriptreact";
-    if (
-      filePath.endsWith(".js") ||
-      filePath.endsWith(".mjs") ||
-      filePath.endsWith(".cjs")
-    )
-      return "javascript";
-    if (filePath.endsWith(".jsx")) return "javascriptreact";
-    if (filePath.endsWith(".go")) return "go";
+    for (const plugin of Object.values(this.languagePlugins)) {
+      const id = plugin.languageIdForPath(filePath);
+      if (id) return id;
+    }
     return this.language;
   }
 
