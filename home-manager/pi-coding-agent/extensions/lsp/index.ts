@@ -528,6 +528,40 @@ async function formatDefinitionWithImplementation(
   return sections.join("\n\n");
 }
 
+async function resolveSymbolLocation(
+  language: string,
+  ctx: ExtensionContext,
+  query: string,
+  signal?: AbortSignal,
+): Promise<{ location: Location; client: LspClient }> {
+  const exts = languages[language]?.fileExtensions ?? new Set<string>();
+  const workspaceRoot = getWorkspaceRoot(language, ctx);
+  const client = await getServer(language, workspaceRoot);
+
+  if (client.openDocumentCount() === 0) {
+    for (const f of findSourceFiles(workspaceRoot, exts)) {
+      if (signal?.aborted) throw new Error("Aborted");
+      await client.ensureDocumentOpen(f);
+    }
+  }
+
+  let match: SymbolInformation | null = null;
+
+  try {
+    const symbols = await client.workspaceSymbol(query, signal);
+    match = findBestSymbolMatch(symbols, query);
+  } catch {
+    // workspace/symbol may fail without project config (e.g. tsserver)
+  }
+
+  if (!match) {
+    match = await findSymbolInOpenFiles(client, query);
+  }
+
+  if (!match?.location) throw new Error(`Symbol not found: ${query}`);
+  return { location: match.location, client };
+}
+
 export default function (pi: ExtensionAPI) {
   const servers = new Map<string, LspClient>();
 
@@ -576,13 +610,13 @@ export default function (pi: ExtensionAPI) {
   pi.registerTool({
     name: "lsp",
     label: "LSP",
-    description: `Language Server Protocol tool. Starts LSP servers on demand and provides editor-like features: hover info, go-to-definition, find references, rename symbols, list document/workspace symbols, completions, and diagnostics. Supported languages: ${getSupportedLanguages().join(", ")}. Line and character numbers are 1-based.`,
+    description: `Language Server Protocol tool. Starts LSP servers on demand and provides editor-like features: hover info, go-to-definition, find references, rename symbols, list document/workspace symbols, completions, and diagnostics. Supported languages: ${getSupportedLanguages().join(", ")}. Line and character numbers are 1-based. Both 'definition' and 'references' support 'query' to look up symbols by name without file/position.`,
     promptSnippet:
       "LSP operations (hover, definition, references, rename, symbols, diagnostics) for nix, python, typescript, and go",
     promptGuidelines: [
       "ALWAYS use the lsp tool FOR ANY coding related action instead grep-based approaches.",
       "IMPORTANT: USE lsp tool instead of read or ripgrep for searching code snippets, functions, variables or symbols in code.",
-      "Use 'definition' with a 'query' parameter to look up a symbol by name and see its implementation body. 'workspace_symbol' only lists names and locations — prefer 'definition' when you need the code.",
+      "Use 'definition' or 'references' with a 'query' parameter to look up symbols by name. 'definition' returns the implementation body, 'references' returns all usages. 'workspace_symbol' only lists names and locations.",
       "Before renaming a symbol, use 'references' to see all usages, then use 'rename' to apply the workspace edit returned by the language server.",
       "Line and character numbers for the lsp tool are 1-based (matching what the read tool shows).",
     ],
@@ -680,57 +714,48 @@ export default function (pi: ExtensionAPI) {
               throw new Error(
                 "'query' (symbol name) is required for definition when 'file' is not provided",
               );
-
-            const exts =
-              languages[language]?.fileExtensions ?? new Set<string>();
-
-            const workspaceRoot = getWorkspaceRoot(language, ctx);
-            const client = await getServer(language, workspaceRoot);
-
-            if (client.openDocumentCount() === 0) {
-              for (const f of findSourceFiles(workspaceRoot, exts)) {
-                if (signal?.aborted) throw new Error("Aborted");
-                await client.ensureDocumentOpen(f);
-              }
-            }
-
-            let match: SymbolInformation | null = null;
-
-            try {
-              const symbols = await client.workspaceSymbol(
-                params.query,
-                signal,
-              );
-              match = findBestSymbolMatch(symbols, params.query);
-            } catch {
-              // workspace/symbol may fail without project config (e.g. tsserver)
-            }
-
-            if (!match) {
-              match = await findSymbolInOpenFiles(client, params.query);
-            }
-
-            if (!match?.location)
-              throw new Error(`Symbol not found: ${params.query}`);
+            const { location, client: symbolClient } =
+              await resolveSymbolLocation(language, ctx, params.query, signal);
             resultText = await formatDefinitionWithImplementation(
-              [match.location],
-              client,
+              [location],
+              symbolClient,
             );
           }
           break;
         }
 
         case "references": {
-          const file = requireFile(params.file);
-          const pos = requirePosition(params.line, params.character);
-          const result = await client.references(
-            file,
-            pos.line,
-            pos.character,
-            true,
-            signal,
-          );
-          resultText = formatReferences(result);
+          if (params.file) {
+            const file = requireFile(params.file);
+            const pos = requirePosition(params.line, params.character);
+            const result = await client.references(
+              file,
+              pos.line,
+              pos.character,
+              true,
+              signal,
+            );
+            resultText = formatReferences(result);
+          } else {
+            if (!params.query)
+              throw new Error(
+                "'query' (symbol name) is required for references when 'file' is not provided",
+              );
+            const { location, client: refClient } = await resolveSymbolLocation(
+              language,
+              ctx,
+              params.query,
+              signal,
+            );
+            const result = await refClient.references(
+              uriToPath(location.uri),
+              location.range.start.line,
+              location.range.start.character,
+              true,
+              signal,
+            );
+            resultText = formatReferences(result);
+          }
           break;
         }
 
