@@ -528,40 +528,6 @@ async function formatDefinitionWithImplementation(
   return sections.join("\n\n");
 }
 
-async function resolveSymbolLocation(
-  language: string,
-  ctx: ExtensionContext,
-  query: string,
-  signal?: AbortSignal,
-): Promise<{ location: Location; client: LspClient }> {
-  const exts = languages[language]?.fileExtensions ?? new Set<string>();
-  const workspaceRoot = getWorkspaceRoot(language, ctx);
-  const client = await getServer(language, workspaceRoot);
-
-  if (client.openDocumentCount() === 0) {
-    for (const f of findSourceFiles(workspaceRoot, exts)) {
-      if (signal?.aborted) throw new Error("Aborted");
-      await client.ensureDocumentOpen(f);
-    }
-  }
-
-  let match: SymbolInformation | null = null;
-
-  try {
-    const symbols = await client.workspaceSymbol(query, signal);
-    match = findBestSymbolMatch(symbols, query);
-  } catch {
-    // workspace/symbol may fail without project config (e.g. tsserver)
-  }
-
-  if (!match) {
-    match = await findSymbolInOpenFiles(client, query);
-  }
-
-  if (!match?.location) throw new Error(`Symbol not found: ${query}`);
-  return { location: match.location, client };
-}
-
 export default function (pi: ExtensionAPI) {
   const servers = new Map<string, LspClient>();
 
@@ -598,6 +564,40 @@ export default function (pi: ExtensionAPI) {
     servers.set(key, client);
     await client.start();
     return client;
+  }
+
+  async function resolveSymbolLocation(
+    language: string,
+    ctx: ExtensionContext,
+    query: string,
+    signal?: AbortSignal,
+  ): Promise<{ location: Location; client: LspClient }> {
+    const exts = languages[language]?.fileExtensions ?? new Set<string>();
+    const workspaceRoot = getWorkspaceRoot(language, ctx);
+    const client = await getServer(language, workspaceRoot);
+
+    if (client.openDocumentCount() === 0) {
+      for (const f of findSourceFiles(workspaceRoot, exts)) {
+        if (signal?.aborted) throw new Error("Aborted");
+        await client.ensureDocumentOpen(f);
+      }
+    }
+
+    let match: SymbolInformation | null = null;
+
+    try {
+      const symbols = await client.workspaceSymbol(query, signal);
+      match = findBestSymbolMatch(symbols, query);
+    } catch {
+      // workspace/symbol may fail without project config (e.g. tsserver)
+    }
+
+    if (!match) {
+      match = await findSymbolInOpenFiles(client, query);
+    }
+
+    if (!match?.location) throw new Error(`Symbol not found: ${query}`);
+    return { location: match.location, client };
   }
 
   pi.on("session_shutdown", async () => {
