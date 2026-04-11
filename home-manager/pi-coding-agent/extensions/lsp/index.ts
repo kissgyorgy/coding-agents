@@ -561,6 +561,7 @@ export default function (pi: ExtensionAPI) {
       language,
       plugin.getConfig(workspaceRoot),
       languages,
+      plugin.isIndexingDoneLog,
     );
     servers.set(key, client);
     await client.start();

@@ -67,6 +67,11 @@ export class LspClient {
       timer: ReturnType<typeof setTimeout>;
     }>
   >();
+  private logIndexingDone = false;
+  private logIndexingWaiters: Array<{
+    resolve: () => void;
+    timer: ReturnType<typeof setTimeout>;
+  }> = [];
 
   constructor(
     language: string,
@@ -75,6 +80,7 @@ export class LspClient {
       string,
       { languageIdForPath: (filePath: string) => string | null }
     >,
+    private isIndexingDoneLog?: (message: string) => boolean,
   ) {
     this.language = language;
     this.configs = configs;
@@ -260,6 +266,19 @@ export class LspClient {
             w.resolve();
           }
         }
+      }
+      return;
+    }
+
+    if (msg.method === "window/logMessage") {
+      const params = msg.params as { type: number; message: string };
+      if (this.isIndexingDoneLog?.(params.message) && !this.logIndexingDone) {
+        this.logIndexingDone = true;
+        for (const w of this.logIndexingWaiters) {
+          clearTimeout(w.timer);
+          w.resolve();
+        }
+        this.logIndexingWaiters = [];
       }
       return;
     }
@@ -555,22 +574,35 @@ export class LspClient {
     timeoutMs = 30000,
     signal?: AbortSignal,
   ): Promise<void> {
-    if (this.activeProgressTokens.size === 0) return;
+    const hasProgress = this.activeProgressTokens.size > 0;
+    const hasLog = !this.logIndexingDone && this.isIndexingDoneLog;
+    if (!hasProgress && !hasLog) return;
 
-    return new Promise<void>((resolve, reject) => {
-      let settled = false;
-      const settle = (fn: () => void) => {
-        if (settled) return;
-        settled = true;
-        clearTimeout(timer);
-        signal?.removeEventListener("abort", onAbort);
-        fn();
-      };
-      const onAbort = () => settle(() => reject(new Error("Aborted")));
-      signal?.addEventListener("abort", onAbort, { once: true });
-      const timer = setTimeout(() => settle(resolve), timeoutMs);
-      this.indexingWaiters.push({ resolve: () => settle(resolve), timer });
-    });
+    const makeWait = (
+      waiters: Array<{
+        resolve: () => void;
+        timer: ReturnType<typeof setTimeout>;
+      }>,
+    ) =>
+      new Promise<void>((resolve, reject) => {
+        let settled = false;
+        const settle = (fn: () => void) => {
+          if (settled) return;
+          settled = true;
+          clearTimeout(timer);
+          signal?.removeEventListener("abort", onAbort);
+          fn();
+        };
+        const onAbort = () => settle(() => reject(new Error("Aborted")));
+        signal?.addEventListener("abort", onAbort, { once: true });
+        const timer = setTimeout(() => settle(resolve), timeoutMs);
+        waiters.push({ resolve: () => settle(resolve), timer });
+      });
+
+    const waits: Promise<void>[] = [];
+    if (hasProgress) waits.push(makeWait(this.indexingWaiters));
+    if (hasLog) waits.push(makeWait(this.logIndexingWaiters));
+    await Promise.all(waits);
   }
 
   private async waitForDocumentDiagnostics(

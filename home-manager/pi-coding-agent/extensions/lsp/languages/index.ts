@@ -6,6 +6,7 @@ export interface LanguagePlugin {
   getWorkspaceRoot: (startDir: string, ctx: { cwd: string }) => string;
   fileExtensions: Set<string>;
   languageIdForPath: (filePath: string) => string | null;
+  isIndexingDoneLog?: (message: string) => boolean;
 }
 
 export {

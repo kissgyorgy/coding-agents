@@ -33,3 +33,7 @@ export function languageIdForPath(filePath: string): string | null {
   if (filePath.endsWith(".py") || filePath.endsWith(".pyi")) return "python";
   return null;
 }
+
+export function isIndexingDoneLog(message: string): boolean {
+  return /Found \d+ source files/.test(message);
+}
