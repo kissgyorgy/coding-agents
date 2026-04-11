@@ -2,6 +2,7 @@ import { spawn, type ChildProcess } from "node:child_process";
 import { readFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import { pathToFileURL } from "node:url";
+import type { IndexingTracker } from "./languages";
 
 export interface LspServerConfig {
   command: string;
@@ -54,11 +55,6 @@ export class LspClient {
     });
   }
   private diagnostics = new Map<string, unknown[]>();
-  private activeProgressTokens = new Set<string | number>();
-  private indexingWaiters: Array<{
-    resolve: () => void;
-    timer: ReturnType<typeof setTimeout>;
-  }> = [];
   private diagnosticsReceivedUris = new Set<string>();
   private diagnosticWaiters = new Map<
     string,
@@ -67,8 +63,8 @@ export class LspClient {
       timer: ReturnType<typeof setTimeout>;
     }>
   >();
-  private logIndexingDone = false;
-  private logIndexingWaiters: Array<{
+  private indexingDone = false;
+  private indexingWaiters: Array<{
     resolve: () => void;
     timer: ReturnType<typeof setTimeout>;
   }> = [];
@@ -80,7 +76,7 @@ export class LspClient {
       string,
       { languageIdForPath: (filePath: string) => string | null }
     >,
-    private isIndexingDoneLog?: (message: string) => boolean,
+    private indexingTracker?: IndexingTracker,
   ) {
     this.language = language;
     this.configs = configs;
@@ -127,7 +123,7 @@ export class LspClient {
       this.config = null;
       this.buffer = Buffer.alloc(0);
       this.rejectAllPending(new Error("LSP server stopped"));
-      this.clearProgressState();
+      this.clearIndexingWaiters();
       return;
     }
 
@@ -144,7 +140,7 @@ export class LspClient {
     this.config = null;
     this.openDocuments.clear();
     this.buffer = Buffer.alloc(0);
-    this.clearProgressState();
+    this.clearIndexingWaiters();
   }
 
   private async startWithConfig(config: LspServerConfig): Promise<void> {
@@ -253,6 +249,19 @@ export class LspClient {
   }
 
   private handleMessage(msg: LspMessage): void {
+    // Forward to indexing tracker first
+    if (this.indexingTracker) {
+      this.indexingTracker.handleMessage(msg);
+      if (!this.indexingDone && this.indexingTracker.isDone()) {
+        this.indexingDone = true;
+        for (const w of this.indexingWaiters) {
+          clearTimeout(w.timer);
+          w.resolve();
+        }
+        this.indexingWaiters = [];
+      }
+    }
+
     if (msg.method === "textDocument/publishDiagnostics") {
       const params = msg.params as { uri: string; diagnostics: unknown[] };
       this.diagnostics.set(params.uri, params.diagnostics);
@@ -270,37 +279,11 @@ export class LspClient {
       return;
     }
 
-    if (msg.method === "window/logMessage") {
-      const params = msg.params as { type: number; message: string };
-      if (this.isIndexingDoneLog?.(params.message) && !this.logIndexingDone) {
-        this.logIndexingDone = true;
-        for (const w of this.logIndexingWaiters) {
-          clearTimeout(w.timer);
-          w.resolve();
-        }
-        this.logIndexingWaiters = [];
-      }
-      return;
-    }
-
-    if (msg.method === "$/progress") {
-      const params = msg.params as {
-        token: string | number;
-        value: { kind: string };
-      };
-      if (params.value.kind === "begin") {
-        this.activeProgressTokens.add(params.token);
-      } else if (params.value.kind === "end") {
-        this.activeProgressTokens.delete(params.token);
-        this.checkIndexingDone();
-      }
-      return;
-    }
-
-    if (msg.method && msg.id !== undefined) {
-      if (msg.method === "window/workDoneProgress/create") {
-        this.send({ jsonrpc: "2.0", id: msg.id, result: null });
-      }
+    if (
+      msg.method === "window/workDoneProgress/create" &&
+      msg.id !== undefined
+    ) {
+      this.send({ jsonrpc: "2.0", id: msg.id, result: null });
       return;
     }
 
@@ -551,58 +534,35 @@ export class LspClient {
     return this.process !== null && this.initialized;
   }
 
-  private clearProgressState(): void {
-    this.activeProgressTokens.clear();
-    for (const waiter of this.indexingWaiters) {
-      clearTimeout(waiter.timer);
-      waiter.resolve();
+  private clearIndexingWaiters(): void {
+    this.indexingDone = false;
+    for (const w of this.indexingWaiters) {
+      clearTimeout(w.timer);
+      w.resolve();
     }
     this.indexingWaiters = [];
-  }
-
-  private checkIndexingDone(): void {
-    if (this.activeProgressTokens.size === 0) {
-      for (const waiter of this.indexingWaiters) {
-        clearTimeout(waiter.timer);
-        waiter.resolve();
-      }
-      this.indexingWaiters = [];
-    }
   }
 
   async waitForIndexing(
     timeoutMs = 30000,
     signal?: AbortSignal,
   ): Promise<void> {
-    const hasProgress = this.activeProgressTokens.size > 0;
-    const hasLog = !this.logIndexingDone && this.isIndexingDoneLog;
-    if (!hasProgress && !hasLog) return;
+    if (!this.indexingTracker || this.indexingDone) return;
 
-    const makeWait = (
-      waiters: Array<{
-        resolve: () => void;
-        timer: ReturnType<typeof setTimeout>;
-      }>,
-    ) =>
-      new Promise<void>((resolve, reject) => {
-        let settled = false;
-        const settle = (fn: () => void) => {
-          if (settled) return;
-          settled = true;
-          clearTimeout(timer);
-          signal?.removeEventListener("abort", onAbort);
-          fn();
-        };
-        const onAbort = () => settle(() => reject(new Error("Aborted")));
-        signal?.addEventListener("abort", onAbort, { once: true });
-        const timer = setTimeout(() => settle(resolve), timeoutMs);
-        waiters.push({ resolve: () => settle(resolve), timer });
-      });
-
-    const waits: Promise<void>[] = [];
-    if (hasProgress) waits.push(makeWait(this.indexingWaiters));
-    if (hasLog) waits.push(makeWait(this.logIndexingWaiters));
-    await Promise.all(waits);
+    return new Promise<void>((resolve, reject) => {
+      let settled = false;
+      const settle = (fn: () => void) => {
+        if (settled) return;
+        settled = true;
+        clearTimeout(timer);
+        signal?.removeEventListener("abort", onAbort);
+        fn();
+      };
+      const onAbort = () => settle(() => reject(new Error("Aborted")));
+      signal?.addEventListener("abort", onAbort, { once: true });
+      const timer = setTimeout(() => settle(resolve), timeoutMs);
+      this.indexingWaiters.push({ resolve: () => settle(resolve), timer });
+    });
   }
 
   private async waitForDocumentDiagnostics(

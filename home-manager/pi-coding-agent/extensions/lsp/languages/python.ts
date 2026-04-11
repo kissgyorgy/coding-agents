@@ -34,6 +34,15 @@ export function languageIdForPath(filePath: string): string | null {
   return null;
 }
 
-export function isIndexingDoneLog(message: string): boolean {
-  return /Found \d+ source files/.test(message);
+export function createIndexingTracker() {
+  let done = false;
+  return {
+    handleMessage(msg: { method?: string; params?: unknown }) {
+      if (msg.method === "window/logMessage") {
+        const params = msg.params as { message: string };
+        if (/Found \d+ source files/.test(params.message)) done = true;
+      }
+    },
+    isDone: () => done,
+  };
 }

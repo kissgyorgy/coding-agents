@@ -561,7 +561,7 @@ export default function (pi: ExtensionAPI) {
       language,
       plugin.getConfig(workspaceRoot),
       languages,
-      plugin.isIndexingDoneLog,
+      plugin.createIndexingTracker?.(),
     );
     servers.set(key, client);
     await client.start();
