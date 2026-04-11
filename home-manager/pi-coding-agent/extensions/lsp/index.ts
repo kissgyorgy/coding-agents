@@ -598,7 +598,19 @@ export default function (pi: ExtensionAPI) {
     }
 
     if (!match?.location) throw new Error(`Symbol not found: ${query}`);
-    return { location: match.location, client };
+
+    const symbolPath = uriToPath(match.location.uri);
+    const symbolRoot = getWorkspaceRoot(language, ctx, symbolPath);
+    const symbolClient = await getServer(language, symbolRoot);
+
+    if (symbolClient.openDocumentCount() === 0) {
+      for (const f of findSourceFiles(symbolRoot, exts)) {
+        if (signal?.aborted) throw new Error("Aborted");
+        await symbolClient.ensureDocumentOpen(f);
+      }
+    }
+
+    return { location: match.location, client: symbolClient };
   }
 
   pi.on("session_shutdown", async () => {
