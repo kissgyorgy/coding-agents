@@ -1,4 +1,3 @@
-import * as fs from "node:fs";
 import { execFile } from "node:child_process";
 
 export interface FormatResult {
@@ -6,8 +5,18 @@ export interface FormatResult {
   content: string;
 }
 
-function isPythonFile(filePath: string): boolean {
-  return filePath.endsWith(".py");
+function getFirstLine(content: string): string {
+  const newline = content.indexOf("\n");
+  return newline === -1 ? content : content.slice(0, newline);
+}
+
+const PYTHON_SHEBANG_PATTERN = /^#!.*\bpython(?:\d+(?:\.\d+)*)?\b/;
+
+function isPythonFile(filePath: string, content: string): boolean {
+  return (
+    filePath.endsWith(".py") ||
+    PYTHON_SHEBANG_PATTERN.test(getFirstLine(content))
+  );
 }
 
 const PRETTIER_EXTENSIONS = new Set([
@@ -44,14 +53,13 @@ function isGoFile(filePath: string): boolean {
   return filePath.endsWith(".go");
 }
 
-function isShellScript(filePath: string): boolean {
-  if (filePath.endsWith(".sh")) return true;
-  try {
-    const firstLine = fs.readFileSync(filePath, "utf8").split("\n")[0] ?? "";
-    return firstLine.startsWith("#!/usr/bin/env");
-  } catch {
-    return false;
-  }
+const SHFMT_SHEBANG_PATTERN = /^#!.*\b(?:sh|bash|dash|ash|ksh|mksh)\b/;
+
+function isShellScript(filePath: string, content: string): boolean {
+  return (
+    filePath.endsWith(".sh") ||
+    SHFMT_SHEBANG_PATTERN.test(getFirstLine(content))
+  );
 }
 
 function isNixFile(filePath: string): boolean {
@@ -59,7 +67,7 @@ function isNixFile(filePath: string): boolean {
 }
 
 interface Formatter {
-  check: (filePath: string) => boolean;
+  check: (filePath: string, content: string) => boolean;
   cmd: string;
   args: (filePath: string) => string[];
 }
@@ -76,19 +84,43 @@ const FORMATTERS = new Map<string, Formatter>([
   [
     "Prettier",
     {
-      check: isPrettierFile,
+      check: (p, _content) => isPrettierFile(p),
       cmd: "prettier",
       args: (p) => ["--stdin-filepath", p],
     },
   ],
-  ["Shell", { check: isShellScript, cmd: "shfmt", args: (_) => [] }],
-  ["Nix", { check: isNixFile, cmd: "nixpkgs-fmt", args: (_) => [] }],
-  ["Go", { check: isGoFile, cmd: "gofmt", args: (_) => [] }],
+  [
+    "Shell",
+    {
+      check: isShellScript,
+      cmd: "shfmt",
+      args: (_p) => [],
+    },
+  ],
+  [
+    "Nix",
+    {
+      check: (p, _content) => isNixFile(p),
+      cmd: "nixpkgs-fmt",
+      args: (_p) => [],
+    },
+  ],
+  [
+    "Go",
+    {
+      check: (p, _content) => isGoFile(p),
+      cmd: "gofmt",
+      args: (_p) => [],
+    },
+  ],
 ]);
 
-function selectFormatter(filePath: string): [string, Formatter] | undefined {
+function selectFormatter(
+  filePath: string,
+  content: string,
+): [string, Formatter] | undefined {
   for (const entry of FORMATTERS.entries()) {
-    if (entry[1].check(filePath)) return entry;
+    if (entry[1].check(filePath, content)) return entry;
   }
   return undefined;
 }
@@ -118,7 +150,7 @@ export async function formatContent(
   filePath: string,
   content: string,
 ): Promise<FormatResult> {
-  const selected = selectFormatter(filePath);
+  const selected = selectFormatter(filePath, content);
   if (!selected) return { changed: false, content };
 
   // Skip Prettier for HTML files containing Jinja2 syntax
