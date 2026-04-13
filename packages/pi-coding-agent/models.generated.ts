@@ -8026,11 +8026,11 @@ export const MODELS = {
 			cost: {
 				input: 0.3,
 				output: 1.2,
-				cacheRead: 0.06,
+				cacheRead: 0.059,
 				cacheWrite: 0,
 			},
-			contextWindow: 204800,
-			maxTokens: 131072,
+			contextWindow: 196608,
+			maxTokens: 4096,
 		} satisfies Model<"openai-completions">,
 		"mistralai/codestral-2508": {
 			id: "mistralai/codestral-2508",
