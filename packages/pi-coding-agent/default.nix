@@ -95,6 +95,7 @@ buildNpmPackage rec {
     makeBinaryWrapper ${nodejs_22}/bin/node $out/bin/pi \
       --add-flags "$pkgDir/dist/cli.js" \
       --set PI_PACKAGE_DIR "$pkgDir" \
+      --set PI_TELEMETRY "0" \
       --prefix NODE_PATH : "${fetchExtensionDeps}/node_modules"
 
     runHook postInstall
