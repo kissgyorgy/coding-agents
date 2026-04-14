@@ -8452,11 +8452,11 @@ export const MODELS = {
 			cost: {
 				input: 0.6,
 				output: 2.5,
-				cacheRead: 0,
+				cacheRead: 0.15,
 				cacheWrite: 0,
 			},
 			contextWindow: 262144,
-			maxTokens: 4096,
+			maxTokens: 262144,
 		} satisfies Model<"openai-completions">,
 		"moonshotai/kimi-k2.5": {
 			id: "moonshotai/kimi-k2.5",
