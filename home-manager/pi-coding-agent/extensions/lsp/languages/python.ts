@@ -4,18 +4,21 @@ import type { LspServerConfig } from "../lsp-client";
 export const languageId = "python";
 
 export function getConfig(cwd: string): LspServerConfig[] {
+  const rootUri = pathToFileURL(cwd).href;
+  const settings = {
+    basedpyright: {
+      analysis: {
+        diagnosticMode: "openFilesOnly",
+      },
+    },
+  };
+
   return [
     {
-      command: "nix-shell",
-      args: ["-p", "basedpyright", "--run", "basedpyright-langserver --stdio"],
-      rootUri: pathToFileURL(cwd).href,
-      settings: {
-        basedpyright: {
-          analysis: {
-            diagnosticMode: "openFilesOnly",
-          },
-        },
-      },
+      command: "basedpyright-langserver",
+      args: ["--stdio"],
+      rootUri,
+      settings,
     },
   ];
 }
