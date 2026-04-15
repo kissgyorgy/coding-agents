@@ -29,13 +29,8 @@ This creates:
 
 Remove comments from .gitignore after init.
 
-**IMPORTANT:** devenv 2.0's `direnv-export` does not run tasks (like `devenv:python:uv`
-for venv activation). After `devenv init`, replace the generated `.envrc` with the
-fixed version from this skill:
-
-```bash
-cp /home/walkman/.pi/agent/skills/devenv/envrc .envrc
-```
+The generated `.envrc` from `devenv init` works as-is now; you no longer need
+the old task-running workaround.
 
 Edit `devenv.yaml` and replace the inputs section:
 
