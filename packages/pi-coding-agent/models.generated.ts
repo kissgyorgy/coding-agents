@@ -7657,7 +7657,7 @@ export const MODELS = {
 				cacheRead: 0.024999999999999998,
 				cacheWrite: 0.08333333333333334,
 			},
-			contextWindow: 1000000,
+			contextWindow: 1048576,
 			maxTokens: 8192,
 		} satisfies Model<"openai-completions">,
 		"google/gemini-2.0-flash-lite-001": {
@@ -8609,7 +8609,7 @@ export const MODELS = {
 				cacheRead: 0.07,
 				cacheWrite: 0,
 			},
-			contextWindow: 256000,
+			contextWindow: 262144,
 			maxTokens: 4096,
 		} satisfies Model<"openai-completions">,
 		"nex-agi/deepseek-v3.1-nex-n1": {
