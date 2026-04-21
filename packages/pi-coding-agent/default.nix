@@ -1,24 +1,24 @@
 { lib, buildNpmPackage, callPackage, fetchFromGitHub, nodejs_22, makeBinaryWrapper, autoPatchelfHook, stdenv }:
 
 let
-  modelsDate = "20260420";
+  modelsDate = "20260421";
   fetchExtensionDeps = callPackage ./fetch-extension-deps.nix { };
 in
 
 buildNpmPackage rec {
   pname = "pi-coding-agent-models-${modelsDate}";
-  version = "0.67.68";
+  version = "0.68.0";
 
   src = fetchFromGitHub {
     owner = "badlogic";
     repo = "pi-mono";
     rev = "v${version}";
-    hash = "sha256-1k9tHb5Dle37a5qHm8xT14vI5cQZOb8ASGQ1KxzPCr4=";
+    hash = "sha256-qRCl+43YabtgPBWa7eCto0F3xQheKWhJGYnAUZxbHug=";
   };
 
   nodejs = nodejs_22;
 
-  npmDepsHash = "sha256-xQQZECkDuiCdu0FlKbAKgk6EatLf2jMIXKDfRRwN/gA=";
+  npmDepsHash = "sha256-BZMng4KRw+CiD0Jl+qnoEk/LMtoPsh5SmO998BecJc8=";
 
   # Skip native addon compilation (canvas etc.) — koffi/clipboard ship pre-built binaries
   npmFlags = [ "--ignore-scripts" ];
