@@ -6864,7 +6864,7 @@ export const MODELS = {
 		} satisfies Model<"openai-completions">,
 		"kimi-k2.6": {
 			id: "kimi-k2.6",
-			name: "Kimi K2.6",
+			name: "Kimi K2.6 (3x limits)",
 			api: "openai-completions",
 			provider: "opencode-go",
 			baseUrl: "https://opencode.ai/zen/go/v1",
@@ -7747,7 +7747,7 @@ export const MODELS = {
 				cacheRead: 0.024999999999999998,
 				cacheWrite: 0.08333333333333334,
 			},
-			contextWindow: 1048576,
+			contextWindow: 1000000,
 			maxTokens: 8192,
 		} satisfies Model<"openai-completions">,
 		"google/gemini-2.0-flash-lite-001": {
@@ -7946,13 +7946,13 @@ export const MODELS = {
 			reasoning: true,
 			input: ["text", "image"],
 			cost: {
-				input: 0.08,
+				input: 0.07,
 				output: 0.35,
-				cacheRead: 0.01,
+				cacheRead: 0.04,
 				cacheWrite: 0,
 			},
 			contextWindow: 262144,
-			maxTokens: 4096,
+			maxTokens: 262144,
 		} satisfies Model<"openai-completions">,
 		"google/gemma-4-26b-a4b-it:free": {
 			id: "google/gemma-4-26b-a4b-it:free",
@@ -10243,7 +10243,7 @@ export const MODELS = {
 			cost: {
 				input: 0.15,
 				output: 0.7999999999999999,
-				cacheRead: 0.12,
+				cacheRead: 0.11,
 				cacheWrite: 0,
 			},
 			contextWindow: 262144,
@@ -11164,8 +11164,8 @@ export const MODELS = {
 				cacheRead: 0.119,
 				cacheWrite: 0,
 			},
-			contextWindow: 80000,
-			maxTokens: 131072,
+			contextWindow: 202752,
+			maxTokens: 4096,
 		} satisfies Model<"openai-completions">,
 		"z-ai/glm-5-turbo": {
 			id: "z-ai/glm-5-turbo",
@@ -11193,13 +11193,13 @@ export const MODELS = {
 			reasoning: true,
 			input: ["text"],
 			cost: {
-				input: 0.6980000000000001,
-				output: 4.4,
-				cacheRead: 0.26,
+				input: 1.0499999999999998,
+				output: 3.5,
+				cacheRead: 0.5249999999999999,
 				cacheWrite: 0,
 			},
 			contextWindow: 202752,
-			maxTokens: 131072,
+			maxTokens: 65535,
 		} satisfies Model<"openai-completions">,
 		"z-ai/glm-5v-turbo": {
 			id: "z-ai/glm-5v-turbo",
