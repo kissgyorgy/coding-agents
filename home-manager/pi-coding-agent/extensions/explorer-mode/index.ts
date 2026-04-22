@@ -17,7 +17,10 @@
  * - Session-persistent state
  */
 
-import type { ExtensionAPI, ExtensionContext } from "@mariozechner/pi-coding-agent";
+import type {
+  ExtensionAPI,
+  ExtensionContext,
+} from "@mariozechner/pi-coding-agent";
 import { Key } from "@mariozechner/pi-tui";
 import { isSafeCommand, getBlockReason } from "./utils.js";
 
@@ -52,192 +55,190 @@ user build a mental model of the codebase.
 - If a question is ambiguous, ask the user to clarify with the question tool`;
 
 export default function explorerModeExtension(pi: ExtensionAPI): void {
-	let explorerEnabled = false;
-	let savedTools: string[] | null = null;
+  let explorerEnabled = false;
+  let savedTools: string[] | null = null;
 
-	// --explore CLI flag
-	pi.registerFlag("explore", {
-		description: "Start in explorer mode (read-only codebase exploration)",
-		type: "boolean",
-		default: false,
-	});
+  // --explore CLI flag
+  pi.registerFlag("explore", {
+    description: "Start in explorer mode (read-only codebase exploration)",
+    type: "boolean",
+    default: false,
+  });
 
-	function updateStatus(ctx: ExtensionContext): void {
-		if (explorerEnabled) {
-			ctx.ui.setStatus(
-				"explorer-mode",
-				ctx.ui.theme.fg("accent", "🔍 explore"),
-			);
-		} else {
-			ctx.ui.setStatus("explorer-mode", undefined);
-		}
-	}
+  function updateStatus(ctx: ExtensionContext): void {
+    if (explorerEnabled) {
+      ctx.ui.setStatus(
+        "explorer-mode",
+        ctx.ui.theme.fg("accent", "🔍 explore"),
+      );
+    } else {
+      ctx.ui.setStatus("explorer-mode", undefined);
+    }
+  }
 
-	function enableExplorer(ctx: ExtensionContext): void {
-		explorerEnabled = true;
-		savedTools = pi.getActiveTools();
-		pi.setActiveTools(EXPLORER_TOOLS);
-		updateStatus(ctx);
-		persistState();
-		ctx.ui.notify("Explorer mode enabled — read-only codebase exploration", "info");
-	}
+  function enableExplorer(ctx: ExtensionContext): void {
+    explorerEnabled = true;
+    savedTools = pi.getActiveTools();
+    pi.setActiveTools(EXPLORER_TOOLS);
+    updateStatus(ctx);
+    persistState();
+    ctx.ui.notify(
+      "Explorer mode enabled — read-only codebase exploration",
+      "info",
+    );
+  }
 
-	function disableExplorer(ctx: ExtensionContext): void {
-		explorerEnabled = false;
-		if (savedTools) {
-			pi.setActiveTools(savedTools);
-			savedTools = null;
-		}
-		updateStatus(ctx);
-		persistState();
-		ctx.ui.notify("Explorer mode disabled — full tool access restored", "info");
-	}
+  function disableExplorer(ctx: ExtensionContext): void {
+    explorerEnabled = false;
+    if (savedTools) {
+      pi.setActiveTools(savedTools);
+      savedTools = null;
+    }
+    updateStatus(ctx);
+    persistState();
+    ctx.ui.notify("Explorer mode disabled — full tool access restored", "info");
+  }
 
-	function toggleExplorer(ctx: ExtensionContext): void {
-		if (explorerEnabled) {
-			disableExplorer(ctx);
-		} else {
-			enableExplorer(ctx);
-		}
-	}
+  function toggleExplorer(ctx: ExtensionContext): void {
+    if (explorerEnabled) {
+      disableExplorer(ctx);
+    } else {
+      enableExplorer(ctx);
+    }
+  }
 
-	function persistState(): void {
-		pi.appendEntry("explorer-mode", {
-			enabled: explorerEnabled,
-			savedTools,
-		});
-	}
+  function persistState(): void {
+    pi.appendEntry("explorer-mode", {
+      enabled: explorerEnabled,
+      savedTools,
+    });
+  }
 
-	// /explore command
-	pi.registerCommand("explore", {
-		description: "Toggle explorer mode (read-only codebase exploration)",
-		handler: async (_args, ctx) => toggleExplorer(ctx),
-	});
+  // /explore command
+  pi.registerCommand("explore", {
+    description: "Toggle explorer mode (read-only codebase exploration)",
+    handler: async (_args, ctx) => toggleExplorer(ctx),
+  });
 
-	// Ctrl+Alt+E shortcut
-	pi.registerShortcut(Key.ctrlAlt("e"), {
-		description: "Toggle explorer mode",
-		handler: async (ctx) => toggleExplorer(ctx),
-	});
+  // Ctrl+Alt+E shortcut
+  pi.registerShortcut(Key.ctrlAlt("e"), {
+    description: "Toggle explorer mode",
+    handler: async (ctx) => toggleExplorer(ctx),
+  });
 
-	// Block write and edit tools entirely in explorer mode
-	pi.on("tool_call", async (event, ctx) => {
-		if (!explorerEnabled) return;
+  // Block write and edit tools entirely in explorer mode
+  pi.on("tool_call", async (event, ctx) => {
+    if (!explorerEnabled) return;
 
-		// Block write and edit tools
-		if (event.toolName === "write" || event.toolName === "edit") {
-			return {
-				block: true,
-				reason: `Explorer mode: ${event.toolName} is disabled. This is a read-only exploration session. Use /explore to exit explorer mode if you need to make changes.`,
-			};
-		}
+    // Block write and edit tools
+    if (event.toolName === "write" || event.toolName === "edit") {
+      return {
+        block: true,
+        reason: `Explorer mode: ${event.toolName} is disabled. This is a read-only exploration session. Use /explore to exit explorer mode if you need to make changes.`,
+      };
+    }
 
-		// Restrict bash to safe commands
-		if (event.toolName === "bash") {
-			const command = event.input.command as string;
-			if (!isSafeCommand(command)) {
-				const reason = getBlockReason(command);
-				return {
-					block: true,
-					reason: `Explorer mode: bash command blocked. ${reason}. Only read-only commands are allowed. Use /explore to exit explorer mode if you need to run this command.`,
-				};
-			}
-		}
-	});
+    // Restrict bash to safe commands
+    if (event.toolName === "bash") {
+      const command = event.input.command as string;
+      if (!isSafeCommand(command)) {
+        const reason = getBlockReason(command);
+        return {
+          block: true,
+          reason: `Explorer mode: bash command blocked. ${reason}. Only read-only commands are allowed. Use /explore to exit explorer mode if you need to run this command.`,
+        };
+      }
+    }
+  });
 
-	// Inject explorer guidance as a message (preserves system prompt caching)
-	pi.on("before_agent_start", async () => {
-		if (!explorerEnabled) return;
+  // Inject explorer guidance as a message (preserves system prompt caching)
+  pi.on("before_agent_start", async () => {
+    if (!explorerEnabled) return;
 
-		return {
-			message: {
-				customType: "explorer-mode-context",
-				content: EXPLORER_SYSTEM_PROMPT,
-				display: false,
-			},
-		};
-	});
+    return {
+      message: {
+        customType: "explorer-mode-context",
+        content: EXPLORER_SYSTEM_PROMPT,
+        display: false,
+      },
+    };
+  });
 
-	// Filter out stale explorer context messages when mode is off
-	pi.on("context", async (event) => {
-		if (explorerEnabled) return;
+  // Filter out stale explorer context messages when mode is off
+  pi.on("context", async (event) => {
+    if (explorerEnabled) return;
 
-		return {
-			messages: event.messages.filter((m) => {
-				const msg = m as { customType?: string };
-				return msg.customType !== "explorer-mode-context";
-			}),
-		};
-	});
+    return {
+      messages: event.messages.filter((m) => {
+        const msg = m as { customType?: string };
+        return msg.customType !== "explorer-mode-context";
+      }),
+    };
+  });
 
-	// Restore state on session start
-	pi.on("session_start", async (_event, ctx) => {
-		// Check --explore flag
-		if (pi.getFlag("explore") === true) {
-			explorerEnabled = true;
-		}
+  // Restore state on session start
+  pi.on("session_start", async (_event, ctx) => {
+    // Check --explore flag
+    if (pi.getFlag("explore") === true) {
+      explorerEnabled = true;
+    }
 
-		// Restore persisted state from session branch
-		const branchEntries = ctx.sessionManager.getBranch();
-		for (const entry of branchEntries) {
-			if (
-				entry.type === "custom" &&
-				entry.customType === "explorer-mode"
-			) {
-				const data = entry.data as {
-					enabled?: boolean;
-					savedTools?: string[] | null;
-				} | undefined;
-				if (data) {
-					explorerEnabled = data.enabled ?? explorerEnabled;
-					savedTools = data.savedTools ?? savedTools;
-				}
-			}
-		}
+    // Restore persisted state from session branch
+    const branchEntries = ctx.sessionManager.getBranch();
+    for (const entry of branchEntries) {
+      if (entry.type === "custom" && entry.customType === "explorer-mode") {
+        const data = entry.data as
+          | {
+              enabled?: boolean;
+              savedTools?: string[] | null;
+            }
+          | undefined;
+        if (data) {
+          explorerEnabled = data.enabled ?? explorerEnabled;
+          savedTools = data.savedTools ?? savedTools;
+        }
+      }
+    }
 
-		if (explorerEnabled) {
-			pi.setActiveTools(EXPLORER_TOOLS);
-		}
-		updateStatus(ctx);
-	});
+    if (explorerEnabled) {
+      pi.setActiveTools(EXPLORER_TOOLS);
+    }
+    updateStatus(ctx);
+  });
 
-	// Restore on tree navigation
-	pi.on("session_tree", async (_event, ctx) => {
-		restoreFromBranch(ctx);
-	});
+  // Restore on tree navigation
+  pi.on("session_tree", async (_event, ctx) => {
+    restoreFromBranch(ctx);
+  });
 
-	// Restore after fork
-	pi.on("session_fork", async (_event, ctx) => {
-		restoreFromBranch(ctx);
-	});
+  // session_start already restores state after fork/new/resume.
 
-	function restoreFromBranch(ctx: ExtensionContext): void {
-		const branchEntries = ctx.sessionManager.getBranch();
-		let restoredEnabled = false;
-		let restoredSavedTools: string[] | null = null;
+  function restoreFromBranch(ctx: ExtensionContext): void {
+    const branchEntries = ctx.sessionManager.getBranch();
+    let restoredEnabled = false;
+    let restoredSavedTools: string[] | null = null;
 
-		for (const entry of branchEntries) {
-			if (
-				entry.type === "custom" &&
-				entry.customType === "explorer-mode"
-			) {
-				const data = entry.data as {
-					enabled?: boolean;
-					savedTools?: string[] | null;
-				} | undefined;
-				if (data) {
-					restoredEnabled = data.enabled ?? false;
-					restoredSavedTools = data.savedTools ?? null;
-				}
-			}
-		}
+    for (const entry of branchEntries) {
+      if (entry.type === "custom" && entry.customType === "explorer-mode") {
+        const data = entry.data as
+          | {
+              enabled?: boolean;
+              savedTools?: string[] | null;
+            }
+          | undefined;
+        if (data) {
+          restoredEnabled = data.enabled ?? false;
+          restoredSavedTools = data.savedTools ?? null;
+        }
+      }
+    }
 
-		explorerEnabled = restoredEnabled;
-		savedTools = restoredSavedTools;
+    explorerEnabled = restoredEnabled;
+    savedTools = restoredSavedTools;
 
-		if (explorerEnabled) {
-			pi.setActiveTools(EXPLORER_TOOLS);
-		}
-		updateStatus(ctx);
-	}
+    if (explorerEnabled) {
+      pi.setActiveTools(EXPLORER_TOOLS);
+    }
+    updateStatus(ctx);
+  }
 }

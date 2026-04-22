@@ -33,7 +33,7 @@ import {
   Spacer,
   Text,
 } from "@mariozechner/pi-tui";
-import { Type } from "@sinclair/typebox";
+import { Type } from "typebox";
 import { parseResponsesSSE } from "./types";
 import type { SearchBackend } from "./types";
 import { openai } from "./openai";

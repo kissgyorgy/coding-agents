@@ -34,7 +34,7 @@ import {
   DEFAULT_MAX_LINES,
   formatSize,
 } from "@mariozechner/pi-coding-agent";
-import { Type } from "@sinclair/typebox";
+import { Type } from "typebox";
 import { writeFileSync } from "node:fs";
 
 import type { MirrorBackend } from "./types.js";
