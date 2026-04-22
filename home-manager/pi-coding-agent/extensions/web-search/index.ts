@@ -394,6 +394,12 @@ export default function (pi: ExtensionAPI) {
       "Search the web for current information. " +
       "Use when you need up-to-date facts, documentation or any information that may be online. " +
       "Returns a search-augmented answer with citations.",
+    promptSnippet:
+      "Search the web for current information using an LLM with web search capabilities",
+    promptGuidelines: [
+      "Use web_search when you need up-to-date information, current events, documentation, or any facts that may have changed after your training cutoff.",
+      "Prefer web_search over guessing when the user asks about recent changes, new library versions, or current best practices.",
+    ],
     parameters: Type.Object({
       query: Type.String({ description: "The search query" }),
     }),
