@@ -20,6 +20,7 @@ Read-only exploration mode for safe code analysis.
 | `/plan:execute` | Execute the current plan                                       |
 | `/plan:edit`    | Edit the current plan file (inline editor)                     |
 | `/plan:view`    | View the current plan in a read-only scrollable modal          |
+| `/plan:file`    | Set the plan file to an existing file                          |
 | `/plan:delete`  | Delete the current plan file and reset state                   |
 | `/plan:model`   | Configure models for slug generation and execution             |
 | `Ctrl+Alt+P`    | Toggle plan mode                                               |
@@ -62,7 +63,8 @@ Detailed analysis and approach.
    - `/plan:view` or `Ctrl+Alt+O` opens a read-only Markdown viewer modal
    - Scroll with `↑/↓`, `PageUp/PageDown`, `Home/End`; close with `Esc`
    - Works even outside plan/execution mode as long as a plan file exists
-7. Toggle plan mode off with `/plan` or `Ctrl+Alt+P` to end execution and restore the previous model
+7. Point plan mode to an existing file with `/plan:file <path>` (enables plan mode if not active)
+8. Toggle plan mode off with `/plan` or `Ctrl+Alt+P` to end execution and restore the previous model
 
 > **Note:** `Ctrl+G` is overridden in plan/execution mode to edit the plan file
 > instead of the prompt. Outside plan mode, `Ctrl+G` works normally (opens

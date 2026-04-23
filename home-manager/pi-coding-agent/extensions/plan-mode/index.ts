@@ -1,6 +1,7 @@
 import {
   existsSync,
   mkdirSync,
+  readdirSync,
   readFileSync,
   unlinkSync,
   writeFileSync,
@@ -674,6 +675,51 @@ ${todoList}
       updateStatus(ctx);
       persistState();
       ctx.ui.notify(`Deleted ${planRelative}`, "info");
+    },
+  });
+
+  pi.registerCommand("plan:file", {
+    description: "Set the plan file to an existing file",
+    getArgumentCompletions: (prefix: string) => {
+      const plansDir = join(process.cwd(), "plans");
+      try {
+        const files = readdirSync(plansDir)
+          .filter((f) => f.endsWith(".md"))
+          .map((f) => `plans/${f}`);
+        const filtered = files.filter((f) => f.startsWith(prefix || "plans/"));
+        return filtered.length > 0
+          ? filtered.map((f) => ({ value: f, label: f }))
+          : null;
+      } catch {
+        return null;
+      }
+    },
+    handler: async (args, ctx) => {
+      const path = args?.trim();
+      if (!path) {
+        ctx.ui.notify("Usage: /plan:file <path-to-plan-file>", "warning");
+        return;
+      }
+      const resolved = resolve(ctx.cwd, path);
+      if (!existsSync(resolved)) {
+        ctx.ui.notify(
+          `File not found: ${relative(ctx.cwd, resolved)}`,
+          "error",
+        );
+        return;
+      }
+      planFilePath = resolved;
+      if (!planModeEnabled && !executionMode) {
+        planModeEnabled = true;
+      }
+      persistState();
+      updateStatus(ctx);
+      const planRelative = relative(ctx.cwd, planFilePath);
+      const modeLabel = executionMode ? "execution" : "plan";
+      ctx.ui.notify(
+        `Plan file set to ${planRelative} (${modeLabel} mode)`,
+        "info",
+      );
     },
   });
 
