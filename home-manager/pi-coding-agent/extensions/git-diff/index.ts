@@ -32,6 +32,7 @@ export default function (pi: ExtensionAPI) {
   let themeRef: Theme | null = null;
   let termH = 40;
   let savedCtx: ExtensionContext | null = null;
+  let refreshSeq = 0;
 
   async function getCommitDiff(): Promise<string> {
     // 1. Commits not yet pushed to upstream tracking branch
@@ -109,16 +110,25 @@ export default function (pi: ExtensionAPI) {
   }
 
   async function refreshDiff(): Promise<void> {
-    if (!diffPanel || !tuiRef) return;
+    const panel = diffPanel;
+    const tui = tuiRef;
+    if (!panel || !tui) return;
+
+    const seq = ++refreshSeq;
     const raw = await getDiff();
+    if (seq !== refreshSeq || panel !== diffPanel || tui !== tuiRef) return;
+
     if (raw.trim()) {
-      diffPanel.setFiles(parseDiff(raw));
-      diffPanel.setIsClean(false);
+      panel.setFiles(parseDiff(raw));
+      panel.setIsClean(false);
     } else {
-      diffPanel.setFiles(parseDiff(await getCommitDiff()));
-      diffPanel.setIsClean(true);
+      const commitDiff = await getCommitDiff();
+      if (seq !== refreshSeq || panel !== diffPanel || tui !== tuiRef) return;
+      panel.setFiles(parseDiff(commitDiff));
+      panel.setIsClean(true);
     }
-    tuiRef.requestRender();
+
+    tui.requestRender();
   }
 
   function showPanel(ctx: ExtensionContext): void {
@@ -147,6 +157,7 @@ export default function (pi: ExtensionAPI) {
   }
 
   function hidePanel(ctx?: ExtensionContext): void {
+    refreshSeq++;
     if (overlayHandle) {
       overlayHandle.hide();
       overlayHandle = null;
