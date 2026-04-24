@@ -3031,6 +3031,7 @@ export const MODELS = {
 			provider: "github-copilot",
 			baseUrl: "https://api.individual.githubcopilot.com",
 			headers: {"User-Agent":"GitHubCopilotChat/0.35.0","Editor-Version":"vscode/1.107.0","Editor-Plugin-Version":"copilot-chat/0.35.0","Copilot-Integration-Id":"vscode-chat"},
+			compat: {"supportsEagerToolInputStreaming":false},
 			reasoning: true,
 			input: ["text", "image"],
 			cost: {
@@ -3103,6 +3104,7 @@ export const MODELS = {
 			provider: "github-copilot",
 			baseUrl: "https://api.individual.githubcopilot.com",
 			headers: {"User-Agent":"GitHubCopilotChat/0.35.0","Editor-Version":"vscode/1.107.0","Editor-Plugin-Version":"copilot-chat/0.35.0","Copilot-Integration-Id":"vscode-chat"},
+			compat: {"supportsEagerToolInputStreaming":false},
 			reasoning: true,
 			input: ["text", "image"],
 			cost: {
@@ -3121,6 +3123,7 @@ export const MODELS = {
 			provider: "github-copilot",
 			baseUrl: "https://api.individual.githubcopilot.com",
 			headers: {"User-Agent":"GitHubCopilotChat/0.35.0","Editor-Version":"vscode/1.107.0","Editor-Plugin-Version":"copilot-chat/0.35.0","Copilot-Integration-Id":"vscode-chat"},
+			compat: {"supportsEagerToolInputStreaming":false},
 			reasoning: true,
 			input: ["text", "image"],
 			cost: {
@@ -5137,6 +5140,7 @@ export const MODELS = {
 			api: "anthropic-messages",
 			provider: "kimi-coding",
 			baseUrl: "https://api.kimi.com/coding",
+			headers: {"User-Agent":"KimiCLI/1.5"},
 			reasoning: true,
 			input: ["text", "image"],
 			cost: {
@@ -5154,6 +5158,7 @@ export const MODELS = {
 			api: "anthropic-messages",
 			provider: "kimi-coding",
 			baseUrl: "https://api.kimi.com/coding",
+			headers: {"User-Agent":"KimiCLI/1.5"},
 			reasoning: true,
 			input: ["text", "image"],
 			cost: {
@@ -5171,6 +5176,7 @@ export const MODELS = {
 			api: "anthropic-messages",
 			provider: "kimi-coding",
 			baseUrl: "https://api.kimi.com/coding",
+			headers: {"User-Agent":"KimiCLI/1.5"},
 			reasoning: true,
 			input: ["text"],
 			cost: {
@@ -6550,6 +6556,23 @@ export const MODELS = {
 				cacheWrite: 0,
 			},
 			contextWindow: 272000,
+			maxTokens: 128000,
+		} satisfies Model<"openai-codex-responses">,
+		"gpt-5.5": {
+			id: "gpt-5.5",
+			name: "GPT-5.5",
+			api: "openai-codex-responses",
+			provider: "openai-codex",
+			baseUrl: "https://chatgpt.com/backend-api",
+			reasoning: true,
+			input: ["text", "image"],
+			cost: {
+				input: 5,
+				output: 30,
+				cacheRead: 0.5,
+				cacheWrite: 0,
+			},
+			contextWindow: 400000,
 			maxTokens: 128000,
 		} satisfies Model<"openai-codex-responses">,
 	},
