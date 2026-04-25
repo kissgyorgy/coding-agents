@@ -1,6 +1,6 @@
 ---
 name: devenv
-description: Use this when any of devenv, service setup, dependencies or Nix packages are mentioned.
+description: Use this when working in a project with devenv.nix, or when devenv.sh development environment setup, services, dependencies, or Nix packages are relevant.
 ---
 
 # devenv.sh Development Environments
