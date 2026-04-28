@@ -7400,8 +7400,8 @@ export const MODELS = {
 				cacheRead: 0.2,
 				cacheWrite: 0,
 			},
-			contextWindow: 204800,
-			maxTokens: 131072,
+			contextWindow: 202752,
+			maxTokens: 32768,
 		} satisfies Model<"openai-completions">,
 		"glm-5.1": {
 			id: "glm-5.1",
@@ -7417,8 +7417,8 @@ export const MODELS = {
 				cacheRead: 0.26,
 				cacheWrite: 0,
 			},
-			contextWindow: 204800,
-			maxTokens: 131072,
+			contextWindow: 202752,
+			maxTokens: 32768,
 		} satisfies Model<"openai-completions">,
 		"kimi-k2.5": {
 			id: "kimi-k2.5",
