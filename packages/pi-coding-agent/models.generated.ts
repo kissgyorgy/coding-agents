@@ -8390,7 +8390,7 @@ export const MODELS = {
 				cacheRead: 0.024999999999999998,
 				cacheWrite: 0.08333333333333334,
 			},
-			contextWindow: 1000000,
+			contextWindow: 1048576,
 			maxTokens: 8192,
 		} satisfies Model<"openai-completions">,
 		"google/gemini-2.0-flash-lite-001": {
@@ -11326,12 +11326,12 @@ export const MODELS = {
 			reasoning: true,
 			input: ["text", "image"],
 			cost: {
-				input: 0.5,
-				output: 2,
-				cacheRead: 0.25,
+				input: 0.325,
+				output: 3.25,
+				cacheRead: 0,
 				cacheWrite: 0,
 			},
-			contextWindow: 262144,
+			contextWindow: 256000,
 			maxTokens: 65536,
 		} satisfies Model<"openai-completions">,
 		"qwen/qwen3.6-flash": {
@@ -11360,10 +11360,10 @@ export const MODELS = {
 			reasoning: true,
 			input: ["text"],
 			cost: {
-				input: 1.3,
-				output: 7.8,
+				input: 1.04,
+				output: 6.24,
 				cacheRead: 0,
-				cacheWrite: 1.625,
+				cacheWrite: 1.3,
 			},
 			contextWindow: 262144,
 			maxTokens: 65536,
@@ -12843,7 +12843,7 @@ export const MODELS = {
 			cost: {
 				input: 0.14,
 				output: 0.28,
-				cacheRead: 0.028,
+				cacheRead: 0.0028,
 				cacheWrite: 0,
 			},
 			contextWindow: 1000000,
