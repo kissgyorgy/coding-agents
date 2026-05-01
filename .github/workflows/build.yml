@@ -16,6 +16,9 @@ jobs:
 
       - uses: DeterminateSystems/magic-nix-cache-action@main
 
+      - name: Check flake
+        run: nix flake check --all-systems --print-build-logs
+
       - name: Build packages
         run: |
           set -euo pipefail
