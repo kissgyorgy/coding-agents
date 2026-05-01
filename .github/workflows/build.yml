@@ -1,0 +1,40 @@
+name: Build
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  aarch64-darwin:
+    name: Build aarch64-darwin packages
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: DeterminateSystems/nix-installer-action@main
+
+      - uses: DeterminateSystems/magic-nix-cache-action@main
+
+      - name: Build packages
+        run: |
+          set -euo pipefail
+          packages=$(nix eval --json .#packages.aarch64-darwin --apply builtins.attrNames | jq -r '.[]')
+          for package in $packages; do
+            echo "::group::Building $package"
+            nix build --print-build-logs --no-link ".#packages.aarch64-darwin.$package"
+            echo "::endgroup::"
+          done
+
+      - name: Smoke test packages
+        run: |
+          set -euo pipefail
+          packages=$(nix eval --json .#packages.aarch64-darwin --apply builtins.attrNames | jq -r '.[]')
+          for package in $packages; do
+            echo "::group::Testing $package"
+            out=$(nix build --no-link --print-out-paths ".#packages.aarch64-darwin.$package")
+            mainProgram=$(nix eval --raw ".#packages.aarch64-darwin.$package.meta.mainProgram")
+            echo "$out/bin/$mainProgram --help"
+            "$out/bin/$mainProgram" --help
+            echo "::endgroup::"
+          done
