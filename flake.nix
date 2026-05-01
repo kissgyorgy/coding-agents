@@ -7,8 +7,27 @@
 
   outputs = { self, nixpkgs }:
     let
-      pkgs = import nixpkgs {
-        system = "x86_64-linux";
+      lib = nixpkgs.lib;
+      systems = [ "x86_64-linux" "aarch64-darwin" ];
+      commonPackageNames = [
+        "claude-code"
+        "claude-code-ui"
+        "gemini-cli"
+        "ccusage"
+        "codex"
+        "crush"
+        "pi-coding-agent"
+      ];
+      linuxOnlyPackageNames = [
+        "playwright-cli"
+        "vibe-kanban"
+      ];
+      packageNames = {
+        x86_64-linux = commonPackageNames ++ linuxOnlyPackageNames;
+        aarch64-darwin = commonPackageNames;
+      };
+      pkgsFor = system: import nixpkgs {
+        inherit system;
         config.allowUnfree = true;
         overlays = [ self.overlays.default ];
       };
@@ -26,9 +45,10 @@
         vibe-kanban = final.callPackage ./packages/vibe-kanban.nix { };
       };
 
-      packages.x86_64-linux = {
-        inherit (pkgs) claude-code claude-code-ui gemini-cli ccusage codex crush pi-coding-agent playwright-cli vibe-kanban;
-      };
+      packages = lib.genAttrs systems (system:
+        let pkgs = pkgsFor system;
+        in lib.genAttrs packageNames.${system} (name: pkgs.${name})
+      );
 
       homeManagerModules = {
         claude-code = import ./home-manager/claude-code;

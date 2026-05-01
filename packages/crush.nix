@@ -1,19 +1,34 @@
-{ lib, stdenv, fetchurl, autoPatchelfHook, glibc }:
+{ lib, stdenv, fetchurl, autoPatchelfHook ? null, glibc ? null }:
 
+let
+  sources = {
+    x86_64-linux = {
+      asset = "Linux_x86_64";
+      hash = "sha256-PePtqcO61U8TFAnVVf1ooDMLNBAc7skIU5IN9iJB9Zo=";
+    };
+    aarch64-darwin = {
+      asset = "Darwin_arm64";
+      hash = "sha256-DL22g5ZhQeFfUyAP6Rc3bqdmM3OE4sgNxBTzxcR1ZUA=";
+    };
+  };
+  source = sources.${stdenv.hostPlatform.system} or (throw "crush is not supported on ${stdenv.hostPlatform.system}");
+in
 stdenv.mkDerivation rec {
   pname = "crush";
   version = "0.64.0";
 
   src = fetchurl {
-    url = "https://github.com/charmbracelet/crush/releases/download/v${version}/crush_${version}_Linux_x86_64.tar.gz";
-    hash = "sha256-PePtqcO61U8TFAnVVf1ooDMLNBAc7skIU5IN9iJB9Zo=";
+    url = "https://github.com/charmbracelet/crush/releases/download/v${version}/crush_${version}_${source.asset}.tar.gz";
+    hash = source.hash;
   };
 
-  nativeBuildInputs = [ autoPatchelfHook ];
+  nativeBuildInputs = lib.optionals stdenv.hostPlatform.isLinux [ autoPatchelfHook ];
 
-  buildInputs = [ glibc ];
+  buildInputs = lib.optionals stdenv.hostPlatform.isLinux [ glibc ];
 
-  sourceRoot = "crush_${version}_Linux_x86_64";
+  sourceRoot = "crush_${version}_${source.asset}";
+
+  dontStrip = stdenv.hostPlatform.isDarwin;
 
   installPhase = ''
     runHook preInstall
@@ -34,7 +49,7 @@ stdenv.mkDerivation rec {
     homepage = "https://github.com/charmbracelet/crush";
     license = licenses.unfree;
     maintainers = [ ];
-    platforms = [ "x86_64-linux" ];
+    platforms = builtins.attrNames sources;
     mainProgram = "crush";
   };
 }
