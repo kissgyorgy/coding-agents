@@ -2,11 +2,11 @@
 
 stdenv.mkDerivation rec {
   pname = "codex";
-  version = "rust-v0.125.0";
+  version = "rust-v0.128.0";
 
   src = fetchurl {
-    url = "https://github.com/openai/codex/releases/download/${version}/codex-x86_64-unknown-linux-gnu.tar.gz";
-    hash = "sha256-UivAubirMfOo8fxIeKvU6DsRamwbz8dxfS/gNvVM1L4=";
+    url = "https://github.com/openai/codex/releases/download/${version}/codex-x86_64-unknown-linux-musl.tar.gz";
+    hash = "sha256-iGuF5hGMC0MjRDfKAH++kjYRpTsQPQDg0650rvsg4jo=";
   };
 
   nativeBuildInputs = [ autoPatchelfHook ];
@@ -18,7 +18,7 @@ stdenv.mkDerivation rec {
   installPhase = ''
     runHook preInstall
 
-    install -Dm755 codex-x86_64-unknown-linux-gnu $out/bin/codex
+    install -Dm755 codex-x86_64-unknown-linux-musl $out/bin/codex
 
     runHook postInstall
   '';
