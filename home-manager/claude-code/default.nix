@@ -23,6 +23,7 @@ in
       claude-code
       ccusage
       socat
+    ] ++ lib.optionals pkgs.stdenv.hostPlatform.isLinux [
       bubblewrap
     ];
 

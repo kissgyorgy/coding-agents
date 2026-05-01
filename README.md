@@ -18,6 +18,9 @@ All agents and aliases are configured with yolo mode by default. (e.g. `--danger
 
 Packages are automatically updated 3 times a day via GitHub Actions.
 
+Supported flake systems are `x86_64-linux` and `aarch64-darwin`. `playwright-cli`
+and `vibe-kanban` are currently Linux-only.
+
 ## Skills
 
 [Agent Skills](https://agentskills.io) get installed into each agent's config

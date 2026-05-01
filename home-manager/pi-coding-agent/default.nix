@@ -30,13 +30,14 @@ in
       if skillsDir != null then symlink skillsDir else ../../skills;
     home.packages = with pkgs; [
       pi-coding-agent
-      wl-clipboard
       nil
       basedpyright
       typescript-language-server
       typescript
       gopls
       go
+    ] ++ lib.optionals pkgs.stdenv.hostPlatform.isLinux [
+      wl-clipboard
     ];
   };
 }

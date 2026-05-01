@@ -1,4 +1,4 @@
-{ lib, buildNpmPackage, callPackage, fetchFromGitHub, nodejs_22, makeBinaryWrapper, autoPatchelfHook, stdenv }:
+{ lib, buildNpmPackage, callPackage, fetchFromGitHub, nodejs_22, makeBinaryWrapper, autoPatchelfHook ? null, stdenv }:
 
 let
   modelsDate = "20260501";
@@ -23,9 +23,10 @@ buildNpmPackage rec {
   # Skip native addon compilation (canvas etc.) — koffi/clipboard ship pre-built binaries
   npmFlags = [ "--ignore-scripts" ];
 
-  # Native addons (koffi, clipboard) need patching; tsgo is statically linked
-  nativeBuildInputs = [ autoPatchelfHook makeBinaryWrapper ];
-  buildInputs = [ stdenv.cc.cc.lib ];
+  # Native addons (koffi, clipboard) need patching on Linux; tsgo is statically linked
+  nativeBuildInputs = [ makeBinaryWrapper ]
+    ++ lib.optionals stdenv.hostPlatform.isLinux [ autoPatchelfHook ];
+  buildInputs = lib.optionals stdenv.hostPlatform.isLinux [ stdenv.cc.cc.lib ];
 
   # Replace upstream models with our freshly generated ones
   postPatch = ''
@@ -101,26 +102,32 @@ buildNpmPackage rec {
     runHook postInstall
   '';
 
-  # Remove non-Linux-x64-glibc native binaries before autoPatchelf tries them.
+  # Remove native binaries for platforms we don't need.
   # The monorepo node_modules includes deps from all workspace packages (web-ui etc.)
   # with native binaries for platforms we don't need.
   preFixup = ''
     local pkgDir="$out/lib/pi-coding-agent"
-
-    # Remove all musl packages (we use glibc)
+  '' + lib.optionalString stdenv.hostPlatform.isLinux ''
     find "$pkgDir/node_modules" -maxdepth 3 -type d -name "*-musl*" -exec rm -rf {} + 2>/dev/null || true
-
-    # Remove koffi builds for other platforms (keep only linux_x64)
-    find "$pkgDir/node_modules/koffi/build/koffi" -mindepth 1 -maxdepth 1 -type d \
-      ! -name linux_x64 -exec rm -rf {} + 2>/dev/null || true
-
-    # Remove dev-only tools not needed at runtime (biome, tailwindcss, etc.)
+  '' + lib.optionalString (stdenv.hostPlatform.system == "x86_64-linux") ''
+    if [ -d "$pkgDir/node_modules/koffi/build/koffi" ]; then
+      for dir in "$pkgDir/node_modules/koffi/build/koffi"/*; do
+        [ -d "$dir" ] || continue
+        [ "$(basename "$dir")" = linux_x64 ] || rm -rf "$dir"
+      done
+    fi
+  '' + lib.optionalString (stdenv.hostPlatform.system == "aarch64-darwin") ''
+    if [ -d "$pkgDir/node_modules/koffi/build/koffi" ]; then
+      for dir in "$pkgDir/node_modules/koffi/build/koffi"/*; do
+        [ -d "$dir" ] || continue
+        [ "$(basename "$dir")" = darwin_arm64 ] || rm -rf "$dir"
+      done
+    fi
+  '' + ''
     rm -rf "$pkgDir/node_modules/@biomejs"
     rm -rf "$pkgDir/node_modules/@tailwindcss"
 
-    # Remove all broken symlinks (workspace links to packages/ that aren't in output,
-    # .bin links to removed packages, etc.)
-    find "$pkgDir/node_modules" -xtype l -delete 2>/dev/null || true
+    find "$pkgDir/node_modules" -type l -exec sh -c 'for link do [ -e "$link" ] || rm "$link"; done' sh {} + 2>/dev/null || true
   '';
 
   meta = {
@@ -130,6 +137,6 @@ buildNpmPackage rec {
     license = lib.licenses.mit;
     maintainers = [ ];
     mainProgram = "pi";
-    platforms = [ "x86_64-linux" ];
+    platforms = [ "x86_64-linux" "aarch64-darwin" ];
   };
 }
