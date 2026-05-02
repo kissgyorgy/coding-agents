@@ -15,6 +15,7 @@ All agents and aliases are configured with yolo mode by default. (e.g. `--danger
 | **hermes-agent**    | [Hermes Agent](https://github.com/NousResearch/hermes-agent) — Nous Research's self-improving AI agent          |
 | **llmfit**          | [llmfit](https://github.com/AlexsJones/llmfit) — Right-size LLM models to your system hardware                  |
 | **llmserve**        | [llmserve](https://github.com/AlexsJones/llmserve) — TUI for serving local LLM models                           |
+| **openclaude**      | [OpenClaude](https://github.com/Gitlawb/openclaude) — Coding-agent CLI for cloud and local model providers      |
 | **pi-coding-agent** | [Pi](https://github.com/badlogic/pi-mono) — The minimal coding agent with extensions, skills, and TUI           |
 | **vibe-kanban**     | [Vibe Kanban](https://github.com/BloopAI/vibe-kanban) — Kanban-style orchestration surface for AI coding agents |
 | **ccusage**         | [ccusage](https://www.npmjs.com/package/ccusage) — Track Claude Code token usage and costs                      |
@@ -46,6 +47,7 @@ nix run github:kissgyorgy/coding-agents#codex
 nix run github:kissgyorgy/coding-agents#crush
 nix run github:kissgyorgy/coding-agents#gemini-cli
 nix run github:kissgyorgy/coding-agents#hermes-agent
+nix run github:kissgyorgy/coding-agents#openclaude
 nix run github:kissgyorgy/coding-agents#pi-coding-agent
 nix run github:kissgyorgy/coding-agents#vibe-kanban
 ```

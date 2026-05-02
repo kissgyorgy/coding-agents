@@ -21,6 +21,7 @@
         "codex"
         "crush"
         "hermes-agent"
+        "openclaude"
         "pi-coding-agent"
       ];
       linuxOnlyPackageNames = [
@@ -48,6 +49,7 @@
         codex = final.callPackage ./packages/codex.nix { };
         crush = final.callPackage ./packages/crush.nix { };
         hermes-agent = hermes-agent.packages.${final.stdenv.hostPlatform.system}.default;
+        openclaude = final.callPackage ./packages/openclaude.nix { };
         pi-coding-agent = final.callPackage ./packages/pi-coding-agent { };
         llmfit = final.callPackage ./packages/llmfit.nix { };
         llmserve = final.callPackage ./packages/llmserve.nix { };
