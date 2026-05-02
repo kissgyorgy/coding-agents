@@ -2,7 +2,7 @@
 build *args:
     #!/usr/bin/env bash
     set -euo pipefail
-    all="claude-code claude-code-ui gemini-cli ccusage codex crush pi-coding-agent llmfit"
+    all="claude-code claude-code-ui gemini-cli ccusage codex crush pi-coding-agent llmfit llmserve"
     attrs=""
     for pkg in ${args:-$all}; do attrs+=" .#$pkg"; done
     nix build $attrs
@@ -12,7 +12,7 @@ update:
     #!/usr/bin/env bash
     set -uo pipefail
     failed=()
-    for pkg in claude-code codex gemini-cli crush pi-coding-agent llmfit; do
+    for pkg in claude-code codex gemini-cli crush pi-coding-agent llmfit llmserve; do
         echo "==> Updating $pkg"
         if ! just update-"$pkg"; then
             echo "==> FAILED: $pkg"
@@ -29,6 +29,7 @@ update-codex: (_update-pkg "codex" "openai/codex" "" "true")
 update-gemini-cli: (_update-pkg "gemini-cli" "google-gemini/gemini-cli" "" "true")
 update-crush: (_update-pkg "crush" "charmbracelet/crush" "" "true")
 update-llmfit: (_update-pkg "llmfit" "AlexsJones/llmfit")
+update-llmserve: (_update-pkg "llmserve" "AlexsJones/llmserve")
 
 update-pi-coding-agent: (_update-pkg "pi-coding-agent" "badlogic/pi-mono" "_pi-post-update") update-pi-models
 

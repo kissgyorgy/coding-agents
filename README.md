@@ -13,6 +13,7 @@ All agents and aliases are configured with yolo mode by default. (e.g. `--danger
 | **crush**           | [Crush](https://github.com/charmbracelet/crush) — Charm's glamorous terminal coding agent                       |
 | **gemini-cli**      | [Gemini CLI](https://github.com/google-gemini/gemini-cli) — Google's CLI coding agent                           |
 | **llmfit**          | [llmfit](https://github.com/AlexsJones/llmfit) — Right-size LLM models to your system hardware                  |
+| **llmserve**        | [llmserve](https://github.com/AlexsJones/llmserve) — TUI for serving local LLM models                           |
 | **pi-coding-agent** | [Pi](https://github.com/badlogic/pi-mono) — The minimal coding agent with extensions, skills, and TUI           |
 | **vibe-kanban**     | [Vibe Kanban](https://github.com/BloopAI/vibe-kanban) — Kanban-style orchestration surface for AI coding agents |
 | **ccusage**         | [ccusage](https://www.npmjs.com/package/ccusage) — Track Claude Code token usage and costs                      |
@@ -20,7 +21,7 @@ All agents and aliases are configured with yolo mode by default. (e.g. `--danger
 Packages are automatically updated 3 times a day via GitHub Actions.
 
 Supported flake systems are `x86_64-linux` and `aarch64-darwin`. `llmfit`,
-`playwright-cli`, and `vibe-kanban` are currently Linux-only.
+`llmserve`, `playwright-cli`, and `vibe-kanban` are currently Linux-only.
 
 ## Skills
 

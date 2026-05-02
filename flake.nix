@@ -20,6 +20,7 @@
       ];
       linuxOnlyPackageNames = [
         "llmfit"
+        "llmserve"
         "playwright-cli"
         "vibe-kanban"
       ];
@@ -43,6 +44,7 @@
         crush = final.callPackage ./packages/crush.nix { };
         pi-coding-agent = final.callPackage ./packages/pi-coding-agent { };
         llmfit = final.callPackage ./packages/llmfit.nix { };
+        llmserve = final.callPackage ./packages/llmserve.nix { };
         playwright-cli = final.callPackage ./packages/playwright-cli.nix { };
         vibe-kanban = final.callPackage ./packages/vibe-kanban.nix { };
       };

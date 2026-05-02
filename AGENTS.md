@@ -1,8 +1,8 @@
 # Overview
 
 This is a Nix flake that provides opinionated packages and Home Manager modules
-for AI coding agents (Claude Code, Codex, Gemini CLI, Pi, Crush, llmfit, ccusage,
-Claude Code UI, Vibe Kanban). All agents are configured with yolo/auto-approve mode by
+for AI coding agents (Claude Code, Codex, Gemini CLI, Pi, Crush, llmfit,
+llmserve, ccusage, Claude Code UI, Vibe Kanban). All agents are configured with yolo/auto-approve mode by
 default. Shared "skills" (domain knowledge documents) are distributed to every
 agent.
 
@@ -44,7 +44,7 @@ Each `.nix` file is a standalone Nix derivation that downloads a pre-built binar
 
 - **Binary ELF patching**: `claude-code.nix`, `pi-coding-agent/` — download a single binary, `patchelf` the interpreter
 - **autoPatchelfHook**: `codex.nix` — automatic shared library resolution
-- **Rust builds**: `llmfit.nix` — build from source with `rustPlatform.buildRustPackage`
+- **Rust builds**: `llmfit.nix`, `llmserve.nix` — build from source with `rustPlatform.buildRustPackage`
 - **Node.js wrapper**: `gemini-cli.nix`, `ccusage.nix` — download a JS bundle, wrap with `makeBinaryWrapper` pointing to `nodejs_20`
 - **buildNpmPackage**: `claude-code-ui.nix` — full npm build from source
 - **AppImage**: `emdash.nix` — extract and wrap AppImage with Wayland flags
