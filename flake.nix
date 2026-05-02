@@ -3,9 +3,13 @@
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
+    hermes-agent = {
+      url = "github:NousResearch/hermes-agent/v2026.4.30";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
   };
 
-  outputs = { self, nixpkgs }:
+  outputs = { self, nixpkgs, hermes-agent }:
     let
       lib = nixpkgs.lib;
       systems = [ "x86_64-linux" "aarch64-darwin" ];
@@ -16,6 +20,7 @@
         "ccusage"
         "codex"
         "crush"
+        "hermes-agent"
         "pi-coding-agent"
       ];
       linuxOnlyPackageNames = [
@@ -42,6 +47,7 @@
         ccusage = final.callPackage ./packages/ccusage.nix { };
         codex = final.callPackage ./packages/codex.nix { };
         crush = final.callPackage ./packages/crush.nix { };
+        hermes-agent = hermes-agent.packages.${final.stdenv.hostPlatform.system}.default;
         pi-coding-agent = final.callPackage ./packages/pi-coding-agent { };
         llmfit = final.callPackage ./packages/llmfit.nix { };
         llmserve = final.callPackage ./packages/llmserve.nix { };
@@ -59,6 +65,7 @@
         codex = import ./home-manager/codex;
         gemini-cli = import ./home-manager/gemini-cli;
         crush = import ./home-manager/crush;
+        hermes-agent = import ./home-manager/hermes-agent;
         pi-coding-agent = import ./home-manager/pi-coding-agent;
         default = { lib, ... }: {
           imports = [
@@ -66,6 +73,7 @@
             self.homeManagerModules.codex
             self.homeManagerModules.crush
             self.homeManagerModules.gemini-cli
+            self.homeManagerModules.hermes-agent
             self.homeManagerModules.pi-coding-agent
           ];
           options.coding-agents.skillsDir = lib.mkOption {

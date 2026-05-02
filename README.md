@@ -12,6 +12,7 @@ All agents and aliases are configured with yolo mode by default. (e.g. `--danger
 | **codex**           | [Codex](https://github.com/openai/codex) — OpenAI's CLI coding agent                                            |
 | **crush**           | [Crush](https://github.com/charmbracelet/crush) — Charm's glamorous terminal coding agent                       |
 | **gemini-cli**      | [Gemini CLI](https://github.com/google-gemini/gemini-cli) — Google's CLI coding agent                           |
+| **hermes-agent**    | [Hermes Agent](https://github.com/NousResearch/hermes-agent) — Nous Research's self-improving AI agent          |
 | **llmfit**          | [llmfit](https://github.com/AlexsJones/llmfit) — Right-size LLM models to your system hardware                  |
 | **llmserve**        | [llmserve](https://github.com/AlexsJones/llmserve) — TUI for serving local LLM models                           |
 | **pi-coding-agent** | [Pi](https://github.com/badlogic/pi-mono) — The minimal coding agent with extensions, skills, and TUI           |
@@ -44,6 +45,7 @@ nix run github:kissgyorgy/coding-agents#claude-code
 nix run github:kissgyorgy/coding-agents#codex
 nix run github:kissgyorgy/coding-agents#crush
 nix run github:kissgyorgy/coding-agents#gemini-cli
+nix run github:kissgyorgy/coding-agents#hermes-agent
 nix run github:kissgyorgy/coding-agents#pi-coding-agent
 nix run github:kissgyorgy/coding-agents#vibe-kanban
 ```
@@ -78,6 +80,7 @@ Import the module and apply the overlay:
     codex.enable = true;
     crush.enable = true;
     gemini-cli.enable = true;
+    hermes-agent.enable = true;
     pi-coding-agent.enable = true;
   };
 }
@@ -116,6 +119,10 @@ integration.
 #### `coding-agents.gemini-cli`
 
 - **`enable`** — Install Gemini CLI and add a `gemini` shell alias (runs with `--yolo --model pro`)
+
+#### `coding-agents.hermes-agent`
+
+- **`enable`** — Install Hermes Agent
 
 #### `coding-agents.pi-coding-agent`
 
