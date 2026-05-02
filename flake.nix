@@ -19,6 +19,7 @@
         "pi-coding-agent"
       ];
       linuxOnlyPackageNames = [
+        "llmfit"
         "playwright-cli"
         "vibe-kanban"
       ];
@@ -41,6 +42,7 @@
         codex = final.callPackage ./packages/codex.nix { };
         crush = final.callPackage ./packages/crush.nix { };
         pi-coding-agent = final.callPackage ./packages/pi-coding-agent { };
+        llmfit = final.callPackage ./packages/llmfit.nix { };
         playwright-cli = final.callPackage ./packages/playwright-cli.nix { };
         vibe-kanban = final.callPackage ./packages/vibe-kanban.nix { };
       };
