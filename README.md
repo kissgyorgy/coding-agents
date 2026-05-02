@@ -18,7 +18,7 @@ All agents and aliases are configured with yolo mode by default. (e.g. `--danger
 | **vibe-kanban**     | [Vibe Kanban](https://github.com/BloopAI/vibe-kanban) — Kanban-style orchestration surface for AI coding agents |
 | **ccusage**         | [ccusage](https://www.npmjs.com/package/ccusage) — Track Claude Code token usage and costs                      |
 
-Packages are automatically updated 3 times a day via GitHub Actions.
+Packages are automatically updated every hour via GitHub Actions.
 
 Supported flake systems are `x86_64-linux` and `aarch64-darwin`. `llmfit`,
 `llmserve`, `playwright-cli`, and `vibe-kanban` are currently Linux-only.
