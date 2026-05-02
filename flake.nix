@@ -14,6 +14,7 @@
       lib = nixpkgs.lib;
       systems = [ "x86_64-linux" "aarch64-darwin" ];
       commonPackageNames = [
+        "aichat"
         "claude-code"
         "claude-code-ui"
         "gemini-cli"
@@ -42,6 +43,7 @@
     in
     {
       overlays.default = final: prev: {
+        aichat = final.callPackage ./packages/aichat.nix { };
         claude-code = final.callPackage ./packages/claude-code.nix { };
         claude-code-ui = final.callPackage ./packages/claude-code-ui.nix { };
         gemini-cli = final.callPackage ./packages/gemini-cli.nix { };

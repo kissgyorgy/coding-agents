@@ -40,7 +40,7 @@ jobs:
       - name: Build and push to cachix
         run: |
           failed=()
-          for pkg in claude-code claude-code-ui gemini-cli ccusage codex pi-coding-agent; do
+          for pkg in aichat claude-code claude-code-ui gemini-cli ccusage codex pi-coding-agent; do
             echo "::group::Building $pkg"
             if nix build .#"$pkg" 2>&1; then
               cachix push coding-agents ./result*

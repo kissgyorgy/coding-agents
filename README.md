@@ -7,6 +7,7 @@ All agents and aliases are configured with yolo mode by default. (e.g. `--danger
 
 | Package             | Description                                                                                                     |
 | ------------------- | --------------------------------------------------------------------------------------------------------------- |
+| **aichat**          | [AIChat](https://github.com/sigoden/aichat) — All-in-one LLM CLI tool                                           |
 | **claude-code**     | [Claude Code](https://github.com/anthropics/claude-code) — Anthropic's CLI coding agent                         |
 | **claude-code-ui**  | [Claude Code UI](https://github.com/siteboon/claudecodeui) — Web UI for Claude Code                             |
 | **codex**           | [Codex](https://github.com/openai/codex) — OpenAI's CLI coding agent                                            |
@@ -42,6 +43,7 @@ directory, so every agent has access to the same domain knowledge.
 Run any package directly:
 
 ```bash
+nix run github:kissgyorgy/coding-agents#aichat
 nix run github:kissgyorgy/coding-agents#claude-code
 nix run github:kissgyorgy/coding-agents#codex
 nix run github:kissgyorgy/coding-agents#crush
