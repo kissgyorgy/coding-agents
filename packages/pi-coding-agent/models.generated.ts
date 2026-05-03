@@ -9316,7 +9316,7 @@ export const MODELS = {
 				cacheRead: 0.024999999999999998,
 				cacheWrite: 0.08333333333333334,
 			},
-			contextWindow: 1000000,
+			contextWindow: 1048576,
 			maxTokens: 8192,
 		} satisfies Model<"openai-completions">,
 		"google/gemini-2.0-flash-lite-001": {
@@ -16550,7 +16550,7 @@ export const MODELS = {
 		} satisfies Model<"openai-completions">,
 		"glm-5v-turbo": {
 			id: "glm-5v-turbo",
-			name: "glm-5v-turbo",
+			name: "GLM-5V-Turbo",
 			api: "openai-completions",
 			provider: "zai",
 			baseUrl: "https://api.z.ai/api/coding/paas/v4",
