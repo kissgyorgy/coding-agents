@@ -12340,6 +12340,23 @@ export const MODELS = {
 			contextWindow: 262144,
 			maxTokens: 81920,
 		} satisfies Model<"openai-completions">,
+		"qwen/qwen3.6-35b-a3b": {
+			id: "qwen/qwen3.6-35b-a3b",
+			name: "Qwen: Qwen3.6 35B A3B",
+			api: "openai-completions",
+			provider: "openrouter",
+			baseUrl: "https://openrouter.ai/api/v1",
+			reasoning: true,
+			input: ["text", "image"],
+			cost: {
+				input: 0.15,
+				output: 1,
+				cacheRead: 0.049999999999999996,
+				cacheWrite: 0,
+			},
+			contextWindow: 262144,
+			maxTokens: 262144,
+		} satisfies Model<"openai-completions">,
 		"qwen/qwen3.6-flash": {
 			id: "qwen/qwen3.6-flash",
 			name: "Qwen: Qwen3.6 Flash",
