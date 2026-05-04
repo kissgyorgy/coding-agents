@@ -9279,13 +9279,13 @@ export const MODELS = {
 			thinkingLevelMap: {"minimal":null,"low":null,"medium":null,"high":"high","xhigh":"max"},
 			input: ["text"],
 			cost: {
-				input: 0,
-				output: 0,
-				cacheRead: 0,
+				input: 0.435,
+				output: 0.87,
+				cacheRead: 0.003625,
 				cacheWrite: 0,
 			},
-			contextWindow: 131000,
-			maxTokens: 131000,
+			contextWindow: 1048576,
+			maxTokens: 384000,
 		} satisfies Model<"openai-completions">,
 		"essentialai/rnj-1-instruct": {
 			id: "essentialai/rnj-1-instruct",
