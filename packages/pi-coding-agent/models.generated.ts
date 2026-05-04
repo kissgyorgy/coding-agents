@@ -9318,7 +9318,7 @@ export const MODELS = {
 				cacheRead: 0.024999999999999998,
 				cacheWrite: 0.08333333333333334,
 			},
-			contextWindow: 1000000,
+			contextWindow: 1048576,
 			maxTokens: 8192,
 		} satisfies Model<"openai-completions">,
 		"google/gemini-2.0-flash-lite-001": {
@@ -10101,6 +10101,23 @@ export const MODELS = {
 				cacheWrite: 0,
 			},
 			contextWindow: 131072,
+			maxTokens: 4096,
+		} satisfies Model<"openai-completions">,
+		"mistralai/mistral-medium-3-5": {
+			id: "mistralai/mistral-medium-3-5",
+			name: "Mistral: Mistral Medium 3.5",
+			api: "openai-completions",
+			provider: "openrouter",
+			baseUrl: "https://openrouter.ai/api/v1",
+			reasoning: true,
+			input: ["text", "image"],
+			cost: {
+				input: 1.5,
+				output: 7.5,
+				cacheRead: 0,
+				cacheWrite: 0,
+			},
+			contextWindow: 262144,
 			maxTokens: 4096,
 		} satisfies Model<"openai-completions">,
 		"mistralai/mistral-medium-3.1": {
