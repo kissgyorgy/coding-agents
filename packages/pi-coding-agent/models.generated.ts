@@ -12944,13 +12944,13 @@ export const MODELS = {
 			reasoning: true,
 			input: ["text"],
 			cost: {
-				input: 0.38,
-				output: 1.74,
-				cacheRead: 0,
+				input: 0.39999999999999997,
+				output: 1.75,
+				cacheRead: 0.08,
 				cacheWrite: 0,
 			},
 			contextWindow: 202752,
-			maxTokens: 4096,
+			maxTokens: 131072,
 		} satisfies Model<"openai-completions">,
 		"z-ai/glm-4.7-flash": {
 			id: "z-ai/glm-4.7-flash",
