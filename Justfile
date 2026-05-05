@@ -3,8 +3,9 @@ build *args:
     #!/usr/bin/env bash
     set -euo pipefail
     all="aichat claude-code claude-code-ui gemini-cli ccusage codex crush hermes-agent pi-coding-agent llmfit llmserve"
+    requested="{{args}}"
     attrs=""
-    for pkg in ${args:-$all}; do attrs+=" .#$pkg"; done
+    for pkg in ${requested:-$all}; do attrs+=" .#$pkg"; done
     nix build $attrs
 
 # Update all packages sequentially (continues on individual failures)
