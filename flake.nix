@@ -34,6 +34,7 @@
       aarch64LinuxOnlyPackageNames = [
         "llmfit"
         "llmserve"
+        "playwright-cli"
         "vibe-kanban"
       ];
       packageNames = {
