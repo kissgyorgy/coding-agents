@@ -9318,7 +9318,7 @@ export const MODELS = {
 				cacheRead: 0.024999999999999998,
 				cacheWrite: 0.08333333333333334,
 			},
-			contextWindow: 1048576,
+			contextWindow: 1000000,
 			maxTokens: 8192,
 		} satisfies Model<"openai-completions">,
 		"google/gemini-2.0-flash-lite-001": {
@@ -16466,7 +16466,7 @@ export const MODELS = {
 			provider: "xiaomi",
 			baseUrl: "https://api.xiaomimimo.com/anthropic",
 			reasoning: true,
-			input: ["text"],
+			input: ["text", "image"],
 			cost: {
 				input: 0.4,
 				output: 2,
@@ -16483,7 +16483,7 @@ export const MODELS = {
 			provider: "xiaomi",
 			baseUrl: "https://api.xiaomimimo.com/anthropic",
 			reasoning: true,
-			input: ["text", "image"],
+			input: ["text"],
 			cost: {
 				input: 1,
 				output: 3,
@@ -16553,7 +16553,7 @@ export const MODELS = {
 			provider: "xiaomi-token-plan-ams",
 			baseUrl: "https://token-plan-ams.xiaomimimo.com/anthropic",
 			reasoning: true,
-			input: ["text"],
+			input: ["text", "image"],
 			cost: {
 				input: 0.4,
 				output: 2,
@@ -16570,7 +16570,7 @@ export const MODELS = {
 			provider: "xiaomi-token-plan-ams",
 			baseUrl: "https://token-plan-ams.xiaomimimo.com/anthropic",
 			reasoning: true,
-			input: ["text", "image"],
+			input: ["text"],
 			cost: {
 				input: 1,
 				output: 3,
@@ -16640,7 +16640,7 @@ export const MODELS = {
 			provider: "xiaomi-token-plan-cn",
 			baseUrl: "https://token-plan-cn.xiaomimimo.com/anthropic",
 			reasoning: true,
-			input: ["text"],
+			input: ["text", "image"],
 			cost: {
 				input: 0.4,
 				output: 2,
@@ -16657,7 +16657,7 @@ export const MODELS = {
 			provider: "xiaomi-token-plan-cn",
 			baseUrl: "https://token-plan-cn.xiaomimimo.com/anthropic",
 			reasoning: true,
-			input: ["text", "image"],
+			input: ["text"],
 			cost: {
 				input: 1,
 				output: 3,
@@ -16727,7 +16727,7 @@ export const MODELS = {
 			provider: "xiaomi-token-plan-sgp",
 			baseUrl: "https://token-plan-sgp.xiaomimimo.com/anthropic",
 			reasoning: true,
-			input: ["text"],
+			input: ["text", "image"],
 			cost: {
 				input: 0.4,
 				output: 2,
@@ -16744,7 +16744,7 @@ export const MODELS = {
 			provider: "xiaomi-token-plan-sgp",
 			baseUrl: "https://token-plan-sgp.xiaomimimo.com/anthropic",
 			reasoning: true,
-			input: ["text", "image"],
+			input: ["text"],
 			cost: {
 				input: 1,
 				output: 3,
