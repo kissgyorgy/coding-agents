@@ -8,11 +8,11 @@ let
     };
     aarch64-linux = {
       asset = "Linux_arm64";
-      hash = "sha256-n2GFXIlb2rPfn2fuz/2wrhyFjzXCjOCJdKvuvW7Tsqc=";
+      hash = "sha256-+lvehiQrL8RQAtRYlpPRheRSDXj0LoRJ8C6ZHaXT+G4=";
     };
     aarch64-darwin = {
       asset = "Darwin_arm64";
-      hash = "sha256-ZeDKDTtMsdKFNnSvKBTlSltasFI6MBSYDfibLrDfccE=";
+      hash = "sha256-CUkhnKUM4A+ZfCm8DWpSJxApHo8piA7ON8cHwnUCz3g=";
     };
   };
   source = sources.${stdenv.hostPlatform.system} or (throw "crush is not supported on ${stdenv.hostPlatform.system}");
