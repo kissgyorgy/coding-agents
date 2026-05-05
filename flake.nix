@@ -12,7 +12,7 @@
   outputs = { self, nixpkgs, hermes-agent }:
     let
       lib = nixpkgs.lib;
-      systems = [ "x86_64-linux" "aarch64-darwin" ];
+      systems = [ "x86_64-linux" "aarch64-linux" "aarch64-darwin" ];
       commonPackageNames = [
         "aichat"
         "claude-code"
@@ -31,8 +31,15 @@
         "playwright-cli"
         "vibe-kanban"
       ];
+      aarch64LinuxOnlyPackageNames = [
+        "llmfit"
+        "llmserve"
+        "playwright-cli"
+        "vibe-kanban"
+      ];
       packageNames = {
         x86_64-linux = commonPackageNames ++ linuxOnlyPackageNames;
+        aarch64-linux = commonPackageNames ++ aarch64LinuxOnlyPackageNames;
         aarch64-darwin = commonPackageNames;
       };
       pkgsFor = system: import nixpkgs {

@@ -6,12 +6,20 @@ let
       platform = "linux-x64";
       hash = "sha256-dwyBNzrUKXDvV2Z22njWvmBBP0reI6utvxNDyggJuz4=";
     };
+    aarch64-linux = {
+      platform = "linux-arm64";
+      hash = "sha256-4qMYebdDP2WNkV5nFiSfELkTtGeHOVDo5+BmunxNluk=";
+    };
     aarch64-darwin = {
       platform = "darwin-arm64";
-      hash = "sha256-h6HQUBjOrfwf5ha/wQJisFA/UZhvSvLcQtHthW7T97s=";
+      hash = "sha256-GlauTNFxung5/CsD1VgCL/rrtWk75TLY88NEcxBj6Xk=";
     };
   };
   source = sources.${stdenv.hostPlatform.system} or (throw "claude-code is not supported on ${stdenv.hostPlatform.system}");
+  interpreter = {
+    x86_64-linux = "${glibc}/lib/ld-linux-x86-64.so.2";
+    aarch64-linux = "${glibc}/lib/ld-linux-aarch64.so.1";
+  }.${stdenv.hostPlatform.system} or null;
 in
 stdenv.mkDerivation rec {
   pname = "claude-code";
@@ -30,8 +38,8 @@ stdenv.mkDerivation rec {
     mkdir -p $out/bin
     cp $src $out/bin/claude
     chmod u+w,+x $out/bin/claude
-  '' + lib.optionalString stdenv.hostPlatform.isLinux ''
-    patchelf --set-interpreter ${glibc}/lib/ld-linux-x86-64.so.2 $out/bin/claude
+  '' + lib.optionalString (interpreter != null) ''
+    patchelf --set-interpreter ${interpreter} $out/bin/claude
   '';
 
   meta = {
