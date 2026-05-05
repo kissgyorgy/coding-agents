@@ -138,7 +138,7 @@ rustPlatform.buildRustPackage rec {
     homepage = "https://github.com/BloopAI/vibe-kanban";
     license = lib.licenses.asl20;
     maintainers = [ ];
-    platforms = [ "x86_64-linux" ];
+    platforms = [ "x86_64-linux" "aarch64-linux" ];
     mainProgram = "vibe-kanban";
   };
 }

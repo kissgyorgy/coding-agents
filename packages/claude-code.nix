@@ -6,6 +6,10 @@ let
       platform = "linux-x64";
       hash = "sha256-dwyBNzrUKXDvV2Z22njWvmBBP0reI6utvxNDyggJuz4=";
     };
+    aarch64-linux = {
+      platform = "linux-arm64";
+      hash = "sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=";
+    };
     aarch64-darwin = {
       platform = "darwin-arm64";
       hash = "sha256-h6HQUBjOrfwf5ha/wQJisFA/UZhvSvLcQtHthW7T97s=";

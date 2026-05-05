@@ -6,6 +6,42 @@ on:
   workflow_dispatch:
 
 jobs:
+  aarch64-linux:
+    name: Build aarch64-linux packages
+    runs-on: ubuntu-24.04-arm
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: DeterminateSystems/nix-installer-action@main
+
+      - uses: DeterminateSystems/magic-nix-cache-action@main
+
+      - name: Check flake
+        run: nix flake check --all-systems --print-build-logs
+
+      - name: Build packages
+        run: |
+          set -euo pipefail
+          packages=$(nix eval --json .#packages.aarch64-linux --apply builtins.attrNames | jq -r '.[]')
+          for package in $packages; do
+            echo "::group::Building $package"
+            nix build --print-build-logs --no-link ".#packages.aarch64-linux.$package"
+            echo "::endgroup::"
+          done
+
+      - name: Smoke test packages
+        run: |
+          set -euo pipefail
+          packages=$(nix eval --json .#packages.aarch64-linux --apply builtins.attrNames | jq -r '.[]')
+          for package in $packages; do
+            echo "::group::Testing $package"
+            out=$(nix build --no-link --print-out-paths ".#packages.aarch64-linux.$package")
+            mainProgram=$(nix eval --raw ".#packages.aarch64-linux.$package.meta.mainProgram")
+            echo "$out/bin/$mainProgram --help"
+            "$out/bin/$mainProgram" --help
+            echo "::endgroup::"
+          done
+
   aarch64-darwin:
     name: Build aarch64-darwin packages
     runs-on: macos-15

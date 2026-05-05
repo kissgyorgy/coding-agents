@@ -116,6 +116,13 @@ buildNpmPackage rec {
         [ "$(basename "$dir")" = linux_x64 ] || rm -rf "$dir"
       done
     fi
+  '' + lib.optionalString (stdenv.hostPlatform.system == "aarch64-linux") ''
+    if [ -d "$pkgDir/node_modules/koffi/build/koffi" ]; then
+      for dir in "$pkgDir/node_modules/koffi/build/koffi"/*; do
+        [ -d "$dir" ] || continue
+        [ "$(basename "$dir")" = linux_arm64 ] || rm -rf "$dir"
+      done
+    fi
   '' + lib.optionalString (stdenv.hostPlatform.system == "aarch64-darwin") ''
     if [ -d "$pkgDir/node_modules/koffi/build/koffi" ]; then
       for dir in "$pkgDir/node_modules/koffi/build/koffi"/*; do
@@ -137,6 +144,6 @@ buildNpmPackage rec {
     license = lib.licenses.mit;
     maintainers = [ ];
     mainProgram = "pi";
-    platforms = [ "x86_64-linux" "aarch64-darwin" ];
+    platforms = [ "x86_64-linux" "aarch64-linux" "aarch64-darwin" ];
   };
 }
