@@ -31,9 +31,14 @@
         "playwright-cli"
         "vibe-kanban"
       ];
+      aarch64LinuxOnlyPackageNames = [
+        "llmfit"
+        "llmserve"
+        "vibe-kanban"
+      ];
       packageNames = {
         x86_64-linux = commonPackageNames ++ linuxOnlyPackageNames;
-        aarch64-linux = commonPackageNames ++ linuxOnlyPackageNames;
+        aarch64-linux = commonPackageNames ++ aarch64LinuxOnlyPackageNames;
         aarch64-darwin = commonPackageNames;
       };
       pkgsFor = system: import nixpkgs {

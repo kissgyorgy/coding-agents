@@ -1,0 +1,18 @@
+{
+  "generated_at": "2026-05-05T03:53:08.631Z",
+  "git_hash": "8436dcd59cbf6883662358184c299f85af3fba4a",
+  "changed_files": [
+    "packages/pi-coding-agent/models.generated.ts"
+  ],
+  "change_stat": " 1 file changed, 1 insertion(+), 1 deletion(-)",
+  "recent_commits": [
+    "8436dcd pi-coding-agent: update generated models",
+    "583dec4 pi-coding-agent: update generated models",
+    "fa43d0e pi-coding-agent: update generated models",
+    "7d95ca8 claude-code: 2.1.126 -> 2.1.128",
+    "6b3c9fd crush: 0.65.2 -> 0.65.3"
+  ],
+  "blast_radius": {
+    "packages/pi-coding-agent/models.generated.ts": []
+  }
+}
