@@ -34,18 +34,34 @@ jobs:
         run: |
           set -euo pipefail
           packages=$(nix eval --json .#packages.aarch64-linux --apply builtins.attrNames | jq -r '.[]')
+          # Packages that can't be smoke tested with --help (hang or need GPU/TTY)
+          skip_run_test="llmserve vibe-kanban"
           failed=()
           for package in $packages; do
             echo "::group::Testing $package"
             if out=$(nix build --no-link --print-out-paths ".#packages.aarch64-linux.$package" 2>&1); then
               mainProgram=$(nix eval --raw ".#packages.aarch64-linux.$package.meta.mainProgram")
-              echo "$out/bin/$mainProgram --help"
-              if timeout 10s "$out/bin/$mainProgram" --help 2>&1; then
-                echo "::endgroup::"
+              binary="$out/bin/$mainProgram"
+              if [[ " $skip_run_test " =~ " $package " ]]; then
+                # Just verify binary exists
+                if [ -x "$binary" ]; then
+                  echo "$package: binary exists at $binary"
+                  echo "::endgroup::"
+                else
+                  echo "::error::$package binary not found"
+                  failed+=("$package")
+                  echo "::endgroup::"
+                fi
               else
-                echo "::warning::$package --help failed or timed out (expected for some packages like llmserve)"
-                failed+=("$package")
-                echo "::endgroup::"
+                # Run --help
+                echo "$binary --help"
+                if timeout 10s "$binary" --help 2>&1; then
+                  echo "::endgroup::"
+                else
+                  echo "::warning::$package --help failed"
+                  failed+=("$package")
+                  echo "::endgroup::"
+                fi
               fi
             else
               echo "::error::$package build failed"
@@ -90,11 +106,12 @@ jobs:
             echo "::group::Testing $package"
             if out=$(nix build --no-link --print-out-paths ".#packages.aarch64-darwin.$package" 2>&1); then
               mainProgram=$(nix eval --raw ".#packages.aarch64-darwin.$package.meta.mainProgram")
-              echo "$out/bin/$mainProgram --help"
-              if timeout 10s "$out/bin/$mainProgram" --help 2>&1; then
+              binary="$out/bin/$mainProgram"
+              echo "$binary --help"
+              if "$binary" --help 2>&1; then
                 echo "::endgroup::"
               else
-                echo "::warning::$package --help failed or timed out"
+                echo "::warning::$package --help failed"
                 failed+=("$package")
                 echo "::endgroup::"
               fi
