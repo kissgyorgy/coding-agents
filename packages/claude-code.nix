@@ -8,7 +8,7 @@ let
     };
     aarch64-linux = {
       platform = "linux-arm64";
-      hash = "sha256-PODOYRBM2UT4HFPJWZZ33EU7KLL5TC5VDKXQEO6BBHLWB6UH5SEQ====";
+      hash = "sha256-ukM3eV7TDWmeyQJnYZaYeF8j2k9Az/JMNmDhfBcA2b0=";
     };
     aarch64-darwin = {
       platform = "darwin-arm64";
