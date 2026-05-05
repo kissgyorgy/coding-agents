@@ -8,7 +8,7 @@ let
     };
     aarch64-linux = {
       asset = "Linux_arm64";
-      hash = "sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=";
+      hash = "sha256-9f61855c895bdab3df9f67eecffdb0ae1c858f35c28ce08974abeebd6ed3b2a7=";
     };
     aarch64-darwin = {
       asset = "Darwin_arm64";

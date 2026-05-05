@@ -16,7 +16,7 @@ let
     };
     aarch64-linux = {
       target = "aarch64-unknown-linux-musl";
-      hash = "sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=";
+      hash = "sha256-7b86ec442cd527c395e9b673bd929f52d7d98bb51aaf023bc109d760fa87ec89=";
     };
     aarch64-darwin = {
       target = "aarch64-apple-darwin";
