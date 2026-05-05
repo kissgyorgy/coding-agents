@@ -30,6 +30,7 @@ jobs:
           done
 
       - name: Smoke test packages
+        timeout-minutes: 10
         run: |
           set -euo pipefail
           packages=$(nix eval --json .#packages.aarch64-linux --apply builtins.attrNames | jq -r '.[]')
@@ -39,10 +40,10 @@ jobs:
             if out=$(nix build --no-link --print-out-paths ".#packages.aarch64-linux.$package" 2>&1); then
               mainProgram=$(nix eval --raw ".#packages.aarch64-linux.$package.meta.mainProgram")
               echo "$out/bin/$mainProgram --help"
-              if "$out/bin/$mainProgram" --help 2>&1; then
+              if timeout 10s "$out/bin/$mainProgram" --help 2>&1; then
                 echo "::endgroup::"
               else
-                echo "::warning::$package --help failed (expected for some packages like llmserve)"
+                echo "::warning::$package --help failed or timed out (expected for some packages like llmserve)"
                 failed+=("$package")
                 echo "::endgroup::"
               fi
@@ -80,6 +81,7 @@ jobs:
           done
 
       - name: Smoke test packages
+        timeout-minutes: 10
         run: |
           set -euo pipefail
           packages=$(nix eval --json .#packages.aarch64-darwin --apply builtins.attrNames | jq -r '.[]')
@@ -89,10 +91,10 @@ jobs:
             if out=$(nix build --no-link --print-out-paths ".#packages.aarch64-darwin.$package" 2>&1); then
               mainProgram=$(nix eval --raw ".#packages.aarch64-darwin.$package.meta.mainProgram")
               echo "$out/bin/$mainProgram --help"
-              if "$out/bin/$mainProgram" --help 2>&1; then
+              if timeout 10s "$out/bin/$mainProgram" --help 2>&1; then
                 echo "::endgroup::"
               else
-                echo "::warning::$package --help failed"
+                echo "::warning::$package --help failed or timed out"
                 failed+=("$package")
                 echo "::endgroup::"
               fi
