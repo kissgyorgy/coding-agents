@@ -1,76 +1,21 @@
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
+import type {
+  CompletionItem,
+  CompletionResult,
+  Diagnostic,
+  DocumentSymbol,
+  Location,
+  LocationLink,
+  Range,
+  SymbolInformation,
+  WorkspaceEdit,
+} from "./types";
 
-interface Location {
-  uri: string;
-  range: Range;
-}
-
-interface Range {
-  start: Position;
-  end: Position;
-}
-
-interface Position {
-  line: number;
-  character: number;
-}
-
-interface MarkupContent {
-  kind: "plaintext" | "markdown";
-  value: string;
-}
-
-interface LocationLink {
-  targetUri: string;
-  targetRange: Range;
-  targetSelectionRange: Range;
-}
-
-interface SymbolInfo {
-  name: string;
-  kind: number;
-  location?: Location;
-  containerName?: string;
-  children?: SymbolInfo[];
-  range?: Range;
-  selectionRange?: Range;
-  detail?: string;
-}
-
-interface TextEdit {
-  range: Range;
-  newText: string;
-}
-
-interface WorkspaceEdit {
-  changes?: Record<string, TextEdit[]>;
-  documentChanges?: (
-    | { textDocument: { uri: string; version?: number }; edits: TextEdit[] }
-    | { kind: string; uri: string; newUri?: string }
-  )[];
-}
-
-interface CompletionItem {
-  label: string;
-  kind?: number;
-  detail?: string;
-  documentation?: string | MarkupContent;
-  insertText?: string;
-}
-
-interface CompletionResult {
-  isIncomplete?: boolean;
-  items: CompletionItem[];
-}
-
-interface Diagnostic {
-  range: Range;
-  severity?: number;
-  code?: number | string;
-  source?: string;
-  message: string;
-}
+type SymbolInfo = DocumentSymbol &
+  SymbolInformation & {
+    children?: SymbolInfo[];
+  };
 
 const SYMBOL_KINDS: Record<number, string> = {
   1: "File",
@@ -137,6 +82,14 @@ const SEVERITY_LABELS: Record<number, string> = {
 };
 
 const fileLinesCache = new Map<string, string[]>();
+
+export function invalidateFilePreviewCache(path?: string): void {
+  if (path === undefined) {
+    fileLinesCache.clear();
+    return;
+  }
+  fileLinesCache.delete(path);
+}
 
 function uriToPath(uri: string): string {
   try {

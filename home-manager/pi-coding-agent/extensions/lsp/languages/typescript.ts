@@ -1,9 +1,13 @@
-import { existsSync } from "node:fs";
-import { dirname, join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import type { LspServerConfig } from "../lsp-client";
+import { getWorkspaceRootFromMarkers } from "./utils";
 
 export const languageId = "typescript";
+export const workspaceMarkers = [
+  "tsconfig.json",
+  "jsconfig.json",
+  "package.json",
+];
 
 export function getConfig(cwd: string): LspServerConfig[] {
   return [
@@ -15,37 +19,11 @@ export function getConfig(cwd: string): LspServerConfig[] {
   ];
 }
 
-function findNearestContainingDir(
-  startDir: string,
-  stopDir: string,
-  fileNames: string[],
-): string | null {
-  let current = resolve(startDir);
-  const limit = resolve(stopDir);
-
-  while (true) {
-    for (const fileName of fileNames) {
-      if (existsSync(join(current, fileName))) return current;
-    }
-    if (current === limit) return null;
-    const parent = dirname(current);
-    if (parent === current) return null;
-    if (!current.startsWith(limit)) return null;
-    current = parent;
-  }
-}
-
 export function getWorkspaceRoot(
   startDir: string,
-  _ctx: { cwd: string },
+  ctx: { cwd: string },
 ): string {
-  const configDir = findNearestContainingDir(startDir, "/", [
-    "tsconfig.json",
-    "jsconfig.json",
-    "package.json",
-  ]);
-  if (configDir) return configDir;
-  return startDir;
+  return getWorkspaceRootFromMarkers(startDir, ctx, workspaceMarkers);
 }
 
 export const fileExtensions = new Set([
@@ -55,6 +33,8 @@ export const fileExtensions = new Set([
   ".jsx",
   ".mts",
   ".mjs",
+  ".cts",
+  ".cjs",
 ]);
 
 export function languageIdForPath(filePath: string): string | null {

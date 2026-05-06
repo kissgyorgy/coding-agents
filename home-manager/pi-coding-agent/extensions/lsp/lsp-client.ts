@@ -1,7 +1,7 @@
 import { spawn, type ChildProcess } from "node:child_process";
 import { readFile } from "node:fs/promises";
 import { resolve } from "node:path";
-import { pathToFileURL } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import type { IndexingTracker } from "./languages";
 
 export interface LspServerConfig {
@@ -36,6 +36,7 @@ export class LspClient {
   private configs: LspServerConfig[];
   private config: LspServerConfig | null = null;
   private openDocuments = new Set<string>();
+  private documentVersions = new Map<string, number>();
   private languagePlugins: Record<
     string,
     { languageIdForPath: (filePath: string) => string | null }
@@ -48,7 +49,7 @@ export class LspClient {
   getOpenDocumentPaths(): string[] {
     return [...this.openDocuments].map((uri) => {
       try {
-        return new URL(uri).pathname;
+        return fileURLToPath(uri);
       } catch {
         return uri;
       }
@@ -122,7 +123,12 @@ export class LspClient {
       this.initialized = false;
       this.config = null;
       this.buffer = Buffer.alloc(0);
+      this.openDocuments.clear();
+      this.documentVersions.clear();
+      this.diagnostics.clear();
+      this.diagnosticsReceivedUris.clear();
       this.rejectAllPending(new Error("LSP server stopped"));
+      this.clearDiagnosticWaiters();
       this.clearIndexingWaiters();
       return;
     }
@@ -139,7 +145,11 @@ export class LspClient {
     this.initialized = false;
     this.config = null;
     this.openDocuments.clear();
+    this.documentVersions.clear();
+    this.diagnostics.clear();
+    this.diagnosticsReceivedUris.clear();
     this.buffer = Buffer.alloc(0);
+    this.clearDiagnosticWaiters();
     this.clearIndexingWaiters();
   }
 
@@ -358,6 +368,42 @@ export class LspClient {
     this.send({ jsonrpc: "2.0", method, params });
   }
 
+  hasDocumentOpen(filePath: string): boolean {
+    const absPath = resolve(filePath);
+    const uri = pathToFileURL(absPath).href;
+    return this.openDocuments.has(uri);
+  }
+
+  private nextDocumentVersion(uri: string): number {
+    const version = (this.documentVersions.get(uri) ?? 0) + 1;
+    this.documentVersions.set(uri, version);
+    return version;
+  }
+
+  private resetDiagnosticsForUri(uri: string): void {
+    this.diagnostics.delete(uri);
+    this.diagnosticsReceivedUris.delete(uri);
+  }
+
+  private resolveDiagnosticWaiters(uri: string): void {
+    const waiters = this.diagnosticWaiters.get(uri);
+    if (!waiters) return;
+    this.diagnosticWaiters.delete(uri);
+    for (const waiter of waiters) {
+      clearTimeout(waiter.timer);
+      waiter.resolve();
+    }
+  }
+
+  private isMissingFileError(error: unknown): boolean {
+    return (
+      typeof error === "object" &&
+      error !== null &&
+      "code" in error &&
+      (error.code === "ENOENT" || error.code === "ENOTDIR")
+    );
+  }
+
   async ensureDocumentOpen(filePath: string): Promise<string> {
     const absPath = resolve(filePath);
     const uri = pathToFileURL(absPath).href;
@@ -365,11 +411,13 @@ export class LspClient {
     if (!this.openDocuments.has(uri)) {
       const content = await readFile(absPath, "utf8");
       const languageId = this.getLanguageId(absPath);
+      const version = this.nextDocumentVersion(uri);
+      this.resetDiagnosticsForUri(uri);
       this.notify("textDocument/didOpen", {
         textDocument: {
           uri,
           languageId,
-          version: 1,
+          version,
           text: content,
         },
       });
@@ -382,25 +430,60 @@ export class LspClient {
   async refreshDocument(filePath: string): Promise<string> {
     const absPath = resolve(filePath);
     const uri = pathToFileURL(absPath).href;
-    const content = await readFile(absPath, "utf8");
-    const languageId = this.getLanguageId(absPath);
 
-    if (this.openDocuments.has(uri)) {
-      this.notify("textDocument/didClose", {
-        textDocument: { uri },
-      });
+    let content: string;
+    try {
+      content = await readFile(absPath, "utf8");
+    } catch (error) {
+      if (this.isMissingFileError(error)) {
+        await this.closeDocument(absPath);
+        return uri;
+      }
+      throw error;
     }
 
+    const version = this.nextDocumentVersion(uri);
+    this.resetDiagnosticsForUri(uri);
+
+    if (this.openDocuments.has(uri)) {
+      this.notify("textDocument/didChange", {
+        textDocument: { uri, version },
+        contentChanges: [{ text: content }],
+      });
+      return uri;
+    }
+
+    const languageId = this.getLanguageId(absPath);
     this.notify("textDocument/didOpen", {
       textDocument: {
         uri,
         languageId,
-        version: Date.now(),
+        version,
         text: content,
       },
     });
     this.openDocuments.add(uri);
     return uri;
+  }
+
+  async refreshOpenDocument(filePath: string): Promise<void> {
+    if (!this.hasDocumentOpen(filePath)) return;
+    await this.refreshDocument(filePath);
+  }
+
+  async closeDocument(filePath: string): Promise<void> {
+    const absPath = resolve(filePath);
+    const uri = pathToFileURL(absPath).href;
+    if (this.openDocuments.has(uri)) {
+      this.notify("textDocument/didClose", {
+        textDocument: { uri },
+      });
+    }
+    this.openDocuments.delete(uri);
+    this.documentVersions.delete(uri);
+    this.diagnostics.delete(uri);
+    this.diagnosticsReceivedUris.delete(uri);
+    this.resolveDiagnosticWaiters(uri);
   }
 
   private getLanguageId(filePath: string): string {
@@ -507,13 +590,24 @@ export class LspClient {
   ): Promise<unknown[]> {
     const absPath = resolve(filePath);
     const uri = pathToFileURL(absPath).href;
-    await this.refreshDocument(filePath);
+    await this.refreshDocument(absPath);
+    if (!this.openDocuments.has(uri)) return [];
     await this.waitForDocumentDiagnostics(uri, 15000, signal);
     return this.diagnostics.get(uri) ?? [];
   }
 
   isRunning(): boolean {
     return this.process !== null && this.initialized;
+  }
+
+  private clearDiagnosticWaiters(): void {
+    for (const waiters of this.diagnosticWaiters.values()) {
+      for (const waiter of waiters) {
+        clearTimeout(waiter.timer);
+        waiter.resolve();
+      }
+    }
+    this.diagnosticWaiters.clear();
   }
 
   private clearIndexingWaiters(): void {

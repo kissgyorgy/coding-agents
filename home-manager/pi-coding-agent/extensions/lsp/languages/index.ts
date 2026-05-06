@@ -1,18 +1,6 @@
-import type { LspServerConfig } from "../lsp-client";
+import type { LanguagePlugin } from "./types";
 
-export interface IndexingTracker {
-  handleMessage(msg: { method?: string; params?: unknown }): void;
-  isDone(): boolean;
-}
-
-export interface LanguagePlugin {
-  languageId: string;
-  getConfig: (cwd: string) => LspServerConfig[];
-  getWorkspaceRoot: (startDir: string, ctx: { cwd: string }) => string;
-  fileExtensions: Set<string>;
-  languageIdForPath: (filePath: string) => string | null;
-  createIndexingTracker?: () => IndexingTracker;
-}
+export type { IndexingTracker, LanguagePlugin } from "./types";
 
 export {
   languageId as nix,
@@ -20,6 +8,7 @@ export {
   getWorkspaceRoot as nixWorkspaceRoot,
   fileExtensions as nixExtensions,
   languageIdForPath as nixLanguageId,
+  workspaceMarkers as nixWorkspaceMarkers,
 } from "./nix";
 export {
   languageId as python,
@@ -27,6 +16,7 @@ export {
   getWorkspaceRoot as pythonWorkspaceRoot,
   fileExtensions as pythonExtensions,
   languageIdForPath as pythonLanguageId,
+  workspaceMarkers as pythonWorkspaceMarkers,
 } from "./python";
 export {
   languageId as typescript,
@@ -34,6 +24,7 @@ export {
   getWorkspaceRoot as typescriptWorkspaceRoot,
   fileExtensions as typescriptExtensions,
   languageIdForPath as typescriptLanguageId,
+  workspaceMarkers as typescriptWorkspaceMarkers,
 } from "./typescript";
 export {
   languageId as go,
@@ -41,6 +32,7 @@ export {
   getWorkspaceRoot as goWorkspaceRoot,
   fileExtensions as goExtensions,
   languageIdForPath as goLanguageId,
+  workspaceMarkers as goWorkspaceMarkers,
 } from "./go";
 
 import * as nix from "./nix";

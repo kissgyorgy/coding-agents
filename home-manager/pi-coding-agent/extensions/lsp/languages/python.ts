@@ -1,7 +1,14 @@
 import { pathToFileURL } from "node:url";
 import type { LspServerConfig } from "../lsp-client";
+import { getWorkspaceRootFromMarkers } from "./utils";
 
 export const languageId = "python";
+export const workspaceMarkers = [
+  "pyproject.toml",
+  "setup.cfg",
+  "setup.py",
+  "requirements.txt",
+];
 
 export function getConfig(cwd: string): LspServerConfig[] {
   const rootUri = pathToFileURL(cwd).href;
@@ -25,9 +32,9 @@ export function getConfig(cwd: string): LspServerConfig[] {
 
 export function getWorkspaceRoot(
   startDir: string,
-  _ctx: { cwd: string },
+  ctx: { cwd: string },
 ): string {
-  return startDir;
+  return getWorkspaceRootFromMarkers(startDir, ctx, workspaceMarkers);
 }
 
 export const fileExtensions = new Set([".py", ".pyi"]);
