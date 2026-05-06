@@ -8977,6 +8977,23 @@ export const MODELS = {
 			contextWindow: 2000000,
 			maxTokens: 30000,
 		} satisfies Model<"openai-completions">,
+		"baidu/cobuddy:free": {
+			id: "baidu/cobuddy:free",
+			name: "Baidu Qianfan: CoBuddy (free)",
+			api: "openai-completions",
+			provider: "openrouter",
+			baseUrl: "https://openrouter.ai/api/v1",
+			reasoning: true,
+			input: ["text"],
+			cost: {
+				input: 0,
+				output: 0,
+				cacheRead: 0,
+				cacheWrite: 0,
+			},
+			contextWindow: 131072,
+			maxTokens: 65536,
+		} satisfies Model<"openai-completions">,
 		"baidu/ernie-4.5-21b-a3b": {
 			id: "baidu/ernie-4.5-21b-a3b",
 			name: "Baidu: ERNIE 4.5 21B A3B",
