@@ -1,8 +1,17 @@
-import type { ExtensionAPI } from "@mariozechner/pi-coding-agent";
-import { createWriteToolDefinition } from "@mariozechner/pi-coding-agent";
+import type {
+  ExtensionAPI,
+  ExtensionContext,
+} from "@mariozechner/pi-coding-agent";
 import type { ExecFileException } from "node:child_process";
-import { readFileSync, writeFileSync } from "node:fs";
+import { readFile, writeFile } from "node:fs/promises";
+import { relative, resolve } from "node:path";
 import { formatContent } from "./format-file";
+
+interface FormatResultRecord {
+  filePath: string;
+  changed: boolean;
+  error?: string;
+}
 
 function isExecFileException(
   error: unknown,
@@ -13,99 +22,177 @@ function isExecFileException(
   );
 }
 
-function getErrorMessage(error: unknown): string {
-  if (
-    isExecFileException(error) &&
-    typeof error.stderr === "string" &&
-    error.stderr.trim().length > 0
-  ) {
-    return error.stderr.trim();
+function getErrorText(value: unknown): string | undefined {
+  if (typeof value === "string") {
+    const text = value.trim();
+    return text.length > 0 ? text : undefined;
   }
+
+  if (value instanceof Uint8Array) {
+    const text = Buffer.from(value).toString("utf8").trim();
+    return text.length > 0 ? text : undefined;
+  }
+
+  return undefined;
+}
+
+function getErrorMessage(error: unknown): string {
+  if (isExecFileException(error)) {
+    const stderr = getErrorText(error.stderr);
+    if (stderr) return stderr;
+
+    const stdout = getErrorText(error.stdout);
+    if (stdout) return stdout;
+  }
+
   if (error instanceof Error) return error.message;
   return String(error);
 }
 
-export default function (pi: ExtensionAPI) {
-  // Patch the session-stored AssistantMessage so the LLM context has
-  // formatted content. The consumer awaits extension handlers before
-  // appendMessage, so the mutation persists. This alone doesn't fix the
-  // file on disk (race condition — tool extracts args before handler
-  // finishes), so we also override the write tool below.
-  pi.on("message_end", async (event, ctx) => {
-    if (event.message.role !== "assistant") return;
+function normalizeToolPath(rawPath: unknown, cwd: string): string | undefined {
+  if (typeof rawPath !== "string") return undefined;
+  const withoutPrefix = rawPath.startsWith("@") ? rawPath.slice(1) : rawPath;
+  const trimmed = withoutPrefix.trim();
+  if (!trimmed) return undefined;
+  return resolve(cwd, trimmed);
+}
 
-    for (const block of (event.message as any).content) {
-      if (block.type !== "toolCall" || block.name !== "write") continue;
+function describePath(filePath: string, cwd: string): string {
+  const short = relative(cwd, filePath);
+  return short.startsWith("..") ? filePath : short;
+}
 
-      let filePath: string = block.arguments.path ?? "";
-      if (filePath.startsWith("@")) filePath = filePath.slice(1);
+async function formatFile(filePath: string): Promise<FormatResultRecord> {
+  try {
+    const content = await readFile(filePath, "utf8");
+    const result = await formatContent(filePath, content);
 
-      try {
-        const result = await formatContent(filePath, block.arguments.content);
-        if (result.changed) block.arguments.content = result.content;
-      } catch (error: unknown) {
-        ctx.ui.notify(
-          `post-edit: formatting ${filePath} failed: ${getErrorMessage(error)}`,
-          "error",
-        );
-      }
+    if (!result.changed) {
+      return { filePath, changed: false };
     }
-  });
 
-  // Override the built-in write tool to format content before writing.
-  // Fixes the file on disk — message_end can't do this due to the race.
-  const builtinWrite = createWriteToolDefinition(process.cwd());
+    await writeFile(filePath, result.content, "utf8");
+    return { filePath, changed: true };
+  } catch (error: unknown) {
+    return { filePath, changed: false, error: getErrorMessage(error) };
+  }
+}
 
-  pi.registerTool({
-    ...builtinWrite,
-    async execute(toolCallId, params, signal, onUpdate, ctx) {
-      try {
-        const result = await formatContent(params.path, params.content);
-        if (result.changed) params.content = result.content;
-      } catch (error: unknown) {
-        const msg = `post-edit: formatting ${params.path} failed: ${getErrorMessage(error)}`;
-        const result = await builtinWrite.execute(
-          toolCallId,
-          params,
-          signal,
-          onUpdate,
-          ctx,
-        );
-        result.content.push({ type: "text", text: msg });
-        return result;
-      }
+function notifyAgent(
+  changedFiles: FormatResultRecord[],
+  failedFiles: FormatResultRecord[],
+  ctx: ExtensionContext,
+  pi: ExtensionAPI,
+) {
+  const messageLines: string[] = [];
+  const cwd = ctx.cwd;
 
-      return builtinWrite.execute(toolCallId, params, signal, onUpdate, ctx);
+  if (changedFiles.length > 0) {
+    messageLines.push("I reformatted these files after this turn:");
+    for (const item of changedFiles) {
+      messageLines.push(`- ${describePath(item.filePath, cwd)}`);
+    }
+  }
+
+  if (failedFiles.length > 0) {
+    messageLines.push("Formatting failed for:");
+    for (const item of failedFiles) {
+      const reason = item.error ? ` (${item.error})` : "";
+      messageLines.push(`- ${describePath(item.filePath, cwd)}${reason}`);
+    }
+  }
+
+  if (messageLines.length === 0) return;
+
+  const changed = changedFiles.length > 0;
+
+  messageLines.push(
+    changed
+      ? "Please review these files and fix any unintended changes if needed."
+      : "Please review these files manually and adjust formatting if needed.",
+  );
+
+  pi.sendMessage(
+    {
+      customType: "post-edit-format",
+      content: messageLines.join("\n"),
+      display: false,
+      details: {
+        changedFiles: changedFiles.map((entry) => entry.filePath),
+        failedFiles,
+      },
     },
+    {
+      deliverAs: "followUp",
+      triggerTurn: true,
+    },
+  );
+}
+
+function scheduleEndOfTurnFormatting(
+  paths: string[],
+  ctx: ExtensionContext,
+  pi: ExtensionAPI,
+): void {
+  if (paths.length === 0) return;
+
+  const uniquePaths = [...new Set(paths)];
+
+  void (async () => {
+    const results = await Promise.all(
+      uniquePaths.map((filePath) => formatFile(filePath)),
+    );
+
+    const changedFiles = results.filter((result) => result.changed);
+    const failedFiles = results.filter((result) => result.error);
+
+    if (changedFiles.length === 0 && failedFiles.length === 0) return;
+
+    if (changedFiles.length > 0 && ctx.hasUI) {
+      const pathsText = changedFiles
+        .map((entry) => describePath(entry.filePath, ctx.cwd))
+        .join(", ");
+      ctx.ui.notify(
+        `post-edit: formatted ${changedFiles.length} file(s): ${pathsText}`,
+        "info",
+      );
+    }
+
+    for (const result of failedFiles) {
+      if (!ctx.hasUI) continue;
+      ctx.ui.notify(
+        `post-edit: formatting ${describePath(result.filePath, ctx.cwd)} failed: ${result.error}`,
+        "warning",
+      );
+    }
+
+    notifyAgent(changedFiles, failedFiles, ctx, pi);
+  })();
+}
+
+export default function (pi: ExtensionAPI) {
+  const formattedCandidates = new Set<string>();
+
+  pi.on("turn_start", () => {
+    formattedCandidates.clear();
   });
 
-  // For edit, format the file after it has been written.
   pi.on("tool_result", async (event, ctx) => {
-    if (event.toolName !== "edit") return;
     if (event.isError) return;
+    if (event.toolName !== "edit" && event.toolName !== "write") return;
 
-    let filePath: string = (event.input as any).path ?? "";
-    if (filePath.startsWith("@")) filePath = filePath.slice(1);
+    const filePath = normalizeToolPath(
+      (event.input as { path?: unknown } | undefined)?.path,
+      ctx.cwd,
+    );
+    if (!filePath) return;
 
-    try {
-      const content = readFileSync(filePath, "utf8");
-      const result = await formatContent(filePath, content);
-      if (!result.changed) return;
+    formattedCandidates.add(filePath);
+  });
 
-      writeFileSync(filePath, result.content, "utf8");
-      return {
-        content: [
-          {
-            type: "text",
-            text:
-              `Successfully replaced text in ${filePath}.\n` +
-              `Note: the diff was generated BEFORE auto-formatting was applied to the file.`,
-          },
-        ],
-      };
-    } catch (error: unknown) {
-      const msg = `post-edit: formatting ${filePath} failed: ${getErrorMessage(error)}`;
-      return { content: [{ type: "text" as const, text: msg }] };
-    }
+  pi.on("turn_end", (_event, ctx) => {
+    const paths = Array.from(formattedCandidates);
+    formattedCandidates.clear();
+    scheduleEndOfTurnFormatting(paths, ctx, pi);
   });
 }
