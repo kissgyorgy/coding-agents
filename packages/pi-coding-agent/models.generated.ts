@@ -11994,7 +11994,7 @@ export const MODELS = {
 			reasoning: false,
 			input: ["text"],
 			cost: {
-				input: 0.12,
+				input: 0.11,
 				output: 0.7999999999999999,
 				cacheRead: 0.07,
 				cacheWrite: 0,
