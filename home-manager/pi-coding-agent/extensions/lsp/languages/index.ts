@@ -1,6 +1,6 @@
-import type { LanguagePlugin } from "./types";
+import type { LanguagePlugin, QueryOperation } from "./types";
 
-export type { IndexingTracker, LanguagePlugin } from "./types";
+export type { IndexingTracker, LanguagePlugin, QueryOperation } from "./types";
 
 export {
   languageId as nix,
@@ -49,4 +49,15 @@ export const languages: Record<string, LanguagePlugin> = {
 
 export function getSupportedLanguages(): string[] {
   return Object.keys(languages);
+}
+
+export function explainLanguageQueryError(
+  language: string,
+  error: unknown,
+  query: string,
+  operation: QueryOperation,
+): string | null {
+  return (
+    languages[language]?.explainQueryError?.(error, query, operation) ?? null
+  );
 }

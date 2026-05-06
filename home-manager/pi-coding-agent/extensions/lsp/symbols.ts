@@ -2,7 +2,7 @@ import { readFileSync, readdirSync } from "node:fs";
 import { extname, join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { LspClient } from "./lsp-client";
-import { languages } from "./languages";
+import { explainLanguageQueryError, languages } from "./languages";
 import type { ServerManager } from "./server-manager";
 import type {
   DocumentSymbol,
@@ -228,6 +228,7 @@ export async function resolveSymbolLocation(
 ): Promise<{ location: Location; client: LspClient }> {
   const candidates = await manager.getClientsForQuery(cwd, language);
   let fallbackMatch: { location: Location; client: LspClient } | null = null;
+  let queryErrorExplanation: string | null = null;
 
   for (const { client, instance } of candidates) {
     await ensureSourceFallbackDocuments(
@@ -247,7 +248,13 @@ export async function resolveSymbolLocation(
           fallbackMatch ??= routed;
         }
       }
-    } catch {
+    } catch (error) {
+      queryErrorExplanation ??= explainLanguageQueryError(
+        language,
+        error,
+        query,
+        "query lookup",
+      );
       // workspace/symbol may fail without project config (e.g. tsserver)
     }
   }
@@ -264,6 +271,7 @@ export async function resolveSymbolLocation(
   }
 
   if (fallbackMatch) return fallbackMatch;
+  if (queryErrorExplanation) throw new Error(queryErrorExplanation);
   throw new Error(`Symbol not found: ${query}`);
 }
 

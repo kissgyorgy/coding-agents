@@ -12,6 +12,7 @@ import {
   formatRename,
   formatWorkspaceSymbol,
 } from "./formatters";
+import { explainLanguageQueryError } from "./languages";
 import type { ServerManager } from "./server-manager";
 import {
   formatDefinitionWithImplementation,
@@ -114,6 +115,18 @@ async function runWorkspaceSymbol(
 
   const failures = settled.filter((result) => result.status === "rejected");
   if (results.length === 0 && failures.length === settled.length) {
+    const explanation = failures.flatMap((result) => {
+      if (result.status !== "rejected") return [];
+      const message = explainLanguageQueryError(
+        language,
+        result.reason,
+        query,
+        "workspace_symbol",
+      );
+      return message ? [message] : [];
+    })[0];
+    if (explanation) throw new Error(explanation);
+
     throw new Error(
       failures
         .map((result) =>
