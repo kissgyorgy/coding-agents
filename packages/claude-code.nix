@@ -8,7 +8,7 @@ let
     };
     aarch64-darwin = {
       platform = "darwin-arm64";
-      hash = "sha256-h6HQUBjOrfwf5ha/wQJisFA/UZhvSvLcQtHthW7T97s=";
+      hash = "sha256-LOa5AH849crw0RauNdWfGm1A6QKuf58ZrKbsSDaXt2Q=";
     };
   };
   source = sources.${stdenv.hostPlatform.system} or (throw "claude-code is not supported on ${stdenv.hostPlatform.system}");

@@ -26,7 +26,35 @@ update:
     fi
 
 update-aichat: (_update-pkg "aichat" "sigoden/aichat")
-update-claude-code: (_update-pkg "claude-code" "anthropics/claude-code")
+update-claude-code:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    pkg="claude-code"
+    repo="anthropics/claude-code"
+    tag=$(gh release list --repo "$repo" --exclude-pre-releases --limit 1 --json tagName -q '.[0].tagName')
+    latest=${tag#v}
+    current=$(nix eval --raw .#"$pkg".version)
+
+    base_url="https://storage.googleapis.com/claude-code-dist-86c565f3-f756-42ad-8dfa-d59b1c096819/claude-code-releases/$latest"
+    linux_hash=$(nix store prefetch-file --json "$base_url/linux-x64/claude" | jq -r .hash)
+    darwin_hash=$(nix store prefetch-file --json "$base_url/darwin-arm64/claude" | jq -r .hash)
+
+    sed -i 's/version = "[^"]*";/version = "'"$latest"'";/' packages/claude-code.nix
+    sed -i '/platform = "linux-x64";/,/};/ s|hash = ".*";|hash = "'"$linux_hash"'";|' packages/claude-code.nix
+    sed -i '/platform = "darwin-arm64";/,/};/ s|hash = ".*";|hash = "'"$darwin_hash"'";|' packages/claude-code.nix
+
+    if git diff --quiet -- packages/claude-code.nix; then
+        echo "$pkg: already at $current with current hashes"
+        exit 0
+    fi
+
+    if [[ "$current" == "$latest" ]]; then
+        message="$pkg: refresh $latest hashes"
+    else
+        message="$pkg: $current -> $latest"
+    fi
+    git add -- packages/claude-code.nix
+    git commit -m "$message"
 update-codex: (_update-pkg "codex" "openai/codex" "" "true")
 update-gemini-cli: (_update-pkg "gemini-cli" "google-gemini/gemini-cli" "" "true")
 update-crush: (_update-pkg "crush" "charmbracelet/crush" "" "true")
