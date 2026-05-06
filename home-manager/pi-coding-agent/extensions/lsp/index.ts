@@ -1,3 +1,6 @@
+import { stat } from "node:fs/promises";
+import { homedir } from "node:os";
+import { join, resolve } from "node:path";
 import type { ExtensionAPI } from "@mariozechner/pi-coding-agent";
 import { Text } from "@mariozechner/pi-tui";
 import { executeLspAction, type LspParams as LspToolParams } from "./actions";
@@ -5,16 +8,81 @@ import { FileSync } from "./file-sync";
 import { getSupportedLanguages } from "./languages";
 import { ServerManager } from "./server-manager";
 import { LspParamsSchema } from "./tool-schema";
-import { discoverWorkspaceInstances } from "./workspace-discovery";
+import {
+  discoverWorkspaceInstancesAsync,
+  workspaceKey,
+  type WorkspaceInstance,
+} from "./workspace-discovery";
+
+function normalizeCommandPath(cwd: string, args: string | undefined): string {
+  const path = args?.trim();
+  if (!path) throw new Error("Usage: /lsp:add-dir <path-to-code-directory>");
+
+  const normalized = path.startsWith("@") ? path.slice(1) : path;
+  if (normalized === "~") return homedir();
+  if (normalized.startsWith("~/")) return join(homedir(), normalized.slice(2));
+  return resolve(cwd, normalized);
+}
+
+function mergeWorkspaceInstances(
+  current: WorkspaceInstance[],
+  next: WorkspaceInstance[],
+): WorkspaceInstance[] {
+  const byKey = new Map<string, WorkspaceInstance>();
+  for (const instance of current) {
+    byKey.set(workspaceKey(instance.language, instance.root), instance);
+  }
+  for (const instance of next) {
+    byKey.set(workspaceKey(instance.language, instance.root), instance);
+  }
+  return [...byKey.values()].sort(
+    (a, b) =>
+      a.language.localeCompare(b.language) ||
+      a.root.localeCompare(b.root) ||
+      a.marker.localeCompare(b.marker),
+  );
+}
+
+async function pathIsDirectory(path: string): Promise<boolean> {
+  return (await stat(path)).isDirectory();
+}
 
 export default function (pi: ExtensionAPI) {
   const manager = new ServerManager();
   const fileSync = new FileSync(manager);
 
-  pi.on("session_start", async (_event, ctx) => {
-    const instances = discoverWorkspaceInstances(ctx.cwd);
-    manager.startAllInBackground(instances);
-    fileSync.start(instances);
+  async function discoverAndStartDirectory(
+    directory: string,
+    ctx?: {
+      ui?: {
+        notify: (message: string, level: "info" | "warning" | "error") => void;
+      };
+    },
+  ): Promise<void> {
+    const discovered = await discoverWorkspaceInstancesAsync(directory);
+    if (discovered.length === 0) {
+      ctx?.ui?.notify(
+        `No LSP workspaces discovered under ${directory}`,
+        "warning",
+      );
+      return;
+    }
+
+    const merged = mergeWorkspaceInstances(
+      manager.getDiscoveredInstances(),
+      discovered,
+    );
+    manager.startAllInBackground(merged);
+    fileSync.start(merged);
+
+    ctx?.ui?.notify(
+      `Added ${discovered.length} LSP workspace(s) from ${directory}:\n${manager.formatStatus()}`,
+      "info",
+    );
+  }
+
+  pi.on("session_start", (_event, ctx) => {
+    void discoverAndStartDirectory(ctx.cwd).catch(() => {});
   });
 
   pi.on("tool_result", async (event, ctx) => {
@@ -102,6 +170,43 @@ export default function (pi: ExtensionAPI) {
     description: "Show discovered LSP servers",
     handler: async (_args, ctx) => {
       ctx.ui.notify(`LSP servers:\n${manager.formatStatus()}`, "info");
+    },
+  });
+
+  pi.registerCommand("lsp:add-dir", {
+    description: "Discover and start LSP servers for a code directory",
+    handler: async (args, ctx) => {
+      let directory: string;
+      try {
+        directory = normalizeCommandPath(ctx.cwd, args);
+      } catch (error) {
+        ctx.ui.notify(
+          error instanceof Error ? error.message : String(error),
+          "error",
+        );
+        return;
+      }
+
+      try {
+        if (!(await pathIsDirectory(directory))) {
+          ctx.ui.notify(`LSP path is not a directory: ${directory}`, "error");
+          return;
+        }
+      } catch (error) {
+        ctx.ui.notify(
+          `Cannot access LSP directory ${directory}: ${error instanceof Error ? error.message : String(error)}`,
+          "error",
+        );
+        return;
+      }
+
+      ctx.ui.notify(`Scanning ${directory} for LSP workspaces...`, "info");
+      void discoverAndStartDirectory(directory, ctx).catch((error) => {
+        ctx.ui.notify(
+          `Failed to add LSP directory ${directory}: ${error instanceof Error ? error.message : String(error)}`,
+          "error",
+        );
+      });
     },
   });
 
