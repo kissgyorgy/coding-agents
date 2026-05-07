@@ -7872,9 +7872,9 @@ export const MODELS = {
 			thinkingLevelMap: {"off":null},
 			input: ["text", "image"],
 			cost: {
-				input: 0,
-				output: 0,
-				cacheRead: 0,
+				input: 0.05,
+				output: 0.4,
+				cacheRead: 0.005,
 				cacheWrite: 0,
 			},
 			contextWindow: 400000,
