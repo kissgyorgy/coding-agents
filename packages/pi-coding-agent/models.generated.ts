@@ -14011,6 +14011,23 @@ export const MODELS = {
 			contextWindow: 1000000,
 			maxTokens: 64000,
 		} satisfies Model<"anthropic-messages">,
+		"google/gemini-3.1-flash-lite": {
+			id: "google/gemini-3.1-flash-lite",
+			name: "Gemini 3.1 Flash Lite",
+			api: "anthropic-messages",
+			provider: "vercel-ai-gateway",
+			baseUrl: "https://ai-gateway.vercel.sh",
+			reasoning: true,
+			input: ["text", "image"],
+			cost: {
+				input: 0.25,
+				output: 1.5,
+				cacheRead: 0.03,
+				cacheWrite: 0,
+			},
+			contextWindow: 1000000,
+			maxTokens: 65000,
+		} satisfies Model<"anthropic-messages">,
 		"google/gemini-3.1-flash-lite-preview": {
 			id: "google/gemini-3.1-flash-lite-preview",
 			name: "Gemini 3.1 Flash Lite Preview",
