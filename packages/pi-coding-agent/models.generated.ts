@@ -4708,6 +4708,24 @@ export const MODELS = {
 			contextWindow: 1000000,
 			maxTokens: 64000,
 		} satisfies Model<"google-generative-ai">,
+		"gemini-3.1-flash-lite": {
+			id: "gemini-3.1-flash-lite",
+			name: "Gemini 3.1 Flash Lite",
+			api: "google-generative-ai",
+			provider: "google",
+			baseUrl: "https://generativelanguage.googleapis.com/v1beta",
+			reasoning: true,
+			thinkingLevelMap: {"off":null},
+			input: ["text", "image"],
+			cost: {
+				input: 0.25,
+				output: 1.5,
+				cacheRead: 0.025,
+				cacheWrite: 1,
+			},
+			contextWindow: 1048576,
+			maxTokens: 65536,
+		} satisfies Model<"google-generative-ai">,
 		"gemini-3.1-flash-lite-preview": {
 			id: "gemini-3.1-flash-lite-preview",
 			name: "Gemini 3.1 Flash Lite Preview",
@@ -9266,7 +9284,7 @@ export const MODELS = {
 				cacheRead: 0.024999999999999998,
 				cacheWrite: 0.08333333333333334,
 			},
-			contextWindow: 1000000,
+			contextWindow: 1048576,
 			maxTokens: 8192,
 		} satisfies Model<"openai-completions">,
 		"google/gemini-2.0-flash-lite-001": {
