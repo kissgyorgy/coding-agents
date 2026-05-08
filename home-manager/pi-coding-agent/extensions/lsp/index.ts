@@ -1,3 +1,4 @@
+import { execFileSync } from "node:child_process";
 import { stat } from "node:fs/promises";
 import { homedir } from "node:os";
 import { join, resolve } from "node:path";
@@ -47,7 +48,22 @@ async function pathIsDirectory(path: string): Promise<boolean> {
   return (await stat(path)).isDirectory();
 }
 
+function isInsideGitWorkTree(directory: string): boolean {
+  try {
+    const stdout = execFileSync(
+      "git",
+      ["-C", directory, "rev-parse", "--is-inside-work-tree"],
+      { encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] },
+    );
+    return stdout.trim() === "true";
+  } catch {
+    return false;
+  }
+}
+
 export default function (pi: ExtensionAPI) {
+  if (!isInsideGitWorkTree(process.cwd())) return;
+
   const manager = new ServerManager();
   const fileSync = new FileSync(manager);
 
