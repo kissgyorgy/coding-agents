@@ -9661,6 +9661,23 @@ export const MODELS = {
 			contextWindow: 262144,
 			maxTokens: 32768,
 		} satisfies Model<"openai-completions">,
+		"inclusionai/ring-2.6-1t:free": {
+			id: "inclusionai/ring-2.6-1t:free",
+			name: "inclusionAI: Ring-2.6-1T (free)",
+			api: "openai-completions",
+			provider: "openrouter",
+			baseUrl: "https://openrouter.ai/api/v1",
+			reasoning: true,
+			input: ["text"],
+			cost: {
+				input: 0,
+				output: 0,
+				cacheRead: 0,
+				cacheWrite: 0,
+			},
+			contextWindow: 262144,
+			maxTokens: 65536,
+		} satisfies Model<"openai-completions">,
 		"kwaipilot/kat-coder-pro-v2": {
 			id: "kwaipilot/kat-coder-pro-v2",
 			name: "Kwaipilot: KAT-Coder-Pro V2",
