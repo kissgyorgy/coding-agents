@@ -12782,7 +12782,7 @@ export const MODELS = {
 				cacheWrite: 0,
 			},
 			contextWindow: 1048576,
-			maxTokens: 131072,
+			maxTokens: 16384,
 		} satisfies Model<"openai-completions">,
 		"z-ai/glm-4-32b": {
 			id: "z-ai/glm-4-32b",
