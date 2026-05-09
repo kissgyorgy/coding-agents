@@ -9825,11 +9825,11 @@ export const MODELS = {
 			cost: {
 				input: 0.15,
 				output: 1.15,
-				cacheRead: 0.03,
+				cacheRead: 0,
 				cacheWrite: 0,
 			},
 			contextWindow: 196608,
-			maxTokens: 131072,
+			maxTokens: 196608,
 		} satisfies Model<"openai-completions">,
 		"minimax/minimax-m2.5:free": {
 			id: "minimax/minimax-m2.5:free",
