@@ -7965,6 +7965,23 @@ export const MODELS = {
 			contextWindow: 262144,
 			maxTokens: 65536,
 		} satisfies Model<"anthropic-messages">,
+		"ring-2.6-1t-free": {
+			id: "ring-2.6-1t-free",
+			name: "Ring 2.6 1T Free",
+			api: "openai-completions",
+			provider: "opencode",
+			baseUrl: "https://opencode.ai/zen/v1",
+			reasoning: true,
+			input: ["text"],
+			cost: {
+				input: 0,
+				output: 0,
+				cacheRead: 0,
+				cacheWrite: 0,
+			},
+			contextWindow: 262000,
+			maxTokens: 66000,
+		} satisfies Model<"openai-completions">,
 	},
 	"opencode-go": {
 		"deepseek-v4-flash": {
