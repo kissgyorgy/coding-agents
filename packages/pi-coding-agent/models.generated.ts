@@ -7471,6 +7471,23 @@ export const MODELS = {
 			contextWindow: 1000000,
 			maxTokens: 64000,
 		} satisfies Model<"anthropic-messages">,
+		"deepseep-v4-flash-free": {
+			id: "deepseep-v4-flash-free",
+			name: "DeepSeek V4 Flash Free",
+			api: "openai-completions",
+			provider: "opencode",
+			baseUrl: "https://opencode.ai/zen/v1",
+			reasoning: true,
+			input: ["text"],
+			cost: {
+				input: 0,
+				output: 0,
+				cacheRead: 0,
+				cacheWrite: 0,
+			},
+			contextWindow: 1000000,
+			maxTokens: 384000,
+		} satisfies Model<"openai-completions">,
 		"gemini-3-flash": {
 			id: "gemini-3-flash",
 			name: "Gemini 3 Flash",
