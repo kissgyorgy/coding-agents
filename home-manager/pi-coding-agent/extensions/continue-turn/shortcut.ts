@@ -1,4 +1,4 @@
-import { matchesKey } from "@mariozechner/pi-tui";
+import { matchesKey } from "@earendil-works/pi-tui";
 
 export const CONTINUE_COMMAND = "/continue";
 export const CONTINUE_SHORTCUT = "alt+r";

@@ -10,15 +10,16 @@ buildNpmPackage rec {
   version = "0.74.0";
 
   src = fetchFromGitHub {
-    owner = "badlogic";
-    repo = "pi-mono";
+    owner = "earendil-works";
+    repo = "pi";
     rev = "v${version}";
     hash = "sha256-wEiqOezD8w08vyuenh3Kk+YCYBbQoEq67wATDEKy5XM=";
   };
 
   nodejs = nodejs_22;
 
-  npmDepsHash = "sha256-lEXlHPXWgOnJ+msmkM6JSuoJmKpLggoVuXDDTrZcYAU=";
+  npmDepsFetcherVersion = 2;
+  npmDepsHash = "sha256-aRP9gmO72JC6MWe3C+aOv8Bi1y4PxMWC3hQsJvPj8Ss=";
 
   # Skip native addon compilation (canvas etc.) — koffi/clipboard ship pre-built binaries
   npmFlags = [ "--ignore-scripts" ];
@@ -28,9 +29,11 @@ buildNpmPackage rec {
     ++ lib.optionals stdenv.hostPlatform.isLinux [ autoPatchelfHook ];
   buildInputs = lib.optionals stdenv.hostPlatform.isLinux [ stdenv.cc.cc.lib ];
 
-  # Replace upstream models with our freshly generated ones
+  # Replace upstream models with our freshly generated ones and use a lockfile
+  # with registry tarball metadata required by Nix's offline npm cache.
   postPatch = ''
     cp ${./models.generated.ts} packages/ai/src/models.generated.ts
+    cp ${./package-lock.generated.json} package-lock.json
   '';
 
   # Build workspace packages in dependency order: tui -> ai -> agent -> coding-agent
@@ -50,6 +53,10 @@ buildNpmPackage rec {
     mkdir -p packages/coding-agent/dist/modes/interactive/theme
     cp packages/coding-agent/src/modes/interactive/theme/*.json \
        packages/coding-agent/dist/modes/interactive/theme/
+
+    mkdir -p packages/coding-agent/dist/modes/interactive/assets
+    cp packages/coding-agent/src/modes/interactive/assets/*.png \
+       packages/coding-agent/dist/modes/interactive/assets/
 
     mkdir -p packages/coding-agent/dist/core/export-html/vendor
     cp packages/coding-agent/src/core/export-html/template.html \
@@ -84,12 +91,12 @@ buildNpmPackage rec {
     for pkg_entry in tui:pi-tui ai:pi-ai agent:pi-agent-core; do
       local dir="''${pkg_entry%%:*}"
       local name="''${pkg_entry##*:}"
-      rm -rf "$pkgDir/node_modules/@mariozechner/$name"
-      mkdir -p "$pkgDir/node_modules/@mariozechner/$name"
-      cp -r "packages/$dir/dist" "$pkgDir/node_modules/@mariozechner/$name/"
-      cp "packages/$dir/package.json" "$pkgDir/node_modules/@mariozechner/$name/"
+      rm -rf "$pkgDir/node_modules/@earendil-works/$name"
+      mkdir -p "$pkgDir/node_modules/@earendil-works/$name"
+      cp -r "packages/$dir/dist" "$pkgDir/node_modules/@earendil-works/$name/"
+      cp "packages/$dir/package.json" "$pkgDir/node_modules/@earendil-works/$name/"
       # Copy root-level compiled files referenced by package.json exports
-      cp -f packages/$dir/*.js packages/$dir/*.d.ts "$pkgDir/node_modules/@mariozechner/$name/" 2>/dev/null || true
+      cp -f packages/$dir/*.js packages/$dir/*.d.ts "$pkgDir/node_modules/@earendil-works/$name/" 2>/dev/null || true
     done
 
     # Create the pi wrapper
@@ -132,8 +139,8 @@ buildNpmPackage rec {
 
   meta = {
     description = "Minimal terminal coding harness with AI-powered agent capabilities";
-    homepage = "https://github.com/badlogic/pi-mono/tree/main/packages/coding-agent";
-    downloadPage = "https://github.com/badlogic/pi-mono/releases";
+    homepage = "https://github.com/earendil-works/pi/tree/main/packages/coding-agent";
+    downloadPage = "https://github.com/earendil-works/pi/releases";
     license = lib.licenses.mit;
     maintainers = [ ];
     mainProgram = "pi";

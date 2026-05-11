@@ -10,9 +10,9 @@ import { join, dirname, resolve, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-import type { AgentMessage } from "@mariozechner/pi-agent-core";
-import { complete, getModel } from "@mariozechner/pi-ai";
-import type { AssistantMessage, TextContent } from "@mariozechner/pi-ai";
+import type { AgentMessage } from "@earendil-works/pi-agent-core";
+import { complete, getModel } from "@earendil-works/pi-ai";
+import type { AssistantMessage, TextContent } from "@earendil-works/pi-ai";
 import {
   CustomEditor,
   DynamicBorder,
@@ -20,7 +20,7 @@ import {
   getMarkdownTheme,
   type ExtensionAPI,
   type ExtensionContext,
-} from "@mariozechner/pi-coding-agent";
+} from "@earendil-works/pi-coding-agent";
 import {
   Container,
   Key,
@@ -31,7 +31,7 @@ import {
   matchesKey,
   truncateToWidth,
   visibleWidth,
-} from "@mariozechner/pi-tui";
+} from "@earendil-works/pi-tui";
 import { handleReloadShortcut } from "../reload-shortcut/editor.js";
 import {
   extractDoneSteps,

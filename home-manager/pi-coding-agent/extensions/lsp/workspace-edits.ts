@@ -1,6 +1,6 @@
 import { readFileSync, writeFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
-import { withFileMutationQueue } from "@mariozechner/pi-coding-agent";
+import { withFileMutationQueue } from "@earendil-works/pi-coding-agent";
 import { invalidateFilePreviewCache } from "./formatters";
 import type { LspClient } from "./lsp-client";
 import type { Position, TextEdit, WorkspaceEdit } from "./types";

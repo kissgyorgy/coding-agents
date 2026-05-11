@@ -63,7 +63,7 @@ update-hermes-agent:
 update-llmfit: (_update-pkg "llmfit" "AlexsJones/llmfit")
 update-llmserve: (_update-pkg "llmserve" "AlexsJones/llmserve")
 
-update-pi-coding-agent: (_update-pkg "pi-coding-agent" "badlogic/pi-mono" "_pi-post-update") update-pi-models
+update-pi-coding-agent: (_update-pkg "pi-coding-agent" "earendil-works/pi" "_pi-post-update") update-pi-models
 
 _pi-post-update:
     #!/usr/bin/env bash
@@ -113,11 +113,11 @@ update-pi-models:
 
     tmpdir=$(mktemp -d)
     trap "rm -rf $tmpdir" EXIT
-    cp -r "$src/." "$tmpdir/pi-mono"
-    chmod -R u+w "$tmpdir/pi-mono"
+    cp -r "$src/." "$tmpdir/pi"
+    chmod -R u+w "$tmpdir/pi"
 
     echo "Installing dependencies..."
-    cd "$tmpdir/pi-mono"
+    cd "$tmpdir/pi"
     npm ci --ignore-scripts
 
     echo "Generating models..."

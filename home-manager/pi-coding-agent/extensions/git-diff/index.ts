@@ -2,14 +2,14 @@ import type {
   ExtensionAPI,
   ExtensionContext,
   Theme,
-} from "@mariozechner/pi-coding-agent";
-import { CustomEditor } from "@mariozechner/pi-coding-agent";
-import type { OverlayHandle, TUI } from "@mariozechner/pi-tui";
+} from "@earendil-works/pi-coding-agent";
+import { CustomEditor } from "@earendil-works/pi-coding-agent";
+import type { OverlayHandle, TUI } from "@earendil-works/pi-tui";
 import {
   matchesKey,
   truncateToWidth,
   visibleWidth,
-} from "@mariozechner/pi-tui";
+} from "@earendil-works/pi-tui";
 import { handleReloadShortcut } from "../reload-shortcut/editor.js";
 import { parseDiff, type DiffFile } from "./parser.js";
 

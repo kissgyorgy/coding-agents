@@ -16,7 +16,7 @@ import { join } from "node:path";
 import type {
   ExtensionAPI,
   ExtensionContext,
-} from "@mariozechner/pi-coding-agent";
+} from "@earendil-works/pi-coding-agent";
 import {
   truncateHead,
   DEFAULT_MAX_BYTES,
@@ -24,7 +24,7 @@ import {
   formatSize,
   getAgentDir,
   DynamicBorder,
-} from "@mariozechner/pi-coding-agent";
+} from "@earendil-works/pi-coding-agent";
 import {
   Container,
   fuzzyFilter,
@@ -32,7 +32,7 @@ import {
   Input,
   Spacer,
   Text,
-} from "@mariozechner/pi-tui";
+} from "@earendil-works/pi-tui";
 import { Type } from "typebox";
 import { parseResponsesSSE } from "./types";
 import type { SearchBackend } from "./types";

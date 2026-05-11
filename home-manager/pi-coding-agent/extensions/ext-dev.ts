@@ -12,9 +12,9 @@
  *   /ext my-ext do X      — Load docs + source, with a specific instruction
  */
 
-import type { ExtensionAPI } from "@mariozechner/pi-coding-agent";
-import { getAgentDir, formatSize } from "@mariozechner/pi-coding-agent";
-import { type AutocompleteItem, Box, Text } from "@mariozechner/pi-tui";
+import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
+import { getAgentDir, formatSize } from "@earendil-works/pi-coding-agent";
+import { type AutocompleteItem, Box, Text } from "@earendil-works/pi-tui";
 import * as fs from "node:fs";
 import * as path from "node:path";
 
