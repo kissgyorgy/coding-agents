@@ -8839,13 +8839,13 @@ export const MODELS = {
 			reasoning: true,
 			input: ["text"],
 			cost: {
-				input: 0.15,
-				output: 0.75,
-				cacheRead: 0,
+				input: 0.21,
+				output: 0.7899999999999999,
+				cacheRead: 0.13,
 				cacheWrite: 0,
 			},
-			contextWindow: 32768,
-			maxTokens: 7168,
+			contextWindow: 163840,
+			maxTokens: 32768,
 		} satisfies Model<"openai-completions">,
 		"deepseek/deepseek-r1": {
 			id: "deepseek/deepseek-r1",
