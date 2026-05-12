@@ -8490,6 +8490,24 @@ export const MODELS = {
 			contextWindow: 1000000,
 			maxTokens: 128000,
 		} satisfies Model<"openai-completions">,
+		"anthropic/claude-opus-4.7-fast": {
+			id: "anthropic/claude-opus-4.7-fast",
+			name: "Anthropic: Claude Opus 4.7 (Fast)",
+			api: "openai-completions",
+			provider: "openrouter",
+			baseUrl: "https://openrouter.ai/api/v1",
+			reasoning: true,
+			thinkingLevelMap: {"xhigh":"xhigh"},
+			input: ["text", "image"],
+			cost: {
+				input: 30,
+				output: 150,
+				cacheRead: 3,
+				cacheWrite: 37.5,
+			},
+			contextWindow: 1000000,
+			maxTokens: 128000,
+		} satisfies Model<"openai-completions">,
 		"anthropic/claude-sonnet-4": {
 			id: "anthropic/claude-sonnet-4",
 			name: "Anthropic: Claude Sonnet 4",
@@ -9834,7 +9852,7 @@ export const MODELS = {
 				cacheRead: 0.04,
 				cacheWrite: 0,
 			},
-			contextWindow: 131072,
+			contextWindow: 262144,
 			maxTokens: 4096,
 		} satisfies Model<"openai-completions">,
 		"mistralai/mistral-nemo": {
