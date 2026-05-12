@@ -8146,9 +8146,9 @@ export const MODELS = {
 		"minimax-m2.5": {
 			id: "minimax-m2.5",
 			name: "MiniMax M2.5",
-			api: "openai-completions",
+			api: "anthropic-messages",
 			provider: "opencode-go",
-			baseUrl: "https://opencode.ai/zen/go/v1",
+			baseUrl: "https://opencode.ai/zen/go",
 			reasoning: true,
 			input: ["text"],
 			cost: {
@@ -8159,7 +8159,7 @@ export const MODELS = {
 			},
 			contextWindow: 204800,
 			maxTokens: 65536,
-		} satisfies Model<"openai-completions">,
+		} satisfies Model<"anthropic-messages">,
 		"minimax-m2.7": {
 			id: "minimax-m2.7",
 			name: "MiniMax M2.7",
@@ -9852,7 +9852,7 @@ export const MODELS = {
 				cacheRead: 0.04,
 				cacheWrite: 0,
 			},
-			contextWindow: 262144,
+			contextWindow: 131072,
 			maxTokens: 4096,
 		} satisfies Model<"openai-completions">,
 		"mistralai/mistral-nemo": {
@@ -12732,13 +12732,13 @@ export const MODELS = {
 			reasoning: true,
 			input: ["text"],
 			cost: {
-				input: 0.98,
-				output: 3.08,
-				cacheRead: 0.182,
+				input: 1.0499999999999998,
+				output: 3.5,
+				cacheRead: 0.5249999999999999,
 				cacheWrite: 0,
 			},
 			contextWindow: 202752,
-			maxTokens: 4096,
+			maxTokens: 65535,
 		} satisfies Model<"openai-completions">,
 		"z-ai/glm-5v-turbo": {
 			id: "z-ai/glm-5v-turbo",
