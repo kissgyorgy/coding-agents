@@ -13217,23 +13217,6 @@ export const MODELS = {
 			contextWindow: 200000,
 			maxTokens: 8192,
 		} satisfies Model<"anthropic-messages">,
-		"anthropic/claude-3.7-sonnet": {
-			id: "anthropic/claude-3.7-sonnet",
-			name: "Claude 3.7 Sonnet",
-			api: "anthropic-messages",
-			provider: "vercel-ai-gateway",
-			baseUrl: "https://ai-gateway.vercel.sh",
-			reasoning: true,
-			input: ["text", "image"],
-			cost: {
-				input: 3,
-				output: 15,
-				cacheRead: 0.3,
-				cacheWrite: 3.75,
-			},
-			contextWindow: 200000,
-			maxTokens: 8192,
-		} satisfies Model<"anthropic-messages">,
 		"anthropic/claude-haiku-4.5": {
 			id: "anthropic/claude-haiku-4.5",
 			name: "Claude Haiku 4.5",
