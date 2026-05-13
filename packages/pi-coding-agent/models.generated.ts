@@ -1014,7 +1014,7 @@ export const MODELS = {
 				cacheWrite: 0,
 			},
 			contextWindow: 128000,
-			maxTokens: 4096,
+			maxTokens: 16384,
 		} satisfies Model<"bedrock-converse-stream">,
 		"openai.gpt-oss-20b-1:0": {
 			id: "openai.gpt-oss-20b-1:0",
@@ -1031,7 +1031,7 @@ export const MODELS = {
 				cacheWrite: 0,
 			},
 			contextWindow: 128000,
-			maxTokens: 4096,
+			maxTokens: 16384,
 		} satisfies Model<"bedrock-converse-stream">,
 		"openai.gpt-oss-safeguard-120b": {
 			id: "openai.gpt-oss-safeguard-120b",
@@ -1048,7 +1048,7 @@ export const MODELS = {
 				cacheWrite: 0,
 			},
 			contextWindow: 128000,
-			maxTokens: 4096,
+			maxTokens: 16384,
 		} satisfies Model<"bedrock-converse-stream">,
 		"openai.gpt-oss-safeguard-20b": {
 			id: "openai.gpt-oss-safeguard-20b",
@@ -1065,7 +1065,7 @@ export const MODELS = {
 				cacheWrite: 0,
 			},
 			contextWindow: 128000,
-			maxTokens: 4096,
+			maxTokens: 16384,
 		} satisfies Model<"bedrock-converse-stream">,
 		"qwen.qwen3-235b-a22b-2507-v1:0": {
 			id: "qwen.qwen3-235b-a22b-2507-v1:0",
@@ -9019,7 +9019,7 @@ export const MODELS = {
 				cacheRead: 0.024999999999999998,
 				cacheWrite: 0.08333333333333334,
 			},
-			contextWindow: 1048576,
+			contextWindow: 1000000,
 			maxTokens: 8192,
 		} satisfies Model<"openai-completions">,
 		"google/gemini-2.0-flash-lite-001": {
