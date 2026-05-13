@@ -8961,13 +8961,13 @@ export const MODELS = {
 			thinkingLevelMap: {"minimal":null,"low":null,"medium":null,"high":"high","xhigh":"max"},
 			input: ["text"],
 			cost: {
-				input: 0.14,
-				output: 0.28,
-				cacheRead: 0.0028,
+				input: 0.126,
+				output: 0.252,
+				cacheRead: 0.0252,
 				cacheWrite: 0,
 			},
 			contextWindow: 1048576,
-			maxTokens: 384000,
+			maxTokens: 131072,
 		} satisfies Model<"openai-completions">,
 		"deepseek/deepseek-v4-pro": {
 			id: "deepseek/deepseek-v4-pro",
