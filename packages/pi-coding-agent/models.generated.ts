@@ -8968,8 +8968,8 @@ export const MODELS = {
 				cacheRead: 0,
 				cacheWrite: 0,
 			},
-			contextWindow: 256000,
-			maxTokens: 256000,
+			contextWindow: 1048576,
+			maxTokens: 384000,
 		} satisfies Model<"openai-completions">,
 		"deepseek/deepseek-v4-pro": {
 			id: "deepseek/deepseek-v4-pro",
@@ -10055,11 +10055,11 @@ export const MODELS = {
 			cost: {
 				input: 0.74,
 				output: 3.5,
-				cacheRead: 0.25,
+				cacheRead: 0.37,
 				cacheWrite: 0,
 			},
-			contextWindow: 262142,
-			maxTokens: 262142,
+			contextWindow: 262144,
+			maxTokens: 65535,
 		} satisfies Model<"openai-completions">,
 		"nex-agi/deepseek-v3.1-nex-n1": {
 			id: "nex-agi/deepseek-v3.1-nex-n1",
@@ -11920,7 +11920,7 @@ export const MODELS = {
 			cost: {
 				input: 0.39,
 				output: 2.34,
-				cacheRead: 0,
+				cacheRead: 0.195,
 				cacheWrite: 0,
 			},
 			contextWindow: 262144,
@@ -12689,7 +12689,7 @@ export const MODELS = {
 				cacheWrite: 0,
 			},
 			contextWindow: 202752,
-			maxTokens: 131072,
+			maxTokens: 4096,
 		} satisfies Model<"openai-completions">,
 		"z-ai/glm-5v-turbo": {
 			id: "z-ai/glm-5v-turbo",
@@ -12804,11 +12804,11 @@ export const MODELS = {
 			cost: {
 				input: 0.74,
 				output: 3.5,
-				cacheRead: 0.25,
+				cacheRead: 0.37,
 				cacheWrite: 0,
 			},
-			contextWindow: 262142,
-			maxTokens: 262142,
+			contextWindow: 262144,
+			maxTokens: 65535,
 		} satisfies Model<"openai-completions">,
 		"~openai/gpt-latest": {
 			id: "~openai/gpt-latest",
