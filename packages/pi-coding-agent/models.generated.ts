@@ -9038,7 +9038,7 @@ export const MODELS = {
 				cacheRead: 0.024999999999999998,
 				cacheWrite: 0.08333333333333334,
 			},
-			contextWindow: 1000000,
+			contextWindow: 1048576,
 			maxTokens: 8192,
 		} satisfies Model<"openai-completions">,
 		"google/gemini-2.0-flash-lite-001": {
@@ -9628,13 +9628,13 @@ export const MODELS = {
 			reasoning: true,
 			input: ["text"],
 			cost: {
-				input: 0.28,
+				input: 0.27899999999999997,
 				output: 1.2,
 				cacheRead: 0,
 				cacheWrite: 0,
 			},
 			contextWindow: 196608,
-			maxTokens: 4096,
+			maxTokens: 131072,
 		} satisfies Model<"openai-completions">,
 		"mistralai/codestral-2508": {
 			id: "mistralai/codestral-2508",
