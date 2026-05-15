@@ -19,6 +19,7 @@ All agents and aliases are configured with yolo mode by default. (e.g. `--danger
 | **openclaude**      | [OpenClaude](https://github.com/Gitlawb/openclaude) — Coding-agent CLI for cloud and local model providers      |
 | **pi-coding-agent** | [Pi](https://github.com/earendil-works/pi) — The minimal coding agent with extensions, skills, and TUI          |
 | **vibe-kanban**     | [Vibe Kanban](https://github.com/BloopAI/vibe-kanban) — Kanban-style orchestration surface for AI coding agents |
+| **whichllm**        | [whichllm](https://github.com/Andyyyy64/whichllm) — Find the best local LLM that runs on your hardware          |
 | **ccusage**         | [ccusage](https://www.npmjs.com/package/ccusage) — Track Claude Code token usage and costs                      |
 
 Packages are automatically updated every hour via GitHub Actions.
@@ -52,6 +53,7 @@ nix run github:kissgyorgy/coding-agents#hermes-agent
 nix run github:kissgyorgy/coding-agents#openclaude
 nix run github:kissgyorgy/coding-agents#pi-coding-agent
 nix run github:kissgyorgy/coding-agents#vibe-kanban
+nix run github:kissgyorgy/coding-agents#whichllm
 ```
 
 ### Home Manager module

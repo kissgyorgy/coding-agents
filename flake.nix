@@ -24,6 +24,7 @@
         "hermes-agent"
         "openclaude"
         "pi-coding-agent"
+        "whichllm"
       ];
       linuxOnlyPackageNames = [
         "llmfit"
@@ -53,6 +54,7 @@
         hermes-agent = hermes-agent.packages.${final.stdenv.hostPlatform.system}.default;
         openclaude = final.callPackage ./packages/openclaude.nix { };
         pi-coding-agent = final.callPackage ./packages/pi-coding-agent { };
+        whichllm = final.callPackage ./packages/whichllm.nix { };
         llmfit = final.callPackage ./packages/llmfit.nix { };
         llmserve = final.callPackage ./packages/llmserve.nix { };
         playwright-cli = final.callPackage ./packages/playwright-cli.nix { };
