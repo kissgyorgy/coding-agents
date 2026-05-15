@@ -7487,8 +7487,8 @@ export const MODELS = {
 				cacheRead: 0,
 				cacheWrite: 0,
 			},
-			contextWindow: 1000000,
-			maxTokens: 384000,
+			contextWindow: 200000,
+			maxTokens: 128000,
 		} satisfies Model<"openai-completions">,
 		"gemini-3-flash": {
 			id: "gemini-3-flash",
