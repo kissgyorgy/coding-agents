@@ -9038,7 +9038,7 @@ export const MODELS = {
 				cacheRead: 0.024999999999999998,
 				cacheWrite: 0.08333333333333334,
 			},
-			contextWindow: 1000000,
+			contextWindow: 1048576,
 			maxTokens: 8192,
 		} satisfies Model<"openai-completions">,
 		"google/gemini-2.0-flash-lite-001": {
@@ -9415,18 +9415,18 @@ export const MODELS = {
 			contextWindow: 262144,
 			maxTokens: 32768,
 		} satisfies Model<"openai-completions">,
-		"inclusionai/ring-2.6-1t:free": {
-			id: "inclusionai/ring-2.6-1t:free",
-			name: "inclusionAI: Ring-2.6-1T (free)",
+		"inclusionai/ring-2.6-1t": {
+			id: "inclusionai/ring-2.6-1t",
+			name: "inclusionAI: Ring-2.6-1T",
 			api: "openai-completions",
 			provider: "openrouter",
 			baseUrl: "https://openrouter.ai/api/v1",
 			reasoning: true,
 			input: ["text"],
 			cost: {
-				input: 0,
-				output: 0,
-				cacheRead: 0,
+				input: 0.075,
+				output: 0.625,
+				cacheRead: 0.015,
 				cacheWrite: 0,
 			},
 			contextWindow: 262144,
