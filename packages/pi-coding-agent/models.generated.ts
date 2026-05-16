@@ -8692,7 +8692,7 @@ export const MODELS = {
 				cacheRead: 0,
 				cacheWrite: 0,
 			},
-			contextWindow: 120000,
+			contextWindow: 131072,
 			maxTokens: 8000,
 		} satisfies Model<"openai-completions">,
 		"baidu/ernie-4.5-vl-28b-a3b": {
@@ -8709,7 +8709,7 @@ export const MODELS = {
 				cacheRead: 0,
 				cacheWrite: 0,
 			},
-			contextWindow: 30000,
+			contextWindow: 131072,
 			maxTokens: 8000,
 		} satisfies Model<"openai-completions">,
 		"bytedance-seed/seed-1.6": {
@@ -8879,7 +8879,7 @@ export const MODELS = {
 				cacheRead: 0,
 				cacheWrite: 0,
 			},
-			contextWindow: 64000,
+			contextWindow: 163840,
 			maxTokens: 16000,
 		} satisfies Model<"openai-completions">,
 		"deepseek/deepseek-r1-0528": {
@@ -8966,7 +8966,7 @@ export const MODELS = {
 				cacheRead: 0.022,
 				cacheWrite: 0,
 			},
-			contextWindow: 1048575,
+			contextWindow: 1048576,
 			maxTokens: 4096,
 		} satisfies Model<"openai-completions">,
 		"deepseek/deepseek-v4-flash:free": {
@@ -9242,7 +9242,7 @@ export const MODELS = {
 				cacheRead: 0.19999999999999998,
 				cacheWrite: 0.375,
 			},
-			contextWindow: 1048576,
+			contextWindow: 1048756,
 			maxTokens: 65536,
 		} satisfies Model<"openai-completions">,
 		"google/gemma-3-12b-it": {
@@ -9480,7 +9480,7 @@ export const MODELS = {
 				cacheRead: 0,
 				cacheWrite: 0,
 			},
-			contextWindow: 16384,
+			contextWindow: 131072,
 			maxTokens: 16384,
 		} satisfies Model<"openai-completions">,
 		"meta-llama/llama-3.3-70b-instruct": {
@@ -9514,7 +9514,7 @@ export const MODELS = {
 				cacheRead: 0,
 				cacheWrite: 0,
 			},
-			contextWindow: 65536,
+			contextWindow: 131072,
 			maxTokens: 4096,
 		} satisfies Model<"openai-completions">,
 		"meta-llama/llama-4-scout": {
@@ -9531,7 +9531,7 @@ export const MODELS = {
 				cacheRead: 0,
 				cacheWrite: 0,
 			},
-			contextWindow: 327680,
+			contextWindow: 10000000,
 			maxTokens: 16384,
 		} satisfies Model<"openai-completions">,
 		"minimax/minimax-m1": {
@@ -9565,7 +9565,7 @@ export const MODELS = {
 				cacheRead: 0.03,
 				cacheWrite: 0,
 			},
-			contextWindow: 196608,
+			contextWindow: 204800,
 			maxTokens: 196608,
 		} satisfies Model<"openai-completions">,
 		"minimax/minimax-m2.1": {
@@ -9582,7 +9582,7 @@ export const MODELS = {
 				cacheRead: 0.03,
 				cacheWrite: 0,
 			},
-			contextWindow: 196608,
+			contextWindow: 204800,
 			maxTokens: 196608,
 		} satisfies Model<"openai-completions">,
 		"minimax/minimax-m2.5": {
@@ -9599,7 +9599,7 @@ export const MODELS = {
 				cacheRead: 0,
 				cacheWrite: 0,
 			},
-			contextWindow: 196608,
+			contextWindow: 204800,
 			maxTokens: 196608,
 		} satisfies Model<"openai-completions">,
 		"minimax/minimax-m2.5:free": {
@@ -9616,7 +9616,7 @@ export const MODELS = {
 				cacheRead: 0,
 				cacheWrite: 0,
 			},
-			contextWindow: 196608,
+			contextWindow: 204800,
 			maxTokens: 8192,
 		} satisfies Model<"openai-completions">,
 		"minimax/minimax-m2.7": {
@@ -9633,7 +9633,7 @@ export const MODELS = {
 				cacheRead: 0,
 				cacheWrite: 0,
 			},
-			contextWindow: 196608,
+			contextWindow: 204800,
 			maxTokens: 131072,
 		} satisfies Model<"openai-completions">,
 		"mistralai/codestral-2508": {
@@ -10075,7 +10075,7 @@ export const MODELS = {
 				cacheRead: 0.25,
 				cacheWrite: 0,
 			},
-			contextWindow: 262142,
+			contextWindow: 262144,
 			maxTokens: 262142,
 		} satisfies Model<"openai-completions">,
 		"nex-agi/deepseek-v3.1-nex-n1": {
@@ -10177,7 +10177,7 @@ export const MODELS = {
 				cacheRead: 0,
 				cacheWrite: 0,
 			},
-			contextWindow: 262144,
+			contextWindow: 1000000,
 			maxTokens: 4096,
 		} satisfies Model<"openai-completions">,
 		"nvidia/nemotron-3-super-120b-a12b:free": {
@@ -10194,7 +10194,7 @@ export const MODELS = {
 				cacheRead: 0,
 				cacheWrite: 0,
 			},
-			contextWindow: 262144,
+			contextWindow: 1000000,
 			maxTokens: 262144,
 		} satisfies Model<"openai-completions">,
 		"nvidia/nemotron-nano-12b-v2-vl:free": {
@@ -11345,7 +11345,7 @@ export const MODELS = {
 				cacheRead: 0,
 				cacheWrite: 0,
 			},
-			contextWindow: 32768,
+			contextWindow: 131072,
 			maxTokens: 16384,
 		} satisfies Model<"openai-completions">,
 		"qwen/qwen-2.5-7b-instruct": {
@@ -11362,7 +11362,7 @@ export const MODELS = {
 				cacheRead: 0,
 				cacheWrite: 0,
 			},
-			contextWindow: 32768,
+			contextWindow: 131072,
 			maxTokens: 32768,
 		} satisfies Model<"openai-completions">,
 		"qwen/qwen-plus": {
@@ -11430,7 +11430,7 @@ export const MODELS = {
 				cacheRead: 0,
 				cacheWrite: 0,
 			},
-			contextWindow: 40960,
+			contextWindow: 131702,
 			maxTokens: 40960,
 		} satisfies Model<"openai-completions">,
 		"qwen/qwen3-235b-a22b": {
@@ -11481,7 +11481,7 @@ export const MODELS = {
 				cacheRead: 0,
 				cacheWrite: 0,
 			},
-			contextWindow: 131072,
+			contextWindow: 262144,
 			maxTokens: 4096,
 		} satisfies Model<"openai-completions">,
 		"qwen/qwen3-30b-a3b": {
@@ -11498,7 +11498,7 @@ export const MODELS = {
 				cacheRead: 0,
 				cacheWrite: 0,
 			},
-			contextWindow: 40960,
+			contextWindow: 131072,
 			maxTokens: 20000,
 		} satisfies Model<"openai-completions">,
 		"qwen/qwen3-30b-a3b-instruct-2507": {
@@ -11549,7 +11549,7 @@ export const MODELS = {
 				cacheRead: 0,
 				cacheWrite: 0,
 			},
-			contextWindow: 40960,
+			contextWindow: 131072,
 			maxTokens: 16384,
 		} satisfies Model<"openai-completions">,
 		"qwen/qwen3-8b": {
@@ -11566,7 +11566,7 @@ export const MODELS = {
 				cacheRead: 0.049999999999999996,
 				cacheWrite: 0,
 			},
-			contextWindow: 40960,
+			contextWindow: 131072,
 			maxTokens: 8192,
 		} satisfies Model<"openai-completions">,
 		"qwen/qwen3-coder": {
@@ -11583,7 +11583,7 @@ export const MODELS = {
 				cacheRead: 0,
 				cacheWrite: 0,
 			},
-			contextWindow: 262144,
+			contextWindow: 1048576,
 			maxTokens: 65536,
 		} satisfies Model<"openai-completions">,
 		"qwen/qwen3-coder-30b-a3b-instruct": {
@@ -11668,7 +11668,7 @@ export const MODELS = {
 				cacheRead: 0,
 				cacheWrite: 0,
 			},
-			contextWindow: 262000,
+			contextWindow: 1048576,
 			maxTokens: 262000,
 		} satisfies Model<"openai-completions">,
 		"qwen/qwen3-max": {
@@ -11753,7 +11753,7 @@ export const MODELS = {
 				cacheRead: 0,
 				cacheWrite: 0,
 			},
-			contextWindow: 131072,
+			contextWindow: 262144,
 			maxTokens: 32768,
 		} satisfies Model<"openai-completions">,
 		"qwen/qwen3-vl-235b-a22b-instruct": {
@@ -11804,7 +11804,7 @@ export const MODELS = {
 				cacheRead: 0,
 				cacheWrite: 0,
 			},
-			contextWindow: 131072,
+			contextWindow: 262144,
 			maxTokens: 32768,
 		} satisfies Model<"openai-completions">,
 		"qwen/qwen3-vl-30b-a3b-thinking": {
@@ -11838,7 +11838,7 @@ export const MODELS = {
 				cacheRead: 0,
 				cacheWrite: 0,
 			},
-			contextWindow: 131072,
+			contextWindow: 262144,
 			maxTokens: 32768,
 		} satisfies Model<"openai-completions">,
 		"qwen/qwen3-vl-8b-instruct": {
@@ -11855,7 +11855,7 @@ export const MODELS = {
 				cacheRead: 0,
 				cacheWrite: 0,
 			},
-			contextWindow: 131072,
+			contextWindow: 256000,
 			maxTokens: 32768,
 		} satisfies Model<"openai-completions">,
 		"qwen/qwen3-vl-8b-thinking": {
@@ -11872,7 +11872,7 @@ export const MODELS = {
 				cacheRead: 0,
 				cacheWrite: 0,
 			},
-			contextWindow: 131072,
+			contextWindow: 256000,
 			maxTokens: 32768,
 		} satisfies Model<"openai-completions">,
 		"qwen/qwen3.5-122b-a10b": {
@@ -12688,7 +12688,7 @@ export const MODELS = {
 				cacheRead: 0.25,
 				cacheWrite: 0,
 			},
-			contextWindow: 262142,
+			contextWindow: 262144,
 			maxTokens: 262142,
 		} satisfies Model<"openai-completions">,
 		"~openai/gpt-latest": {
