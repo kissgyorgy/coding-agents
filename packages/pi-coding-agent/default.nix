@@ -1,19 +1,19 @@
 { lib, buildNpmPackage, callPackage, fetchFromGitHub, nodejs_22, makeBinaryWrapper, autoPatchelfHook ? null, stdenv }:
 
 let
-  modelsDate = "20260516";
+  modelsDate = "20260517";
   fetchExtensionDeps = callPackage ./fetch-extension-deps.nix { };
 in
 
 buildNpmPackage rec {
   pname = "pi-coding-agent-models-${modelsDate}";
-  version = "0.74.0";
+  version = "0.74.1";
 
   src = fetchFromGitHub {
     owner = "earendil-works";
     repo = "pi";
     rev = "v${version}";
-    hash = "sha256-wEiqOezD8w08vyuenh3Kk+YCYBbQoEq67wATDEKy5XM=";
+    hash = "sha256-RU6xLz9uF1zTrvWtj7MNNmlavD1t/IVxiWCW90mN8QE=";
   };
 
   nodejs = nodejs_22;
