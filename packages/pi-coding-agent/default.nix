@@ -7,13 +7,13 @@ in
 
 buildNpmPackage rec {
   pname = "pi-coding-agent-models-${modelsDate}";
-  version = "0.74.1";
+  version = "0.75.0";
 
   src = fetchFromGitHub {
     owner = "earendil-works";
     repo = "pi";
     rev = "v${version}";
-    hash = "sha256-RU6xLz9uF1zTrvWtj7MNNmlavD1t/IVxiWCW90mN8QE=";
+    hash = "sha256-Cd4vHb8aRc8nSST5srVeZXuynLS2xYzj+gnKhuBe8Pc=";
   };
 
   nodejs = nodejs_22;
