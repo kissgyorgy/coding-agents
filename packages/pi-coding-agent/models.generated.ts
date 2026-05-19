@@ -911,8 +911,8 @@ export const MODELS = {
 				cacheRead: 0,
 				cacheWrite: 0,
 			},
-			contextWindow: 256000,
-			maxTokens: 256000,
+			contextWindow: 262143,
+			maxTokens: 16000,
 		} satisfies Model<"bedrock-converse-stream">,
 		"moonshotai.kimi-k2.5": {
 			id: "moonshotai.kimi-k2.5",
@@ -928,8 +928,8 @@ export const MODELS = {
 				cacheRead: 0,
 				cacheWrite: 0,
 			},
-			contextWindow: 256000,
-			maxTokens: 256000,
+			contextWindow: 262143,
+			maxTokens: 16000,
 		} satisfies Model<"bedrock-converse-stream">,
 		"nvidia.nemotron-nano-12b-v2": {
 			id: "nvidia.nemotron-nano-12b-v2",
