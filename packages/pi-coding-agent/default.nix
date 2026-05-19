@@ -19,7 +19,7 @@ buildNpmPackage rec {
   nodejs = nodejs_22;
 
   npmDepsFetcherVersion = 2;
-  npmDepsHash = "sha256-aRP9gmO72JC6MWe3C+aOv8Bi1y4PxMWC3hQsJvPj8Ss=";
+  npmDepsHash = "sha256-jb+wx80mFkdkPA6P6SOBsBu2WPxkIT5G7FJH4ZkeasY=";
 
   # Skip native addon compilation (canvas etc.) — koffi/clipboard ship pre-built binaries
   npmFlags = [ "--ignore-scripts" ];
@@ -29,11 +29,15 @@ buildNpmPackage rec {
     ++ lib.optionals stdenv.hostPlatform.isLinux [ autoPatchelfHook ];
   buildInputs = lib.optionals stdenv.hostPlatform.isLinux [ stdenv.cc.cc.lib ];
 
-  # Replace upstream models with our freshly generated ones and use a lockfile
-  # with registry tarball metadata required by Nix's offline npm cache.
+  # buildNpmPackage runs npmConfigHook in prePatch, so replace the lockfile
+  # immediately after unpacking, before the hook validates and installs deps.
+  postUnpack = ''
+    cp ${./package-lock.generated.json} $sourceRoot/package-lock.json
+  '';
+
+  # Replace upstream models with our freshly generated ones.
   postPatch = ''
     cp ${./models.generated.ts} packages/ai/src/models.generated.ts
-    cp ${./package-lock.generated.json} package-lock.json
   '';
 
   # Build workspace packages in dependency order: tui -> ai -> agent -> coding-agent
