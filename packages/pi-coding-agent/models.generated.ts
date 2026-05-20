@@ -14397,6 +14397,23 @@ export const MODELS = {
 			contextWindow: 128000,
 			maxTokens: 64000,
 		} satisfies Model<"anthropic-messages">,
+		"mistral/mistral-medium-3.5": {
+			id: "mistral/mistral-medium-3.5",
+			name: "Mistral Medium Latest",
+			api: "anthropic-messages",
+			provider: "vercel-ai-gateway",
+			baseUrl: "https://ai-gateway.vercel.sh",
+			reasoning: true,
+			input: ["text"],
+			cost: {
+				input: 1.5,
+				output: 7.5,
+				cacheRead: 0,
+				cacheWrite: 0,
+			},
+			contextWindow: 256000,
+			maxTokens: 256000,
+		} satisfies Model<"anthropic-messages">,
 		"mistral/mistral-small": {
 			id: "mistral/mistral-small",
 			name: "Mistral Small",
