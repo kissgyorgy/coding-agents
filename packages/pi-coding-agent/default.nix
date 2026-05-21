@@ -7,19 +7,19 @@ in
 
 buildNpmPackage rec {
   pname = "pi-coding-agent-models-${modelsDate}";
-  version = "0.75.4";
+  version = "0.74.2";
 
   src = fetchFromGitHub {
     owner = "earendil-works";
     repo = "pi";
     rev = "v${version}";
-    hash = "sha256-zyIgs2N7uVz+7E+NqxH78baRw0OwXvlrjZiDIP/v0M4=";
+    hash = "sha256-weezJHniMRAe9vgWg91UpH7JxtuqyR9ILw72ffB+Nug=";
   };
 
   nodejs = nodejs_22;
 
   npmDepsFetcherVersion = 2;
-  npmDepsHash = "sha256-CjEkRJjX9PspxqNNZ90aWYzxneFIoYpjodpkMJNeAUE=";
+  npmDepsHash = "sha256-GqDfq/GZH8cI4q8clrRgSaGYV5l7cyf+7bJWjzbWw68=";
 
   # Skip native addon compilation (canvas etc.) — koffi/clipboard ship pre-built binaries
   npmFlags = [ "--ignore-scripts" ];
