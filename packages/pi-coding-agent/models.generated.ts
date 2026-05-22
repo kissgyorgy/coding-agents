@@ -11947,11 +11947,11 @@ export const MODELS = {
 			cost: {
 				input: 0.15,
 				output: 1,
-				cacheRead: 0.049999999999999996,
+				cacheRead: 0,
 				cacheWrite: 0,
 			},
 			contextWindow: 262144,
-			maxTokens: 262144,
+			maxTokens: 262140,
 		} satisfies Model<"openai-completions">,
 		"qwen/qwen3.6-flash": {
 			id: "qwen/qwen3.6-flash",
