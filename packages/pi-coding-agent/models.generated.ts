@@ -8726,13 +8726,13 @@ export const MODELS = {
 			thinkingLevelMap: {"minimal":null,"low":null,"medium":null,"high":"high","xhigh":"max"},
 			input: ["text"],
 			cost: {
-				input: 0.112,
-				output: 0.224,
-				cacheRead: 0.022,
+				input: 0.09999999999999999,
+				output: 0.19999999999999998,
+				cacheRead: 0.02,
 				cacheWrite: 0,
 			},
 			contextWindow: 1048576,
-			maxTokens: 4096,
+			maxTokens: 16384,
 		} satisfies Model<"openai-completions">,
 		"deepseek/deepseek-v4-flash:free": {
 			id: "deepseek/deepseek-v4-flash:free",
