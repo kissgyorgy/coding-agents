@@ -14096,7 +14096,7 @@ export const MODELS = {
 		} satisfies Model<"anthropic-messages">,
 		"minimax/minimax-m2.7": {
 			id: "minimax/minimax-m2.7",
-			name: "Minimax M2.7",
+			name: "MiniMax M2.7",
 			api: "anthropic-messages",
 			provider: "vercel-ai-gateway",
 			baseUrl: "https://ai-gateway.vercel.sh",
