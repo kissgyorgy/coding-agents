@@ -5,7 +5,13 @@ build *args:
     all="aichat claude-code claude-code-ui gemini-cli ccusage codex crush hermes-agent pi-coding-agent whichllm llmfit llmserve"
     requested="{{args}}"
     attrs=""
-    for pkg in ${requested:-$all}; do attrs+=" .#$pkg"; done
+    for pkg in ${requested:-$all}; do
+        if [[ "$pkg" == --* ]]; then
+            echo "error: '$pkg' is not a package name. Host builds are run from the parent nixconf repo (e.g. cd .. && just build zenix)." >&2
+            exit 2
+        fi
+        attrs+=" .#$pkg"
+    done
     nix build $attrs
 
 # Update all packages sequentially (continues on individual failures)
@@ -71,9 +77,27 @@ _pi-post-update:
     set -euo pipefail
     pkg_dir="packages/pi-coding-agent"
     src=$(nix build .#pi-coding-agent.src --no-link --print-out-paths)
+    cp "$src/package-lock.json" "$pkg_dir/package-lock.generated.json"
     cp "$src/packages/ai/src/models.generated.ts" "$pkg_dir/models.generated.ts"
     today=$(date +%Y%m%d)
     sed -i "s/modelsDate = \"[0-9]*\"/modelsDate = \"$today\"/" "$pkg_dir/default.nix"
+
+    sed -i 's/npmDepsHash = "sha256-[^"]*";/npmDepsHash = lib.fakeHash;/' "$pkg_dir/default.nix"
+    set +e
+    build_output=$(nix build .#pi-coding-agent 2>&1)
+    build_status=$?
+    set -e
+    if [[ $build_status -eq 0 ]]; then
+        echo "pi-coding-agent: expected fake npmDepsHash to fail, but build succeeded" >&2
+        exit 1
+    fi
+    npm_deps_hash=$(awk '/got:[[:space:]]*sha256-/ { print $2; exit }' <<<"$build_output")
+    if [[ -z "$npm_deps_hash" ]]; then
+        echo "$build_output" >&2
+        echo "pi-coding-agent: failed to extract npmDepsHash from nix build output" >&2
+        exit 1
+    fi
+    sed -i 's|npmDepsHash = lib\.fakeHash;|npmDepsHash = "'"$npm_deps_hash"'";|' "$pkg_dir/default.nix"
 
 _update-pkg pkg repo pre_commit="" check_assets="":
     #!/usr/bin/env bash
