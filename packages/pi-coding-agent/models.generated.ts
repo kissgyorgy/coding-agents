@@ -7956,23 +7956,6 @@ export const MODELS = {
 			contextWindow: 256000,
 			maxTokens: 4096,
 		} satisfies Model<"openai-completions">,
-		"alibaba/tongyi-deepresearch-30b-a3b": {
-			id: "alibaba/tongyi-deepresearch-30b-a3b",
-			name: "Tongyi DeepResearch 30B A3B",
-			api: "openai-completions",
-			provider: "openrouter",
-			baseUrl: "https://openrouter.ai/api/v1",
-			reasoning: true,
-			input: ["text"],
-			cost: {
-				input: 0.09,
-				output: 0.44999999999999996,
-				cacheRead: 0.09,
-				cacheWrite: 0,
-			},
-			contextWindow: 131072,
-			maxTokens: 131072,
-		} satisfies Model<"openai-completions">,
 		"amazon/nova-2-lite-v1": {
 			id: "amazon/nova-2-lite-v1",
 			name: "Amazon: Nova 2 Lite",
