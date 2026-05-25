@@ -7051,7 +7051,7 @@ export const MODELS = {
 				cacheWrite: 0,
 			},
 			contextWindow: 200000,
-			maxTokens: 128000,
+			maxTokens: 32000,
 		} satisfies Model<"openai-completions">,
 		"claude-haiku-4-5": {
 			id: "claude-haiku-4-5",
