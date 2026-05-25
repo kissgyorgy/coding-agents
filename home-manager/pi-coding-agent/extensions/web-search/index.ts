@@ -98,7 +98,7 @@ function createBackend(settings: WebSearchSettings): SearchBackend {
 const BACKEND_LABELS: Record<BackendType, string> = {
   openai: "OpenAI",
   openrouter: "OpenRouter",
-  "openai-subscription": "OpenAI Subscription (Codex)",
+  "openai-subscription": "Codex",
   anthropic: "Anthropic",
 };
 
