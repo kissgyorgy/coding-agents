@@ -1922,7 +1922,7 @@ export const MODELS = {
 			cost: {
 				input: 0.1,
 				output: 0.4,
-				cacheRead: 0.03,
+				cacheRead: 0.025,
 				cacheWrite: 0,
 			},
 			contextWindow: 1047576,
@@ -2007,7 +2007,7 @@ export const MODELS = {
 			cost: {
 				input: 0.15,
 				output: 0.6,
-				cacheRead: 0.08,
+				cacheRead: 0.075,
 				cacheWrite: 0,
 			},
 			contextWindow: 128000,
@@ -2133,7 +2133,7 @@ export const MODELS = {
 			cost: {
 				input: 1.25,
 				output: 10,
-				cacheRead: 0.13,
+				cacheRead: 0.125,
 				cacheWrite: 0,
 			},
 			contextWindow: 400000,
@@ -2558,7 +2558,7 @@ export const MODELS = {
 			cost: {
 				input: 1.1,
 				output: 4.4,
-				cacheRead: 0.28,
+				cacheRead: 0.275,
 				cacheWrite: 0,
 			},
 			contextWindow: 200000,
@@ -6265,7 +6265,7 @@ export const MODELS = {
 			cost: {
 				input: 0.1,
 				output: 0.4,
-				cacheRead: 0.03,
+				cacheRead: 0.025,
 				cacheWrite: 0,
 			},
 			contextWindow: 1047576,
@@ -6350,7 +6350,7 @@ export const MODELS = {
 			cost: {
 				input: 0.15,
 				output: 0.6,
-				cacheRead: 0.08,
+				cacheRead: 0.075,
 				cacheWrite: 0,
 			},
 			contextWindow: 128000,
@@ -6476,7 +6476,7 @@ export const MODELS = {
 			cost: {
 				input: 1.25,
 				output: 10,
-				cacheRead: 0.13,
+				cacheRead: 0.125,
 				cacheWrite: 0,
 			},
 			contextWindow: 400000,
@@ -6901,7 +6901,7 @@ export const MODELS = {
 			cost: {
 				input: 1.1,
 				output: 4.4,
-				cacheRead: 0.28,
+				cacheRead: 0.275,
 				cacheWrite: 0,
 			},
 			contextWindow: 200000,
@@ -8282,23 +8282,6 @@ export const MODELS = {
 			},
 			contextWindow: 262144,
 			maxTokens: 262144,
-		} satisfies Model<"openai-completions">,
-		"arcee-ai/trinity-large-thinking:free": {
-			id: "arcee-ai/trinity-large-thinking:free",
-			name: "Arcee AI: Trinity Large Thinking (free)",
-			api: "openai-completions",
-			provider: "openrouter",
-			baseUrl: "https://openrouter.ai/api/v1",
-			reasoning: true,
-			input: ["text"],
-			cost: {
-				input: 0,
-				output: 0,
-				cacheRead: 0,
-				cacheWrite: 0,
-			},
-			contextWindow: 262144,
-			maxTokens: 80000,
 		} satisfies Model<"openai-completions">,
 		"arcee-ai/trinity-mini": {
 			id: "arcee-ai/trinity-mini",
@@ -11003,7 +10986,7 @@ export const MODELS = {
 				cacheWrite: 0,
 			},
 			contextWindow: 262144,
-			maxTokens: 32000,
+			maxTokens: 32768,
 		} satisfies Model<"openai-completions">,
 		"poolside/laguna-xs.2:free": {
 			id: "poolside/laguna-xs.2:free",
@@ -12085,9 +12068,9 @@ export const MODELS = {
 			reasoning: true,
 			input: ["text", "image"],
 			cost: {
-				input: 0.39999999999999997,
-				output: 2,
-				cacheRead: 0.08,
+				input: 0.14,
+				output: 0.28,
+				cacheRead: 0.0028,
 				cacheWrite: 0,
 			},
 			contextWindow: 1048576,
@@ -12102,13 +12085,13 @@ export const MODELS = {
 			reasoning: true,
 			input: ["text"],
 			cost: {
-				input: 1,
-				output: 3,
-				cacheRead: 0.19999999999999998,
+				input: 0.435,
+				output: 0.87,
+				cacheRead: 0.0036,
 				cacheWrite: 0,
 			},
 			contextWindow: 1048576,
-			maxTokens: 16384,
+			maxTokens: 131072,
 		} satisfies Model<"openai-completions">,
 		"z-ai/glm-4-32b": {
 			id: "z-ai/glm-4-32b",
