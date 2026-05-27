@@ -8351,23 +8351,6 @@ export const MODELS = {
 			contextWindow: 2000000,
 			maxTokens: 30000,
 		} satisfies Model<"openai-completions">,
-		"baidu/cobuddy:free": {
-			id: "baidu/cobuddy:free",
-			name: "Baidu Qianfan: CoBuddy (free)",
-			api: "openai-completions",
-			provider: "openrouter",
-			baseUrl: "https://openrouter.ai/api/v1",
-			reasoning: true,
-			input: ["text"],
-			cost: {
-				input: 0,
-				output: 0,
-				cacheRead: 0,
-				cacheWrite: 0,
-			},
-			contextWindow: 131072,
-			maxTokens: 65536,
-		} satisfies Model<"openai-completions">,
 		"baidu/ernie-4.5-21b-a3b": {
 			id: "baidu/ernie-4.5-21b-a3b",
 			name: "Baidu: ERNIE 4.5 21B A3B",
@@ -10375,11 +10358,11 @@ export const MODELS = {
 			cost: {
 				input: 1.25,
 				output: 10,
-				cacheRead: 0.125,
+				cacheRead: 0.13,
 				cacheWrite: 0,
 			},
 			contextWindow: 128000,
-			maxTokens: 16384,
+			maxTokens: 32000,
 		} satisfies Model<"openai-completions">,
 		"openai/gpt-5.1-codex": {
 			id: "openai/gpt-5.1-codex",
@@ -10392,7 +10375,7 @@ export const MODELS = {
 			cost: {
 				input: 1.25,
 				output: 10,
-				cacheRead: 0.125,
+				cacheRead: 0.13,
 				cacheWrite: 0,
 			},
 			contextWindow: 400000,
@@ -10426,11 +10409,11 @@ export const MODELS = {
 			cost: {
 				input: 0.25,
 				output: 2,
-				cacheRead: 0.03,
+				cacheRead: 0.024999999999999998,
 				cacheWrite: 0,
 			},
 			contextWindow: 400000,
-			maxTokens: 128000,
+			maxTokens: 100000,
 		} satisfies Model<"openai-completions">,
 		"openai/gpt-5.2": {
 			id: "openai/gpt-5.2",
@@ -10466,7 +10449,7 @@ export const MODELS = {
 				cacheWrite: 0,
 			},
 			contextWindow: 128000,
-			maxTokens: 32000,
+			maxTokens: 16384,
 		} satisfies Model<"openai-completions">,
 		"openai/gpt-5.2-codex": {
 			id: "openai/gpt-5.2-codex",
