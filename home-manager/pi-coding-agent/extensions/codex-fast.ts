@@ -1,13 +1,66 @@
-import type {
-  ExtensionAPI,
-  ExtensionContext,
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { join } from "node:path";
+import {
+  getAgentDir,
+  type ExtensionAPI,
+  type ExtensionContext,
 } from "@earendil-works/pi-coding-agent";
 import type { AutocompleteSuggestions } from "@earendil-works/pi-tui";
 
 const STATE_ENTRY = "codex-fast";
+const SETTINGS_PATH = join(getAgentDir(), "codex-fast.json");
+
+interface FastState {
+  enabled: boolean;
+  updatedAt: number;
+}
 
 function isObject(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function normalizeFastState(
+  data: unknown,
+  fallbackUpdatedAt = 0,
+): FastState | undefined {
+  if (!isObject(data) || typeof data.enabled !== "boolean") return undefined;
+
+  const updatedAt =
+    typeof data.updatedAt === "number" && Number.isFinite(data.updatedAt)
+      ? data.updatedAt
+      : fallbackUpdatedAt;
+
+  return { enabled: data.enabled, updatedAt };
+}
+
+function loadFastState(): FastState | undefined {
+  try {
+    if (!existsSync(SETTINGS_PATH)) return undefined;
+    return normalizeFastState(JSON.parse(readFileSync(SETTINGS_PATH, "utf-8")));
+  } catch {
+    return undefined;
+  }
+}
+
+function saveFastState(state: FastState): void {
+  try {
+    mkdirSync(getAgentDir(), { recursive: true });
+    writeFileSync(SETTINGS_PATH, JSON.stringify(state, null, 2) + "\n");
+  } catch (error) {
+    console.error(`Failed to persist Codex Fast setting: ${error}`);
+  }
+}
+
+function readEntryFastState(
+  entry: { timestamp?: string; data?: unknown } | undefined,
+): FastState | undefined {
+  if (!entry) return undefined;
+
+  const fallbackUpdatedAt = entry.timestamp ? Date.parse(entry.timestamp) : 0;
+  return normalizeFastState(
+    entry.data,
+    Number.isFinite(fallbackUpdatedAt) ? fallbackUpdatedAt : 0,
+  );
 }
 
 function isGpt55Codex(ctx: Pick<ExtensionContext, "model">): boolean {
@@ -30,7 +83,9 @@ export default function codexFastExtension(pi: ExtensionAPI): void {
   let fastEligible = false;
 
   function persistState(): void {
-    pi.appendEntry(STATE_ENTRY, { enabled: fastEnabled });
+    const state: FastState = { enabled: fastEnabled, updatedAt: Date.now() };
+    pi.appendEntry(STATE_ENTRY, state);
+    saveFastState(state);
   }
 
   function updateStatus(ctx: ExtensionContext): void {
@@ -79,8 +134,16 @@ export default function codexFastExtension(pi: ExtensionAPI): void {
         (e: { type: string; customType?: string }) =>
           e.type === "custom" && e.customType === STATE_ENTRY,
       )
-      .pop() as { data?: { enabled: boolean } } | undefined;
-    if (entry) fastEnabled = entry.data?.enabled ?? fastEnabled;
+      .pop() as { timestamp?: string; data?: unknown } | undefined;
+
+    const globalState = loadFastState();
+    const sessionState = readEntryFastState(entry);
+    const state = [globalState, sessionState]
+      .filter((item): item is FastState => item !== undefined)
+      .sort((a, b) => a.updatedAt - b.updatedAt)
+      .pop();
+
+    if (state) fastEnabled = state.enabled;
 
     updateStatus(ctx);
 
