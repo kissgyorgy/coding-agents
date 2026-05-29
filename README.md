@@ -32,10 +32,11 @@ Supported flake systems are `x86_64-linux` and `aarch64-darwin`. `llmfit`,
 [Agent Skills](https://agentskills.io) get installed into each agent's config
 directory, so every agent has access to the same domain knowledge.
 
-| Skill       | Description                                                                                                                                   |
-| ----------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
-| **devenv**  | Setting up [devenv.sh](https://devenv.sh) development environments — Python/uv, services (Postgres, Redis), Django projects, and Nix packages |
-| **compone** | Building Python components with the [compone](https://github.com/kissgyorgy/compone) framework for type-safe HTML/XML/RSS generation          |
+| Skill                     | Description                                                                                                                                   |
+| ------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| **devenv**                | Setting up [devenv.sh](https://devenv.sh) development environments — Python/uv, services (Postgres, Redis), Django projects, and Nix packages |
+| **compone**               | Building Python components with the [compone](https://github.com/kissgyorgy/compone) framework for type-safe HTML/XML/RSS generation          |
+| **hn-sentiment-analysis** | Manual Hacker News thread sentiment analysis from a provided HN URL, with Algolia download and preparation scripts                            |
 
 ## Installation
 
