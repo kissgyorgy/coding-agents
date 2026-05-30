@@ -15264,6 +15264,23 @@ export const MODELS = {
 			contextWindow: 200000,
 			maxTokens: 8000,
 		} satisfies Model<"anthropic-messages">,
+		"stepfun/step-3.7-flash": {
+			id: "stepfun/step-3.7-flash",
+			name: "Step 3.7 Flash",
+			api: "anthropic-messages",
+			provider: "vercel-ai-gateway",
+			baseUrl: "https://ai-gateway.vercel.sh",
+			reasoning: true,
+			input: ["text", "image"],
+			cost: {
+				input: 0.19999999999999998,
+				output: 1.15,
+				cacheRead: 0.04,
+				cacheWrite: 0,
+			},
+			contextWindow: 256000,
+			maxTokens: 256000,
+		} satisfies Model<"anthropic-messages">,
 		"xai/grok-4.1-fast-non-reasoning": {
 			id: "xai/grok-4.1-fast-non-reasoning",
 			name: "Grok 4.1 Fast Non-Reasoning",
