@@ -9527,13 +9527,13 @@ export const MODELS = {
 			reasoning: true,
 			input: ["text"],
 			cost: {
-				input: 0.27899999999999997,
+				input: 0.26,
 				output: 1.2,
 				cacheRead: 0,
 				cacheWrite: 0,
 			},
 			contextWindow: 204800,
-			maxTokens: 131072,
+			maxTokens: 4096,
 		} satisfies Model<"openai-completions">,
 		"mistralai/codestral-2508": {
 			id: "mistralai/codestral-2508",
@@ -10935,13 +10935,13 @@ export const MODELS = {
 			reasoning: true,
 			input: ["text"],
 			cost: {
-				input: 0.03,
+				input: 0.029,
 				output: 0.14,
 				cacheRead: 0,
 				cacheWrite: 0,
 			},
 			contextWindow: 131072,
-			maxTokens: 131072,
+			maxTokens: 4096,
 		} satisfies Model<"openai-completions">,
 		"openai/gpt-oss-20b:free": {
 			id: "openai/gpt-oss-20b:free",
