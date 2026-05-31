@@ -12065,6 +12065,23 @@ export const MODELS = {
 			contextWindow: 32768,
 			maxTokens: 32768,
 		} satisfies Model<"openai-completions">,
+		"upstage/solar-pro-3": {
+			id: "upstage/solar-pro-3",
+			name: "Upstage: Solar Pro 3",
+			api: "openai-completions",
+			provider: "openrouter",
+			baseUrl: "https://openrouter.ai/api/v1",
+			reasoning: true,
+			input: ["text"],
+			cost: {
+				input: 0.15,
+				output: 0.6,
+				cacheRead: 0.015,
+				cacheWrite: 0,
+			},
+			contextWindow: 128000,
+			maxTokens: 4096,
+		} satisfies Model<"openai-completions">,
 		"x-ai/grok-4.20": {
 			id: "x-ai/grok-4.20",
 			name: "xAI: Grok 4.20",
