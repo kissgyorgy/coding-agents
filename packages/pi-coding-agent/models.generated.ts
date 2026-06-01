@@ -9492,13 +9492,13 @@ export const MODELS = {
 			reasoning: true,
 			input: ["text"],
 			cost: {
-				input: 0.26,
+				input: 0.27899999999999997,
 				output: 1.2,
 				cacheRead: 0,
 				cacheWrite: 0,
 			},
 			contextWindow: 204800,
-			maxTokens: 4096,
+			maxTokens: 131072,
 		} satisfies Model<"openai-completions">,
 		"minimax/minimax-m3": {
 			id: "minimax/minimax-m3",
