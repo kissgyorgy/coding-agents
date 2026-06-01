@@ -13240,6 +13240,23 @@ export const MODELS = {
 			contextWindow: 991000,
 			maxTokens: 64000,
 		} satisfies Model<"anthropic-messages">,
+		"alibaba/qwen3.7-plus": {
+			id: "alibaba/qwen3.7-plus",
+			name: "Qwen 3.7 Plus",
+			api: "anthropic-messages",
+			provider: "vercel-ai-gateway",
+			baseUrl: "https://ai-gateway.vercel.sh",
+			reasoning: true,
+			input: ["text", "image"],
+			cost: {
+				input: 0.39999999999999997,
+				output: 1.5999999999999999,
+				cacheRead: 0.08,
+				cacheWrite: 0.5,
+			},
+			contextWindow: 1000000,
+			maxTokens: 64000,
+		} satisfies Model<"anthropic-messages">,
 		"anthropic/claude-3-haiku": {
 			id: "anthropic/claude-3-haiku",
 			name: "Claude 3 Haiku",
