@@ -12056,13 +12056,13 @@ export const MODELS = {
 			reasoning: true,
 			input: ["text"],
 			cost: {
-				input: 0.063,
-				output: 0.21,
-				cacheRead: 0.020999999999999998,
+				input: 0.06599999999999999,
+				output: 0.26,
+				cacheRead: 0.029,
 				cacheWrite: 0,
 			},
 			contextWindow: 262144,
-			maxTokens: 4096,
+			maxTokens: 262144,
 		} satisfies Model<"openai-completions">,
 		"thedrummer/rocinante-12b": {
 			id: "thedrummer/rocinante-12b",
@@ -12385,7 +12385,7 @@ export const MODELS = {
 				cacheWrite: 0,
 			},
 			contextWindow: 202752,
-			maxTokens: 4096,
+			maxTokens: 16384,
 		} satisfies Model<"openai-completions">,
 		"z-ai/glm-5-turbo": {
 			id: "z-ai/glm-5-turbo",
@@ -12419,7 +12419,7 @@ export const MODELS = {
 				cacheWrite: 0,
 			},
 			contextWindow: 202752,
-			maxTokens: 4096,
+			maxTokens: 131072,
 		} satisfies Model<"openai-completions">,
 		"z-ai/glm-5v-turbo": {
 			id: "z-ai/glm-5v-turbo",
