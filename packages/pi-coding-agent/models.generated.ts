@@ -6027,6 +6027,23 @@ export const MODELS = {
 			contextWindow: 8000,
 			maxTokens: 8000,
 		} satisfies Model<"mistral-conversations">,
+		"open-mistral-nemo": {
+			id: "open-mistral-nemo",
+			name: "Open Mistral Nemo",
+			api: "mistral-conversations",
+			provider: "mistral",
+			baseUrl: "https://api.mistral.ai",
+			reasoning: false,
+			input: ["text"],
+			cost: {
+				input: 0.15,
+				output: 0.15,
+				cacheRead: 0,
+				cacheWrite: 0,
+			},
+			contextWindow: 128000,
+			maxTokens: 128000,
+		} satisfies Model<"mistral-conversations">,
 		"open-mixtral-8x22b": {
 			id: "open-mixtral-8x22b",
 			name: "Mixtral 8x22B",
