@@ -5636,6 +5636,23 @@ export const MODELS = {
 			contextWindow: 262144,
 			maxTokens: 262144,
 		} satisfies Model<"mistral-conversations">,
+		"devstral-latest": {
+			id: "devstral-latest",
+			name: "Devstral 2",
+			api: "mistral-conversations",
+			provider: "mistral",
+			baseUrl: "https://api.mistral.ai",
+			reasoning: false,
+			input: ["text"],
+			cost: {
+				input: 0.4,
+				output: 2,
+				cacheRead: 0,
+				cacheWrite: 0,
+			},
+			contextWindow: 262144,
+			maxTokens: 262144,
+		} satisfies Model<"mistral-conversations">,
 		"devstral-medium-2507": {
 			id: "devstral-medium-2507",
 			name: "Devstral Medium",
