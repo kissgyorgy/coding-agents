@@ -3908,7 +3908,7 @@ export const MODELS = {
 				cacheWrite: 6.25,
 			},
 			contextWindow: 1000000,
-			maxTokens: 128000,
+			maxTokens: 32000,
 		} satisfies Model<"anthropic-messages">,
 		"claude-opus-4.7": {
 			id: "claude-opus-4.7",
@@ -3947,8 +3947,8 @@ export const MODELS = {
 				cacheRead: 0.5,
 				cacheWrite: 6.25,
 			},
-			contextWindow: 1000000,
-			maxTokens: 128000,
+			contextWindow: 200000,
+			maxTokens: 64000,
 		} satisfies Model<"anthropic-messages">,
 		"claude-sonnet-4": {
 			id: "claude-sonnet-4",
@@ -4005,7 +4005,7 @@ export const MODELS = {
 				cacheWrite: 3.75,
 			},
 			contextWindow: 1000000,
-			maxTokens: 64000,
+			maxTokens: 32000,
 		} satisfies Model<"anthropic-messages">,
 		"gemini-2.5-pro": {
 			id: "gemini-2.5-pro",
@@ -4061,8 +4061,8 @@ export const MODELS = {
 				cacheRead: 0.2,
 				cacheWrite: 0,
 			},
-			contextWindow: 1048576,
-			maxTokens: 65536,
+			contextWindow: 200000,
+			maxTokens: 64000,
 		} satisfies Model<"openai-completions">,
 		"gemini-3.5-flash": {
 			id: "gemini-3.5-flash",
@@ -4080,8 +4080,8 @@ export const MODELS = {
 				cacheRead: 0.15,
 				cacheWrite: 0,
 			},
-			contextWindow: 1048576,
-			maxTokens: 65536,
+			contextWindow: 200000,
+			maxTokens: 64000,
 		} satisfies Model<"openai-completions">,
 		"gpt-4.1": {
 			id: "gpt-4.1",
@@ -4099,8 +4099,8 @@ export const MODELS = {
 				cacheRead: 0.5,
 				cacheWrite: 0,
 			},
-			contextWindow: 1047576,
-			maxTokens: 32768,
+			contextWindow: 128000,
+			maxTokens: 16384,
 		} satisfies Model<"openai-completions">,
 		"gpt-5-mini": {
 			id: "gpt-5-mini",
@@ -4194,7 +4194,7 @@ export const MODELS = {
 				cacheRead: 0.25,
 				cacheWrite: 0,
 			},
-			contextWindow: 1050000,
+			contextWindow: 400000,
 			maxTokens: 128000,
 		} satisfies Model<"openai-responses">,
 		"gpt-5.4-mini": {
@@ -4251,7 +4251,7 @@ export const MODELS = {
 				cacheRead: 0.5,
 				cacheWrite: 0,
 			},
-			contextWindow: 1050000,
+			contextWindow: 400000,
 			maxTokens: 128000,
 		} satisfies Model<"openai-responses">,
 		"raptor-mini": {
