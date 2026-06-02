@@ -3888,7 +3888,7 @@ export const MODELS = {
 				cacheWrite: 6.25,
 			},
 			contextWindow: 200000,
-			maxTokens: 64000,
+			maxTokens: 32000,
 		} satisfies Model<"anthropic-messages">,
 		"claude-opus-4.6": {
 			id: "claude-opus-4.6",
@@ -3927,8 +3927,8 @@ export const MODELS = {
 				cacheRead: 0.5,
 				cacheWrite: 6.25,
 			},
-			contextWindow: 1000000,
-			maxTokens: 128000,
+			contextWindow: 200000,
+			maxTokens: 32000,
 		} satisfies Model<"anthropic-messages">,
 		"claude-opus-4.8": {
 			id: "claude-opus-4.8",
@@ -3966,8 +3966,8 @@ export const MODELS = {
 				cacheRead: 0.3,
 				cacheWrite: 3.75,
 			},
-			contextWindow: 200000,
-			maxTokens: 64000,
+			contextWindow: 216000,
+			maxTokens: 16000,
 		} satisfies Model<"anthropic-messages">,
 		"claude-sonnet-4.5": {
 			id: "claude-sonnet-4.5",
@@ -3986,7 +3986,7 @@ export const MODELS = {
 				cacheWrite: 3.75,
 			},
 			contextWindow: 200000,
-			maxTokens: 64000,
+			maxTokens: 32000,
 		} satisfies Model<"anthropic-messages">,
 		"claude-sonnet-4.6": {
 			id: "claude-sonnet-4.6",
@@ -4023,8 +4023,8 @@ export const MODELS = {
 				cacheRead: 0.125,
 				cacheWrite: 0,
 			},
-			contextWindow: 1048576,
-			maxTokens: 65536,
+			contextWindow: 128000,
+			maxTokens: 64000,
 		} satisfies Model<"openai-completions">,
 		"gemini-3-flash-preview": {
 			id: "gemini-3-flash-preview",
@@ -4042,8 +4042,8 @@ export const MODELS = {
 				cacheRead: 0.05,
 				cacheWrite: 0,
 			},
-			contextWindow: 1048576,
-			maxTokens: 65536,
+			contextWindow: 128000,
+			maxTokens: 64000,
 		} satisfies Model<"openai-completions">,
 		"gemini-3.1-pro-preview": {
 			id: "gemini-3.1-pro-preview",
@@ -4118,8 +4118,8 @@ export const MODELS = {
 				cacheRead: 0.025,
 				cacheWrite: 0,
 			},
-			contextWindow: 400000,
-			maxTokens: 128000,
+			contextWindow: 264000,
+			maxTokens: 64000,
 		} satisfies Model<"openai-responses">,
 		"gpt-5.2": {
 			id: "gpt-5.2",
