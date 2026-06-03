@@ -8214,6 +8214,23 @@ export const MODELS = {
 			contextWindow: 1000000,
 			maxTokens: 65536,
 		} satisfies Model<"anthropic-messages">,
+		"qwen3.7-plus": {
+			id: "qwen3.7-plus",
+			name: "Qwen3.7 Plus",
+			api: "anthropic-messages",
+			provider: "opencode-go",
+			baseUrl: "https://opencode.ai/zen/go",
+			reasoning: true,
+			input: ["text", "image"],
+			cost: {
+				input: 0.4,
+				output: 1.6,
+				cacheRead: 0.04,
+				cacheWrite: 0.5,
+			},
+			contextWindow: 262144,
+			maxTokens: 65536,
+		} satisfies Model<"anthropic-messages">,
 	},
 	"openrouter": {
 		"ai21/jamba-large-1.7": {
