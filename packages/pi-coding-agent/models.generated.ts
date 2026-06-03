@@ -13749,7 +13749,7 @@ export const MODELS = {
 			provider: "vercel-ai-gateway",
 			baseUrl: "https://ai-gateway.vercel.sh",
 			reasoning: true,
-			input: ["text", "image"],
+			input: ["text"],
 			cost: {
 				input: 0.435,
 				output: 0.87,
