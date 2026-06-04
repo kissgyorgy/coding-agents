@@ -10099,6 +10099,23 @@ export const MODELS = {
 			contextWindow: 1000000,
 			maxTokens: 262144,
 		} satisfies Model<"openai-completions">,
+		"nvidia/nemotron-3-ultra-550b-a55b:free": {
+			id: "nvidia/nemotron-3-ultra-550b-a55b:free",
+			name: "NVIDIA: Nemotron 3 Ultra (free)",
+			api: "openai-completions",
+			provider: "openrouter",
+			baseUrl: "https://openrouter.ai/api/v1",
+			reasoning: true,
+			input: ["text"],
+			cost: {
+				input: 0,
+				output: 0,
+				cacheRead: 0,
+				cacheWrite: 0,
+			},
+			contextWindow: 1000000,
+			maxTokens: 65536,
+		} satisfies Model<"openai-completions">,
 		"nvidia/nemotron-nano-12b-v2-vl:free": {
 			id: "nvidia/nemotron-nano-12b-v2-vl:free",
 			name: "NVIDIA: Nemotron Nano 12B 2 VL (free)",
