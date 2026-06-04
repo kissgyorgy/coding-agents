@@ -15108,12 +15108,12 @@ export const MODELS = {
 			reasoning: true,
 			input: ["text"],
 			cost: {
-				input: 0.5,
-				output: 2.5,
-				cacheRead: 0.15,
+				input: 0.37,
+				output: 1.08,
+				cacheRead: 0,
 				cacheWrite: 0,
 			},
-			contextWindow: 262144,
+			contextWindow: 1000000,
 			maxTokens: 65000,
 		} satisfies Model<"anthropic-messages">,
 		"nvidia/nemotron-nano-12b-v2-vl": {
