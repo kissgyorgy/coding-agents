@@ -1,4 +1,4 @@
-{ lib, buildNpmPackage, fetchFromGitHub, nodejs_20, bun }:
+{ lib, buildNpmPackage, fetchFromGitHub, nodejs_22, bun }:
 
 buildNpmPackage rec {
   pname = "openclaude";
@@ -11,7 +11,7 @@ buildNpmPackage rec {
     hash = "sha256-sZ/59hDoPfrawDrl10kz8EcyR976darE5qRSM+OxlrI=";
   };
 
-  nodejs = nodejs_20;
+  nodejs = nodejs_22;
   npmDepsHash = "sha256-yAtDQJS8Vvcf7Sik69Ho/MMm7Df+iPds+z/rwh5R/Mk=";
 
   nativeBuildInputs = [ bun ];

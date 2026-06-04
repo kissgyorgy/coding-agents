@@ -1,4 +1,4 @@
-{ lib, stdenv, fetchurl, nodejs_20, makeBinaryWrapper }:
+{ lib, stdenv, fetchurl, nodejs_22, makeBinaryWrapper }:
 
 stdenv.mkDerivation rec {
   pname = "ccusage";
@@ -16,7 +16,7 @@ stdenv.mkDerivation rec {
     cp -r * $out/lib/ccusage/
 
     mkdir -p $out/bin
-    makeBinaryWrapper ${nodejs_20}/bin/node $out/bin/ccusage \
+    makeBinaryWrapper ${nodejs_22}/bin/node $out/bin/ccusage \
       --add-flags "$out/lib/ccusage/dist/index.js"
   '';
 

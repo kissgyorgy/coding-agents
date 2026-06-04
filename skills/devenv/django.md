@@ -169,7 +169,7 @@ This starts both PostgreSQL and Django together.
 
   # Add Node.js for Tailwind/frontend tools
   packages = with pkgs; [
-    nodejs_20
+    nodejs_22
     bun
   ];
 

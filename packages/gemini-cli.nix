@@ -1,4 +1,4 @@
-{ lib, buildNpmPackage, fetchFromGitHub, nodejs_20, makeBinaryWrapper }:
+{ lib, buildNpmPackage, fetchFromGitHub, nodejs_22, makeBinaryWrapper }:
 
 buildNpmPackage rec {
   pname = "gemini-cli";
@@ -11,7 +11,7 @@ buildNpmPackage rec {
     hash = "sha256-XZGqZMylKQi7Cc74qvvz50UY4EIJ19bjOYOwD39L2yo=";
   };
 
-  nodejs = nodejs_20;
+  nodejs = nodejs_22;
   npmDepsHash = "sha256-uD6635fzjGwiD0dUY0aCUonsO0zLFw00eidb87bXNh4=";
 
   nativeBuildInputs = [ makeBinaryWrapper ];

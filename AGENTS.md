@@ -45,7 +45,7 @@ Each `.nix` file is a standalone Nix derivation that downloads a pre-built binar
 - **Binary ELF patching**: `claude-code.nix`, `pi-coding-agent/` — download a single binary, `patchelf` the interpreter
 - **autoPatchelfHook**: `codex.nix` — automatic shared library resolution
 - **Rust builds**: `llmfit.nix`, `llmserve.nix` — build from source with `rustPlatform.buildRustPackage`
-- **Node.js wrapper**: `gemini-cli.nix`, `ccusage.nix` — download a JS bundle, wrap with `makeBinaryWrapper` pointing to `nodejs_20`
+- **Node.js wrapper**: `gemini-cli.nix`, `ccusage.nix` — download a JS bundle, wrap with `makeBinaryWrapper` pointing to `nodejs_22`
 - **buildNpmPackage**: `claude-code-ui.nix` — full npm build from source
 - **AppImage**: `emdash.nix` — extract and wrap AppImage with Wayland flags
 

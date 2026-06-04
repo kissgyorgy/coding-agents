@@ -1,4 +1,4 @@
-{ lib, buildNpmPackage, fetchFromGitHub, nodejs_20, python3, node-gyp, makeWrapper }:
+{ lib, buildNpmPackage, fetchFromGitHub, nodejs_22, python3, node-gyp, makeWrapper }:
 
 buildNpmPackage rec {
   pname = "claude-code-ui";
@@ -11,7 +11,7 @@ buildNpmPackage rec {
     hash = "sha256-/fN3MWNR5SenwI/JZFHh2+oKSuKUCLaHf4+rVX7SV5A=";
   };
 
-  nodejs = nodejs_20;
+  nodejs = nodejs_22;
 
   npmDepsHash = "sha256-lH2P+2C8zeJLdkSFLZlfDrppuSV7Lf7nKW2by0GFGrg=";
 
