@@ -1,4 +1,4 @@
-{ lib, buildNpmPackage, callPackage, fetchFromGitHub, nodejs_22, makeBinaryWrapper, autoPatchelfHook ? null, stdenv }:
+{ lib, buildNpmPackage, callPackage, fetchFromGitHub, nodejs_22, makeBinaryWrapper, autoPatchelfHook ? null, stdenv, libcap_ng }:
 
 let
   modelsDate = "20260605";
@@ -27,7 +27,7 @@ buildNpmPackage rec {
   # Native addons (koffi, clipboard) need patching on Linux; tsgo is statically linked
   nativeBuildInputs = [ makeBinaryWrapper ]
     ++ lib.optionals stdenv.hostPlatform.isLinux [ autoPatchelfHook ];
-  buildInputs = lib.optionals stdenv.hostPlatform.isLinux [ stdenv.cc.cc.lib ];
+  buildInputs = lib.optionals stdenv.hostPlatform.isLinux [ stdenv.cc.cc.lib libcap_ng ];
 
   # buildNpmPackage runs npmConfigHook in prePatch, so replace the lockfile
   # immediately after unpacking, before the hook validates and installs deps.
