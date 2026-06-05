@@ -12556,23 +12556,6 @@ export const MODELS = {
 			contextWindow: 256000,
 			maxTokens: 128000,
 		} satisfies Model<"openai-completions">,
-		"sao10k/l3-euryale-70b": {
-			id: "sao10k/l3-euryale-70b",
-			name: "Sao10k: Llama 3 Euryale 70B v2.1",
-			api: "openai-completions",
-			provider: "openrouter",
-			baseUrl: "https://openrouter.ai/api/v1",
-			reasoning: false,
-			input: ["text"],
-			cost: {
-				input: 1.48,
-				output: 1.48,
-				cacheRead: 0,
-				cacheWrite: 0,
-			},
-			contextWindow: 8192,
-			maxTokens: 8192,
-		} satisfies Model<"openai-completions">,
 		"sao10k/l3.1-euryale-70b": {
 			id: "sao10k/l3.1-euryale-70b",
 			name: "Sao10K: Llama 3.1 Euryale 70B v2.2",
