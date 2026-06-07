@@ -9695,8 +9695,8 @@ export const MODELS = {
 			reasoning: false,
 			input: ["text", "image"],
 			cost: {
-				input: 0.04,
-				output: 0.13,
+				input: 0.049999999999999996,
+				output: 0.15,
 				cacheRead: 0,
 				cacheWrite: 0,
 			},
@@ -9985,7 +9985,7 @@ export const MODELS = {
 			reasoning: false,
 			input: ["text", "image"],
 			cost: {
-				input: 0.08,
+				input: 0.09999999999999999,
 				output: 0.3,
 				cacheRead: 0,
 				cacheWrite: 0,
@@ -10514,7 +10514,7 @@ export const MODELS = {
 			reasoning: true,
 			input: ["text"],
 			cost: {
-				input: 0.09999999999999999,
+				input: 0.39999999999999997,
 				output: 0.39999999999999997,
 				cacheRead: 0,
 				cacheWrite: 0,
@@ -11835,7 +11835,7 @@ export const MODELS = {
 			reasoning: false,
 			input: ["text"],
 			cost: {
-				input: 0.071,
+				input: 0.09,
 				output: 0.09999999999999999,
 				cacheRead: 0,
 				cacheWrite: 0,
@@ -11869,8 +11869,8 @@ export const MODELS = {
 			reasoning: true,
 			input: ["text"],
 			cost: {
-				input: 0.09,
-				output: 0.44999999999999996,
+				input: 0.12,
+				output: 0.5,
 				cacheRead: 0,
 				cacheWrite: 0,
 			},
@@ -12328,13 +12328,13 @@ export const MODELS = {
 			reasoning: true,
 			input: ["text", "image"],
 			cost: {
-				input: 0.04,
+				input: 0.09999999999999999,
 				output: 0.15,
 				cacheRead: 0,
 				cacheWrite: 0,
 			},
 			contextWindow: 262144,
-			maxTokens: 81920,
+			maxTokens: 262144,
 		} satisfies Model<"openai-completions">,
 		"qwen/qwen3.5-flash-02-23": {
 			id: "qwen/qwen3.5-flash-02-23",
