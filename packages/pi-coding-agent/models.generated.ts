@@ -8441,23 +8441,6 @@ export const MODELS = {
 			contextWindow: 204800,
 			maxTokens: 131072,
 		} satisfies Model<"openai-completions">,
-		"minimax-m3-free": {
-			id: "minimax-m3-free",
-			name: "MiniMax M3 Free",
-			api: "anthropic-messages",
-			provider: "opencode",
-			baseUrl: "https://opencode.ai/zen",
-			reasoning: true,
-			input: ["text", "image"],
-			cost: {
-				input: 0,
-				output: 0,
-				cacheRead: 0,
-				cacheWrite: 0,
-			},
-			contextWindow: 200000,
-			maxTokens: 32000,
-		} satisfies Model<"anthropic-messages">,
 		"nemotron-3-ultra-free": {
 			id: "nemotron-3-ultra-free",
 			name: "Nemotron 3 Ultra Free",
