@@ -10490,8 +10490,8 @@ export const MODELS = {
 			contextWindow: 262144,
 			maxTokens: 4096,
 		} satisfies Model<"openai-completions">,
-		"nex-agi/Nex-N2-Pro:free": {
-			id: "nex-agi/Nex-N2-Pro:free",
+		"nex-agi/nex-n2-pro:free": {
+			id: "nex-agi/nex-n2-pro:free",
 			name: "Nex AGI: Nex-N2-Pro (free)",
 			api: "openai-completions",
 			provider: "openrouter",
