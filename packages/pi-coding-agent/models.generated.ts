@@ -10471,23 +10471,6 @@ export const MODELS = {
 			contextWindow: 262144,
 			maxTokens: 4096,
 		} satisfies Model<"openai-completions">,
-		"nex-agi/deepseek-v3.1-nex-n1": {
-			id: "nex-agi/deepseek-v3.1-nex-n1",
-			name: "Nex AGI: DeepSeek V3.1 Nex N1",
-			api: "openai-completions",
-			provider: "openrouter",
-			baseUrl: "https://openrouter.ai/api/v1",
-			reasoning: false,
-			input: ["text"],
-			cost: {
-				input: 0.135,
-				output: 0.5,
-				cacheRead: 0,
-				cacheWrite: 0,
-			},
-			contextWindow: 131072,
-			maxTokens: 163840,
-		} satisfies Model<"openai-completions">,
 		"nvidia/llama-3.3-nemotron-super-49b-v1.5": {
 			id: "nvidia/llama-3.3-nemotron-super-49b-v1.5",
 			name: "NVIDIA: Llama 3.3 Nemotron Super 49B V1.5",
