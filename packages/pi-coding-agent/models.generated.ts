@@ -357,6 +357,7 @@ export const MODELS = {
 			provider: "amazon-bedrock",
 			baseUrl: "https://bedrock-runtime.eu-central-1.amazonaws.com",
 			reasoning: true,
+			thinkingLevelMap: {"xhigh":"xhigh"},
 			input: ["text", "image"],
 			cost: {
 				input: 11,
@@ -496,6 +497,7 @@ export const MODELS = {
 			provider: "amazon-bedrock",
 			baseUrl: "https://bedrock-runtime.us-east-1.amazonaws.com",
 			reasoning: true,
+			thinkingLevelMap: {"xhigh":"xhigh"},
 			input: ["text", "image"],
 			cost: {
 				input: 10,
@@ -1387,6 +1389,7 @@ export const MODELS = {
 			provider: "amazon-bedrock",
 			baseUrl: "https://bedrock-runtime.us-east-1.amazonaws.com",
 			reasoning: true,
+			thinkingLevelMap: {"xhigh":"xhigh"},
 			input: ["text", "image"],
 			cost: {
 				input: 10,
@@ -1873,7 +1876,9 @@ export const MODELS = {
 			api: "anthropic-messages",
 			provider: "anthropic",
 			baseUrl: "https://api.anthropic.com",
+			compat: {"forceAdaptiveThinking":true},
 			reasoning: true,
+			thinkingLevelMap: {"xhigh":"xhigh"},
 			input: ["text", "image"],
 			cost: {
 				input: 10,
@@ -2441,7 +2446,7 @@ export const MODELS = {
 				cacheWrite: 0,
 			},
 			contextWindow: 400000,
-			maxTokens: 272000,
+			maxTokens: 128000,
 		} satisfies Model<"azure-openai-responses">,
 		"gpt-5.1": {
 			id: "gpt-5.1",
@@ -2674,7 +2679,7 @@ export const MODELS = {
 				cacheRead: 0.25,
 				cacheWrite: 0,
 			},
-			contextWindow: 272000,
+			contextWindow: 1050000,
 			maxTokens: 128000,
 		} satisfies Model<"azure-openai-responses">,
 		"gpt-5.4-mini": {
@@ -2746,7 +2751,7 @@ export const MODELS = {
 				cacheRead: 0.5,
 				cacheWrite: 0,
 			},
-			contextWindow: 272000,
+			contextWindow: 1050000,
 			maxTokens: 128000,
 		} satisfies Model<"azure-openai-responses">,
 		"gpt-5.5-pro": {
@@ -3066,7 +3071,9 @@ export const MODELS = {
 			api: "anthropic-messages",
 			provider: "cloudflare-ai-gateway",
 			baseUrl: "https://gateway.ai.cloudflare.com/v1/{CLOUDFLARE_ACCOUNT_ID}/{CLOUDFLARE_GATEWAY_ID}/anthropic",
+			compat: {"forceAdaptiveThinking":true},
 			reasoning: true,
+			thinkingLevelMap: {"xhigh":"xhigh"},
 			input: ["text", "image"],
 			cost: {
 				input: 10,
@@ -6384,7 +6391,7 @@ export const MODELS = {
 			api: "openai-completions",
 			provider: "moonshotai",
 			baseUrl: "https://api.moonshot.ai/v1",
-			compat: {"supportsStore":false,"supportsDeveloperRole":false,"supportsReasoningEffort":false,"maxTokensField":"max_tokens","supportsStrictMode":false},
+			compat: {"supportsStore":false,"supportsDeveloperRole":false,"supportsReasoningEffort":false,"maxTokensField":"max_tokens","supportsStrictMode":false,"thinkingFormat":"deepseek"},
 			reasoning: false,
 			input: ["text"],
 			cost: {
@@ -6402,7 +6409,7 @@ export const MODELS = {
 			api: "openai-completions",
 			provider: "moonshotai",
 			baseUrl: "https://api.moonshot.ai/v1",
-			compat: {"supportsStore":false,"supportsDeveloperRole":false,"supportsReasoningEffort":false,"maxTokensField":"max_tokens","supportsStrictMode":false},
+			compat: {"supportsStore":false,"supportsDeveloperRole":false,"supportsReasoningEffort":false,"maxTokensField":"max_tokens","supportsStrictMode":false,"thinkingFormat":"deepseek"},
 			reasoning: false,
 			input: ["text"],
 			cost: {
@@ -6420,7 +6427,7 @@ export const MODELS = {
 			api: "openai-completions",
 			provider: "moonshotai",
 			baseUrl: "https://api.moonshot.ai/v1",
-			compat: {"supportsStore":false,"supportsDeveloperRole":false,"supportsReasoningEffort":false,"maxTokensField":"max_tokens","supportsStrictMode":false},
+			compat: {"supportsStore":false,"supportsDeveloperRole":false,"supportsReasoningEffort":false,"maxTokensField":"max_tokens","supportsStrictMode":false,"thinkingFormat":"deepseek"},
 			reasoning: true,
 			input: ["text"],
 			cost: {
@@ -6438,7 +6445,7 @@ export const MODELS = {
 			api: "openai-completions",
 			provider: "moonshotai",
 			baseUrl: "https://api.moonshot.ai/v1",
-			compat: {"supportsStore":false,"supportsDeveloperRole":false,"supportsReasoningEffort":false,"maxTokensField":"max_tokens","supportsStrictMode":false},
+			compat: {"supportsStore":false,"supportsDeveloperRole":false,"supportsReasoningEffort":false,"maxTokensField":"max_tokens","supportsStrictMode":false,"thinkingFormat":"deepseek"},
 			reasoning: true,
 			input: ["text"],
 			cost: {
@@ -6456,7 +6463,7 @@ export const MODELS = {
 			api: "openai-completions",
 			provider: "moonshotai",
 			baseUrl: "https://api.moonshot.ai/v1",
-			compat: {"supportsStore":false,"supportsDeveloperRole":false,"supportsReasoningEffort":false,"maxTokensField":"max_tokens","supportsStrictMode":false},
+			compat: {"supportsStore":false,"supportsDeveloperRole":false,"supportsReasoningEffort":false,"maxTokensField":"max_tokens","supportsStrictMode":false,"thinkingFormat":"deepseek"},
 			reasoning: false,
 			input: ["text"],
 			cost: {
@@ -6474,7 +6481,7 @@ export const MODELS = {
 			api: "openai-completions",
 			provider: "moonshotai",
 			baseUrl: "https://api.moonshot.ai/v1",
-			compat: {"supportsStore":false,"supportsDeveloperRole":false,"supportsReasoningEffort":false,"maxTokensField":"max_tokens","supportsStrictMode":false},
+			compat: {"supportsStore":false,"supportsDeveloperRole":false,"supportsReasoningEffort":false,"maxTokensField":"max_tokens","supportsStrictMode":false,"thinkingFormat":"deepseek"},
 			reasoning: true,
 			input: ["text", "image"],
 			cost: {
@@ -6492,7 +6499,7 @@ export const MODELS = {
 			api: "openai-completions",
 			provider: "moonshotai",
 			baseUrl: "https://api.moonshot.ai/v1",
-			compat: {"supportsStore":false,"supportsDeveloperRole":false,"supportsReasoningEffort":false,"maxTokensField":"max_tokens","supportsStrictMode":false},
+			compat: {"supportsStore":false,"supportsDeveloperRole":false,"supportsReasoningEffort":false,"maxTokensField":"max_tokens","supportsStrictMode":false,"thinkingFormat":"deepseek"},
 			reasoning: true,
 			input: ["text", "image"],
 			cost: {
@@ -6512,7 +6519,7 @@ export const MODELS = {
 			api: "openai-completions",
 			provider: "moonshotai-cn",
 			baseUrl: "https://api.moonshot.cn/v1",
-			compat: {"supportsStore":false,"supportsDeveloperRole":false,"supportsReasoningEffort":false,"maxTokensField":"max_tokens","supportsStrictMode":false},
+			compat: {"supportsStore":false,"supportsDeveloperRole":false,"supportsReasoningEffort":false,"maxTokensField":"max_tokens","supportsStrictMode":false,"thinkingFormat":"deepseek"},
 			reasoning: false,
 			input: ["text"],
 			cost: {
@@ -6530,7 +6537,7 @@ export const MODELS = {
 			api: "openai-completions",
 			provider: "moonshotai-cn",
 			baseUrl: "https://api.moonshot.cn/v1",
-			compat: {"supportsStore":false,"supportsDeveloperRole":false,"supportsReasoningEffort":false,"maxTokensField":"max_tokens","supportsStrictMode":false},
+			compat: {"supportsStore":false,"supportsDeveloperRole":false,"supportsReasoningEffort":false,"maxTokensField":"max_tokens","supportsStrictMode":false,"thinkingFormat":"deepseek"},
 			reasoning: false,
 			input: ["text"],
 			cost: {
@@ -6548,7 +6555,7 @@ export const MODELS = {
 			api: "openai-completions",
 			provider: "moonshotai-cn",
 			baseUrl: "https://api.moonshot.cn/v1",
-			compat: {"supportsStore":false,"supportsDeveloperRole":false,"supportsReasoningEffort":false,"maxTokensField":"max_tokens","supportsStrictMode":false},
+			compat: {"supportsStore":false,"supportsDeveloperRole":false,"supportsReasoningEffort":false,"maxTokensField":"max_tokens","supportsStrictMode":false,"thinkingFormat":"deepseek"},
 			reasoning: true,
 			input: ["text"],
 			cost: {
@@ -6566,7 +6573,7 @@ export const MODELS = {
 			api: "openai-completions",
 			provider: "moonshotai-cn",
 			baseUrl: "https://api.moonshot.cn/v1",
-			compat: {"supportsStore":false,"supportsDeveloperRole":false,"supportsReasoningEffort":false,"maxTokensField":"max_tokens","supportsStrictMode":false},
+			compat: {"supportsStore":false,"supportsDeveloperRole":false,"supportsReasoningEffort":false,"maxTokensField":"max_tokens","supportsStrictMode":false,"thinkingFormat":"deepseek"},
 			reasoning: true,
 			input: ["text"],
 			cost: {
@@ -6584,7 +6591,7 @@ export const MODELS = {
 			api: "openai-completions",
 			provider: "moonshotai-cn",
 			baseUrl: "https://api.moonshot.cn/v1",
-			compat: {"supportsStore":false,"supportsDeveloperRole":false,"supportsReasoningEffort":false,"maxTokensField":"max_tokens","supportsStrictMode":false},
+			compat: {"supportsStore":false,"supportsDeveloperRole":false,"supportsReasoningEffort":false,"maxTokensField":"max_tokens","supportsStrictMode":false,"thinkingFormat":"deepseek"},
 			reasoning: false,
 			input: ["text"],
 			cost: {
@@ -6602,7 +6609,7 @@ export const MODELS = {
 			api: "openai-completions",
 			provider: "moonshotai-cn",
 			baseUrl: "https://api.moonshot.cn/v1",
-			compat: {"supportsStore":false,"supportsDeveloperRole":false,"supportsReasoningEffort":false,"maxTokensField":"max_tokens","supportsStrictMode":false},
+			compat: {"supportsStore":false,"supportsDeveloperRole":false,"supportsReasoningEffort":false,"maxTokensField":"max_tokens","supportsStrictMode":false,"thinkingFormat":"deepseek"},
 			reasoning: true,
 			input: ["text", "image"],
 			cost: {
@@ -6620,7 +6627,7 @@ export const MODELS = {
 			api: "openai-completions",
 			provider: "moonshotai-cn",
 			baseUrl: "https://api.moonshot.cn/v1",
-			compat: {"supportsStore":false,"supportsDeveloperRole":false,"supportsReasoningEffort":false,"maxTokensField":"max_tokens","supportsStrictMode":false},
+			compat: {"supportsStore":false,"supportsDeveloperRole":false,"supportsReasoningEffort":false,"maxTokensField":"max_tokens","supportsStrictMode":false,"thinkingFormat":"deepseek"},
 			reasoning: true,
 			input: ["text", "image"],
 			cost: {
@@ -7311,7 +7318,7 @@ export const MODELS = {
 				cacheWrite: 0,
 			},
 			contextWindow: 400000,
-			maxTokens: 272000,
+			maxTokens: 128000,
 		} satisfies Model<"openai-responses">,
 		"gpt-5.1": {
 			id: "gpt-5.1",
@@ -7855,6 +7862,7 @@ export const MODELS = {
 			api: "openai-completions",
 			provider: "opencode",
 			baseUrl: "https://opencode.ai/zen/v1",
+			compat: {"maxTokensField":"max_tokens"},
 			reasoning: true,
 			input: ["text"],
 			cost: {
@@ -7872,7 +7880,9 @@ export const MODELS = {
 			api: "anthropic-messages",
 			provider: "opencode",
 			baseUrl: "https://opencode.ai/zen",
+			compat: {"forceAdaptiveThinking":true},
 			reasoning: true,
+			thinkingLevelMap: {"xhigh":"xhigh"},
 			input: ["text", "image"],
 			cost: {
 				input: 10,
@@ -8049,7 +8059,7 @@ export const MODELS = {
 			api: "openai-completions",
 			provider: "opencode",
 			baseUrl: "https://opencode.ai/zen/v1",
-			compat: {"requiresReasoningContentOnAssistantMessages":true,"thinkingFormat":"deepseek"},
+			compat: {"maxTokensField":"max_tokens","requiresReasoningContentOnAssistantMessages":true,"thinkingFormat":"deepseek"},
 			reasoning: true,
 			thinkingLevelMap: {"minimal":null,"low":null,"medium":null,"high":"high","xhigh":"max"},
 			input: ["text"],
@@ -8068,7 +8078,7 @@ export const MODELS = {
 			api: "openai-completions",
 			provider: "opencode",
 			baseUrl: "https://opencode.ai/zen/v1",
-			compat: {"requiresReasoningContentOnAssistantMessages":true,"thinkingFormat":"deepseek"},
+			compat: {"maxTokensField":"max_tokens","requiresReasoningContentOnAssistantMessages":true,"thinkingFormat":"deepseek"},
 			reasoning: true,
 			thinkingLevelMap: {"minimal":null,"low":null,"medium":null,"high":"high","xhigh":"max"},
 			input: ["text"],
@@ -8141,6 +8151,7 @@ export const MODELS = {
 			api: "openai-completions",
 			provider: "opencode",
 			baseUrl: "https://opencode.ai/zen/v1",
+			compat: {"maxTokensField":"max_tokens"},
 			reasoning: true,
 			input: ["text"],
 			cost: {
@@ -8158,6 +8169,7 @@ export const MODELS = {
 			api: "openai-completions",
 			provider: "opencode",
 			baseUrl: "https://opencode.ai/zen/v1",
+			compat: {"maxTokensField":"max_tokens"},
 			reasoning: true,
 			input: ["text"],
 			cost: {
@@ -8463,7 +8475,7 @@ export const MODELS = {
 			api: "openai-completions",
 			provider: "opencode",
 			baseUrl: "https://opencode.ai/zen/v1",
-			compat: {"supportsReasoningEffort":false},
+			compat: {"supportsReasoningEffort":false,"maxTokensField":"max_tokens"},
 			reasoning: true,
 			thinkingLevelMap: {"off":null,"minimal":null,"low":null,"medium":null},
 			input: ["text", "image"],
@@ -8482,6 +8494,7 @@ export const MODELS = {
 			api: "openai-completions",
 			provider: "opencode",
 			baseUrl: "https://opencode.ai/zen/v1",
+			compat: {"maxTokensField":"max_tokens"},
 			reasoning: true,
 			input: ["text", "image"],
 			cost: {
@@ -8499,7 +8512,7 @@ export const MODELS = {
 			api: "openai-completions",
 			provider: "opencode",
 			baseUrl: "https://opencode.ai/zen/v1",
-			compat: {"thinkingFormat":"deepseek","supportsReasoningEffort":false},
+			compat: {"thinkingFormat":"deepseek","supportsReasoningEffort":false,"maxTokensField":"max_tokens"},
 			reasoning: true,
 			input: ["text", "image"],
 			cost: {
@@ -8517,6 +8530,7 @@ export const MODELS = {
 			api: "openai-completions",
 			provider: "opencode",
 			baseUrl: "https://opencode.ai/zen/v1",
+			compat: {"maxTokensField":"max_tokens"},
 			reasoning: true,
 			input: ["text", "image"],
 			cost: {
@@ -8534,6 +8548,7 @@ export const MODELS = {
 			api: "openai-completions",
 			provider: "opencode",
 			baseUrl: "https://opencode.ai/zen/v1",
+			compat: {"maxTokensField":"max_tokens"},
 			reasoning: true,
 			input: ["text"],
 			cost: {
@@ -8551,6 +8566,7 @@ export const MODELS = {
 			api: "openai-completions",
 			provider: "opencode",
 			baseUrl: "https://opencode.ai/zen/v1",
+			compat: {"maxTokensField":"max_tokens"},
 			reasoning: true,
 			input: ["text"],
 			cost: {
@@ -8568,6 +8584,7 @@ export const MODELS = {
 			api: "openai-completions",
 			provider: "opencode",
 			baseUrl: "https://opencode.ai/zen/v1",
+			compat: {"maxTokensField":"max_tokens"},
 			reasoning: true,
 			input: ["text"],
 			cost: {
@@ -8585,6 +8602,7 @@ export const MODELS = {
 			api: "openai-completions",
 			provider: "opencode",
 			baseUrl: "https://opencode.ai/zen/v1",
+			compat: {"maxTokensField":"max_tokens"},
 			reasoning: true,
 			input: ["text"],
 			cost: {
@@ -8638,7 +8656,7 @@ export const MODELS = {
 			api: "openai-completions",
 			provider: "opencode-go",
 			baseUrl: "https://opencode.ai/zen/go/v1",
-			compat: {"requiresReasoningContentOnAssistantMessages":true,"thinkingFormat":"deepseek"},
+			compat: {"maxTokensField":"max_tokens","requiresReasoningContentOnAssistantMessages":true,"thinkingFormat":"deepseek"},
 			reasoning: true,
 			thinkingLevelMap: {"minimal":null,"low":null,"medium":null,"high":"high","xhigh":"max"},
 			input: ["text"],
@@ -8657,7 +8675,7 @@ export const MODELS = {
 			api: "openai-completions",
 			provider: "opencode-go",
 			baseUrl: "https://opencode.ai/zen/go/v1",
-			compat: {"requiresReasoningContentOnAssistantMessages":true,"thinkingFormat":"deepseek"},
+			compat: {"maxTokensField":"max_tokens","requiresReasoningContentOnAssistantMessages":true,"thinkingFormat":"deepseek"},
 			reasoning: true,
 			thinkingLevelMap: {"minimal":null,"low":null,"medium":null,"high":"high","xhigh":"max"},
 			input: ["text"],
@@ -8676,6 +8694,7 @@ export const MODELS = {
 			api: "openai-completions",
 			provider: "opencode-go",
 			baseUrl: "https://opencode.ai/zen/go/v1",
+			compat: {"maxTokensField":"max_tokens"},
 			reasoning: true,
 			input: ["text"],
 			cost: {
@@ -8693,6 +8712,7 @@ export const MODELS = {
 			api: "openai-completions",
 			provider: "opencode-go",
 			baseUrl: "https://opencode.ai/zen/go/v1",
+			compat: {"maxTokensField":"max_tokens"},
 			reasoning: true,
 			input: ["text"],
 			cost: {
@@ -8710,6 +8730,7 @@ export const MODELS = {
 			api: "openai-completions",
 			provider: "opencode-go",
 			baseUrl: "https://opencode.ai/zen/go/v1",
+			compat: {"maxTokensField":"max_tokens"},
 			reasoning: true,
 			input: ["text", "image"],
 			cost: {
@@ -8727,7 +8748,7 @@ export const MODELS = {
 			api: "openai-completions",
 			provider: "opencode-go",
 			baseUrl: "https://opencode.ai/zen/go/v1",
-			compat: {"thinkingFormat":"deepseek","supportsReasoningEffort":false},
+			compat: {"thinkingFormat":"deepseek","supportsReasoningEffort":false,"maxTokensField":"max_tokens"},
 			reasoning: true,
 			thinkingLevelMap: {"minimal":null,"low":null,"medium":null},
 			input: ["text", "image"],
@@ -8746,6 +8767,7 @@ export const MODELS = {
 			api: "openai-completions",
 			provider: "opencode-go",
 			baseUrl: "https://opencode.ai/zen/go/v1",
+			compat: {"maxTokensField":"max_tokens"},
 			reasoning: true,
 			input: ["text", "image"],
 			cost: {
@@ -8763,6 +8785,7 @@ export const MODELS = {
 			api: "openai-completions",
 			provider: "opencode-go",
 			baseUrl: "https://opencode.ai/zen/go/v1",
+			compat: {"maxTokensField":"max_tokens"},
 			reasoning: true,
 			input: ["text"],
 			cost: {
@@ -8797,6 +8820,7 @@ export const MODELS = {
 			api: "openai-completions",
 			provider: "opencode-go",
 			baseUrl: "https://opencode.ai/zen/go/v1",
+			compat: {"maxTokensField":"max_tokens"},
 			reasoning: true,
 			input: ["text"],
 			cost: {
@@ -8831,7 +8855,7 @@ export const MODELS = {
 			api: "openai-completions",
 			provider: "opencode-go",
 			baseUrl: "https://opencode.ai/zen/go/v1",
-			compat: {"thinkingFormat":"qwen"},
+			compat: {"thinkingFormat":"qwen","maxTokensField":"max_tokens"},
 			reasoning: true,
 			input: ["text", "image"],
 			cost: {
@@ -13281,9 +13305,9 @@ export const MODELS = {
 			api: "openai-completions",
 			provider: "together",
 			baseUrl: "https://api.together.ai/v1",
-			compat: {"supportsStore":false,"supportsDeveloperRole":false,"supportsReasoningEffort":false,"maxTokensField":"max_tokens","supportsStrictMode":false,"supportsLongCacheRetention":false},
+			compat: {"supportsStore":false,"supportsDeveloperRole":false,"supportsReasoningEffort":false,"maxTokensField":"max_tokens","supportsStrictMode":false,"supportsLongCacheRetention":false,"thinkingFormat":"together"},
 			reasoning: true,
-			thinkingLevelMap: {"off":null,"minimal":null,"low":null,"medium":null},
+			thinkingLevelMap: {"minimal":null,"low":null,"medium":null},
 			input: ["text"],
 			cost: {
 				input: 0.3,
@@ -14049,7 +14073,9 @@ export const MODELS = {
 			api: "anthropic-messages",
 			provider: "vercel-ai-gateway",
 			baseUrl: "https://ai-gateway.vercel.sh",
+			compat: {"forceAdaptiveThinking":true},
 			reasoning: true,
+			thinkingLevelMap: {"xhigh":"xhigh"},
 			input: ["text", "image"],
 			cost: {
 				input: 10,
