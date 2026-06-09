@@ -8477,6 +8477,23 @@ export const MODELS = {
 			contextWindow: 1000000,
 			maxTokens: 128000,
 		} satisfies Model<"openai-completions">,
+		"north-mini-code-free": {
+			id: "north-mini-code-free",
+			name: "North Mini Code Free",
+			api: "openai-completions",
+			provider: "opencode",
+			baseUrl: "https://opencode.ai/zen/v1",
+			reasoning: true,
+			input: ["text"],
+			cost: {
+				input: 0,
+				output: 0,
+				cacheRead: 0,
+				cacheWrite: 0,
+			},
+			contextWindow: 256000,
+			maxTokens: 64000,
+		} satisfies Model<"openai-completions">,
 		"qwen3.5-plus": {
 			id: "qwen3.5-plus",
 			name: "Qwen3.5 Plus",
