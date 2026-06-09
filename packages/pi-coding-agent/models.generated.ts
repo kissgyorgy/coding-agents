@@ -16390,7 +16390,7 @@ export const MODELS = {
 				cacheRead: 0.2,
 				cacheWrite: 0,
 			},
-			contextWindow: 2000000,
+			contextWindow: 1000000,
 			maxTokens: 30000,
 		} satisfies Model<"openai-completions">,
 		"grok-4.20-0309-reasoning": {
@@ -16407,7 +16407,7 @@ export const MODELS = {
 				cacheRead: 0.2,
 				cacheWrite: 0,
 			},
-			contextWindow: 2000000,
+			contextWindow: 1000000,
 			maxTokens: 30000,
 		} satisfies Model<"openai-completions">,
 		"grok-4.3": {
