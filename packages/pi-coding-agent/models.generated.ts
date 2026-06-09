@@ -11,7 +11,7 @@ export const MODELS = {
 			api: "bedrock-converse-stream",
 			provider: "amazon-bedrock",
 			baseUrl: "https://bedrock-runtime.us-east-1.amazonaws.com",
-			reasoning: false,
+			reasoning: true,
 			input: ["text", "image"],
 			cost: {
 				input: 0.33,
@@ -1131,7 +1131,7 @@ export const MODELS = {
 			api: "bedrock-converse-stream",
 			provider: "amazon-bedrock",
 			baseUrl: "https://bedrock-runtime.us-east-1.amazonaws.com",
-			reasoning: false,
+			reasoning: true,
 			input: ["text"],
 			cost: {
 				input: 0.15,
@@ -1148,7 +1148,7 @@ export const MODELS = {
 			api: "bedrock-converse-stream",
 			provider: "amazon-bedrock",
 			baseUrl: "https://bedrock-runtime.us-east-1.amazonaws.com",
-			reasoning: false,
+			reasoning: true,
 			input: ["text"],
 			cost: {
 				input: 0.15,
@@ -1165,7 +1165,7 @@ export const MODELS = {
 			api: "bedrock-converse-stream",
 			provider: "amazon-bedrock",
 			baseUrl: "https://bedrock-runtime.us-east-1.amazonaws.com",
-			reasoning: false,
+			reasoning: true,
 			input: ["text"],
 			cost: {
 				input: 0.07,
@@ -1182,7 +1182,7 @@ export const MODELS = {
 			api: "bedrock-converse-stream",
 			provider: "amazon-bedrock",
 			baseUrl: "https://bedrock-runtime.us-east-1.amazonaws.com",
-			reasoning: false,
+			reasoning: true,
 			input: ["text"],
 			cost: {
 				input: 0.07,
