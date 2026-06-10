@@ -9297,7 +9297,7 @@ export const MODELS = {
 				cacheRead: 0.135,
 				cacheWrite: 0,
 			},
-			contextWindow: 163840,
+			contextWindow: 131072,
 			maxTokens: 16384,
 		} satisfies Model<"openai-completions">,
 		"deepseek/deepseek-chat-v3.1": {
