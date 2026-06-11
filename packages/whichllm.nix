@@ -34,12 +34,12 @@ let
 in
 python3Packages.buildPythonApplication rec {
   pname = "whichllm";
-  version = "0.5.9";
+  version = "0.5.10";
   format = "pyproject";
 
   src = fetchPypi {
     inherit pname version;
-    hash = "sha256-NTYhJTz2NsxiDi9aLSLZk0qWGZZo4N10RfGhCF7ygsg=";
+    hash = "sha256-TtPAOEufChjbuIMuKcp8uCxzpnH4GNizANuY+kbj/lY=";
   };
 
   nativeBuildInputs = [
