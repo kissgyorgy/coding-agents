@@ -10596,23 +10596,6 @@ export const MODELS = {
 			contextWindow: 128000,
 			maxTokens: 128000,
 		} satisfies Model<"openai-completions">,
-		"nvidia/nemotron-nano-9b-v2": {
-			id: "nvidia/nemotron-nano-9b-v2",
-			name: "NVIDIA: Nemotron Nano 9B V2",
-			api: "openai-completions",
-			provider: "openrouter",
-			baseUrl: "https://openrouter.ai/api/v1",
-			reasoning: true,
-			input: ["text"],
-			cost: {
-				input: 0.04,
-				output: 0.16,
-				cacheRead: 0,
-				cacheWrite: 0,
-			},
-			contextWindow: 131072,
-			maxTokens: 16384,
-		} satisfies Model<"openai-completions">,
 		"nvidia/nemotron-nano-9b-v2:free": {
 			id: "nvidia/nemotron-nano-9b-v2:free",
 			name: "NVIDIA: Nemotron Nano 9B V2 (free)",
