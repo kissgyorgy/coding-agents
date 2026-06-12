@@ -12319,13 +12319,13 @@ export const MODELS = {
 			reasoning: true,
 			input: ["text", "image"],
 			cost: {
-				input: 0.28900000000000003,
-				output: 2.4,
+				input: 0.28700000000000003,
+				output: 3.1,
 				cacheRead: 0,
 				cacheWrite: 0,
 			},
 			contextWindow: 262144,
-			maxTokens: 131072,
+			maxTokens: 262140,
 		} satisfies Model<"openai-completions">,
 		"qwen/qwen3.6-35b-a3b": {
 			id: "qwen/qwen3.6-35b-a3b",
