@@ -7400,7 +7400,7 @@ export const MODELS = {
 				cacheRead: 0.25,
 				cacheWrite: 0,
 			},
-			contextWindow: 1050000,
+			contextWindow: 272000,
 			maxTokens: 128000,
 		} satisfies Model<"openai-responses">,
 		"gpt-5.4-mini": {
@@ -7472,7 +7472,7 @@ export const MODELS = {
 				cacheRead: 0.5,
 				cacheWrite: 0,
 			},
-			contextWindow: 1050000,
+			contextWindow: 272000,
 			maxTokens: 128000,
 		} satisfies Model<"openai-responses">,
 		"gpt-5.5-pro": {
@@ -7664,7 +7664,7 @@ export const MODELS = {
 				cacheRead: 0.25,
 				cacheWrite: 0,
 			},
-			contextWindow: 1000000,
+			contextWindow: 272000,
 			maxTokens: 128000,
 		} satisfies Model<"openai-codex-responses">,
 		"gpt-5.4-mini": {
@@ -7682,7 +7682,7 @@ export const MODELS = {
 				cacheRead: 0.075,
 				cacheWrite: 0,
 			},
-			contextWindow: 400000,
+			contextWindow: 272000,
 			maxTokens: 128000,
 		} satisfies Model<"openai-codex-responses">,
 		"gpt-5.5": {
@@ -7700,7 +7700,7 @@ export const MODELS = {
 				cacheRead: 0.5,
 				cacheWrite: 0,
 			},
-			contextWindow: 400000,
+			contextWindow: 272000,
 			maxTokens: 128000,
 		} satisfies Model<"openai-codex-responses">,
 	},
