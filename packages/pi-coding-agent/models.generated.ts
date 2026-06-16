@@ -12613,13 +12613,13 @@ export const MODELS = {
 			reasoning: true,
 			input: ["text"],
 			cost: {
-				input: 0.063,
-				output: 0.21,
-				cacheRead: 0.021,
+				input: 0.066,
+				output: 0.26,
+				cacheRead: 0.029,
 				cacheWrite: 0,
 			},
 			contextWindow: 262144,
-			maxTokens: 4096,
+			maxTokens: 262144,
 		} satisfies Model<"openai-completions">,
 		"thedrummer/rocinante-12b": {
 			id: "thedrummer/rocinante-12b",
