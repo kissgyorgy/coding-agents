@@ -10677,8 +10677,8 @@ export const MODELS = {
 			input: ["text"],
 			cost: {
 				input: 0.5,
-				output: 2.5,
-				cacheRead: 0.15,
+				output: 2.2,
+				cacheRead: 0.1,
 				cacheWrite: 0,
 			},
 			contextWindow: 1000000,
