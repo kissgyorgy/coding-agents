@@ -9370,6 +9370,23 @@ export const MODELS = {
 			contextWindow: 128000,
 			maxTokens: 4000,
 		} satisfies Model<"openai-completions">,
+		"cohere/north-mini-code:free": {
+			id: "cohere/north-mini-code:free",
+			name: "Cohere: North Mini Code (free)",
+			api: "openai-completions",
+			provider: "openrouter",
+			baseUrl: "https://openrouter.ai/api/v1",
+			reasoning: true,
+			input: ["text"],
+			cost: {
+				input: 0,
+				output: 0,
+				cacheRead: 0,
+				cacheWrite: 0,
+			},
+			contextWindow: 256000,
+			maxTokens: 64000,
+		} satisfies Model<"openai-completions">,
 		"deepseek/deepseek-chat": {
 			id: "deepseek/deepseek-chat",
 			name: "DeepSeek: DeepSeek V3",
