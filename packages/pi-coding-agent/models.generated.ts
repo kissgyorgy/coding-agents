@@ -9865,7 +9865,7 @@ export const MODELS = {
 				cacheWrite: 0,
 			},
 			contextWindow: 262144,
-			maxTokens: 32768,
+			maxTokens: 8192,
 		} satisfies Model<"openai-completions">,
 		"ibm-granite/granite-4.1-8b": {
 			id: "ibm-granite/granite-4.1-8b",
@@ -11511,7 +11511,7 @@ export const MODELS = {
 				cacheWrite: 0,
 			},
 			contextWindow: 131072,
-			maxTokens: 8192,
+			maxTokens: 32768,
 		} satisfies Model<"openai-completions">,
 		"openai/gpt-oss-safeguard-20b": {
 			id: "openai/gpt-oss-safeguard-20b",
@@ -12973,7 +12973,7 @@ export const MODELS = {
 				cacheWrite: 0,
 			},
 			contextWindow: 202752,
-			maxTokens: 131072,
+			maxTokens: 4096,
 		} satisfies Model<"openai-completions">,
 		"z-ai/glm-5.2": {
 			id: "z-ai/glm-5.2",
