@@ -9678,7 +9678,7 @@ export const MODELS = {
 				cacheWrite: 0.083333,
 			},
 			contextWindow: 1048576,
-			maxTokens: 65536,
+			maxTokens: 65535,
 		} satisfies Model<"openai-completions">,
 		"google/gemini-3.1-flash-lite": {
 			id: "google/gemini-3.1-flash-lite",
@@ -12973,7 +12973,7 @@ export const MODELS = {
 				cacheWrite: 0,
 			},
 			contextWindow: 202752,
-			maxTokens: 4096,
+			maxTokens: 131072,
 		} satisfies Model<"openai-completions">,
 		"z-ai/glm-5.2": {
 			id: "z-ai/glm-5.2",
@@ -14949,13 +14949,13 @@ export const MODELS = {
 			reasoning: false,
 			input: ["text"],
 			cost: {
-				input: 0.02,
-				output: 0.04,
+				input: 0.15,
+				output: 0.15,
 				cacheRead: 0,
 				cacheWrite: 0,
 			},
-			contextWindow: 131072,
-			maxTokens: 131072,
+			contextWindow: 128000,
+			maxTokens: 128000,
 		} satisfies Model<"anthropic-messages">,
 		"mistral/mistral-small": {
 			id: "mistral/mistral-small",
