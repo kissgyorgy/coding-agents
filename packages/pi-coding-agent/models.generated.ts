@@ -11819,6 +11819,23 @@ export const MODELS = {
 			contextWindow: 131072,
 			maxTokens: 16384,
 		} satisfies Model<"openai-completions">,
+		"qwen/qwen-2.5-7b-instruct": {
+			id: "qwen/qwen-2.5-7b-instruct",
+			name: "Qwen: Qwen2.5 7B Instruct",
+			api: "openai-completions",
+			provider: "openrouter",
+			baseUrl: "https://openrouter.ai/api/v1",
+			reasoning: false,
+			input: ["text"],
+			cost: {
+				input: 0.04,
+				output: 0.1,
+				cacheRead: 0,
+				cacheWrite: 0,
+			},
+			contextWindow: 131072,
+			maxTokens: 32768,
+		} satisfies Model<"openai-completions">,
 		"qwen/qwen-plus": {
 			id: "qwen/qwen-plus",
 			name: "Qwen: Qwen-Plus",
