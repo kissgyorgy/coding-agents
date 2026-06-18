@@ -10004,6 +10004,23 @@ export const MODELS = {
 			contextWindow: 256000,
 			maxTokens: 80000,
 		} satisfies Model<"openai-completions">,
+		"liquid/lfm-2.5-1.2b-thinking:free": {
+			id: "liquid/lfm-2.5-1.2b-thinking:free",
+			name: "LiquidAI: LFM2.5-1.2B-Thinking (free)",
+			api: "openai-completions",
+			provider: "openrouter",
+			baseUrl: "https://openrouter.ai/api/v1",
+			reasoning: true,
+			input: ["text"],
+			cost: {
+				input: 0,
+				output: 0,
+				cacheRead: 0,
+				cacheWrite: 0,
+			},
+			contextWindow: 32768,
+			maxTokens: 4096,
+		} satisfies Model<"openai-completions">,
 		"meta-llama/llama-3.1-70b-instruct": {
 			id: "meta-llama/llama-3.1-70b-instruct",
 			name: "Meta: Llama 3.1 70B Instruct",
