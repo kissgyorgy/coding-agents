@@ -9697,6 +9697,23 @@ export const MODELS = {
 			contextWindow: 1048576,
 			maxTokens: 65535,
 		} satisfies Model<"openai-completions">,
+		"google/gemini-3-pro-image": {
+			id: "google/gemini-3-pro-image",
+			name: "Google: Nano Banana Pro (Gemini 3 Pro Image)",
+			api: "openai-completions",
+			provider: "openrouter",
+			baseUrl: "https://openrouter.ai/api/v1",
+			reasoning: true,
+			input: ["text", "image"],
+			cost: {
+				input: 2,
+				output: 12,
+				cacheRead: 0.2,
+				cacheWrite: 0.375,
+			},
+			contextWindow: 65536,
+			maxTokens: 32768,
+		} satisfies Model<"openai-completions">,
 		"google/gemini-3.1-flash-lite": {
 			id: "google/gemini-3.1-flash-lite",
 			name: "Google: Gemini 3.1 Flash Lite",
