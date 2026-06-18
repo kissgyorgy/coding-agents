@@ -13067,13 +13067,13 @@ export const MODELS = {
 			reasoning: true,
 			input: ["text"],
 			cost: {
-				input: 1.4,
-				output: 4.4,
-				cacheRead: 0.7,
+				input: 1.2,
+				output: 4.2,
+				cacheRead: 0.2,
 				cacheWrite: 0,
 			},
 			contextWindow: 1048576,
-			maxTokens: 524288,
+			maxTokens: 16384,
 		} satisfies Model<"openai-completions">,
 		"~anthropic/claude-fable-latest": {
 			id: "~anthropic/claude-fable-latest",
