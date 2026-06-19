@@ -5761,7 +5761,7 @@ export const MODELS = {
 			cost: {
 				input: 0.3,
 				output: 0.9,
-				cacheRead: 0,
+				cacheRead: 0.03,
 				cacheWrite: 0,
 			},
 			contextWindow: 256000,
@@ -5778,7 +5778,7 @@ export const MODELS = {
 			cost: {
 				input: 0.4,
 				output: 2,
-				cacheRead: 0,
+				cacheRead: 0.04,
 				cacheWrite: 0,
 			},
 			contextWindow: 262144,
@@ -5795,7 +5795,7 @@ export const MODELS = {
 			cost: {
 				input: 0.4,
 				output: 2,
-				cacheRead: 0,
+				cacheRead: 0.04,
 				cacheWrite: 0,
 			},
 			contextWindow: 262144,
@@ -5812,7 +5812,7 @@ export const MODELS = {
 			cost: {
 				input: 0.4,
 				output: 2,
-				cacheRead: 0,
+				cacheRead: 0.04,
 				cacheWrite: 0,
 			},
 			contextWindow: 128000,
@@ -5829,7 +5829,7 @@ export const MODELS = {
 			cost: {
 				input: 0.4,
 				output: 2,
-				cacheRead: 0,
+				cacheRead: 0.04,
 				cacheWrite: 0,
 			},
 			contextWindow: 262144,
@@ -5846,7 +5846,7 @@ export const MODELS = {
 			cost: {
 				input: 0.1,
 				output: 0.3,
-				cacheRead: 0,
+				cacheRead: 0.01,
 				cacheWrite: 0,
 			},
 			contextWindow: 128000,
@@ -5863,7 +5863,7 @@ export const MODELS = {
 			cost: {
 				input: 0.1,
 				output: 0.3,
-				cacheRead: 0,
+				cacheRead: 0.01,
 				cacheWrite: 0,
 			},
 			contextWindow: 128000,
@@ -5897,7 +5897,7 @@ export const MODELS = {
 			cost: {
 				input: 2,
 				output: 5,
-				cacheRead: 0,
+				cacheRead: 0.2,
 				cacheWrite: 0,
 			},
 			contextWindow: 128000,
@@ -5914,7 +5914,7 @@ export const MODELS = {
 			cost: {
 				input: 0.5,
 				output: 1.5,
-				cacheRead: 0,
+				cacheRead: 0.05,
 				cacheWrite: 0,
 			},
 			contextWindow: 128000,
@@ -5931,7 +5931,7 @@ export const MODELS = {
 			cost: {
 				input: 0.04,
 				output: 0.04,
-				cacheRead: 0,
+				cacheRead: 0.004,
 				cacheWrite: 0,
 			},
 			contextWindow: 128000,
@@ -5948,7 +5948,7 @@ export const MODELS = {
 			cost: {
 				input: 0.1,
 				output: 0.1,
-				cacheRead: 0,
+				cacheRead: 0.01,
 				cacheWrite: 0,
 			},
 			contextWindow: 128000,
@@ -5965,7 +5965,7 @@ export const MODELS = {
 			cost: {
 				input: 2,
 				output: 6,
-				cacheRead: 0,
+				cacheRead: 0.2,
 				cacheWrite: 0,
 			},
 			contextWindow: 131072,
@@ -5982,7 +5982,7 @@ export const MODELS = {
 			cost: {
 				input: 0.5,
 				output: 1.5,
-				cacheRead: 0,
+				cacheRead: 0.05,
 				cacheWrite: 0,
 			},
 			contextWindow: 262144,
@@ -5999,7 +5999,7 @@ export const MODELS = {
 			cost: {
 				input: 0.5,
 				output: 1.5,
-				cacheRead: 0,
+				cacheRead: 0.05,
 				cacheWrite: 0,
 			},
 			contextWindow: 262144,
@@ -6016,7 +6016,7 @@ export const MODELS = {
 			cost: {
 				input: 0.4,
 				output: 2,
-				cacheRead: 0,
+				cacheRead: 0.04,
 				cacheWrite: 0,
 			},
 			contextWindow: 131072,
@@ -6033,7 +6033,7 @@ export const MODELS = {
 			cost: {
 				input: 0.4,
 				output: 2,
-				cacheRead: 0,
+				cacheRead: 0.04,
 				cacheWrite: 0,
 			},
 			contextWindow: 262144,
@@ -6050,7 +6050,7 @@ export const MODELS = {
 			cost: {
 				input: 1.5,
 				output: 7.5,
-				cacheRead: 0,
+				cacheRead: 0.15,
 				cacheWrite: 0,
 			},
 			contextWindow: 262144,
@@ -6084,7 +6084,7 @@ export const MODELS = {
 			cost: {
 				input: 0.4,
 				output: 2,
-				cacheRead: 0,
+				cacheRead: 0.04,
 				cacheWrite: 0,
 			},
 			contextWindow: 262144,
@@ -6101,7 +6101,7 @@ export const MODELS = {
 			cost: {
 				input: 0.15,
 				output: 0.15,
-				cacheRead: 0,
+				cacheRead: 0.015,
 				cacheWrite: 0,
 			},
 			contextWindow: 128000,
@@ -6118,7 +6118,7 @@ export const MODELS = {
 			cost: {
 				input: 0.1,
 				output: 0.3,
-				cacheRead: 0,
+				cacheRead: 0.01,
 				cacheWrite: 0,
 			},
 			contextWindow: 128000,
@@ -6135,7 +6135,7 @@ export const MODELS = {
 			cost: {
 				input: 0.15,
 				output: 0.6,
-				cacheRead: 0,
+				cacheRead: 0.015,
 				cacheWrite: 0,
 			},
 			contextWindow: 256000,
@@ -6152,7 +6152,7 @@ export const MODELS = {
 			cost: {
 				input: 0.15,
 				output: 0.6,
-				cacheRead: 0,
+				cacheRead: 0.015,
 				cacheWrite: 0,
 			},
 			contextWindow: 256000,
@@ -6169,7 +6169,7 @@ export const MODELS = {
 			cost: {
 				input: 0.25,
 				output: 0.25,
-				cacheRead: 0,
+				cacheRead: 0.025,
 				cacheWrite: 0,
 			},
 			contextWindow: 8000,
@@ -6186,7 +6186,7 @@ export const MODELS = {
 			cost: {
 				input: 0.15,
 				output: 0.15,
-				cacheRead: 0,
+				cacheRead: 0.015,
 				cacheWrite: 0,
 			},
 			contextWindow: 128000,
@@ -6203,7 +6203,7 @@ export const MODELS = {
 			cost: {
 				input: 2,
 				output: 6,
-				cacheRead: 0,
+				cacheRead: 0.2,
 				cacheWrite: 0,
 			},
 			contextWindow: 64000,
@@ -6220,7 +6220,7 @@ export const MODELS = {
 			cost: {
 				input: 0.7,
 				output: 0.7,
-				cacheRead: 0,
+				cacheRead: 0.07,
 				cacheWrite: 0,
 			},
 			contextWindow: 32000,
@@ -6237,7 +6237,7 @@ export const MODELS = {
 			cost: {
 				input: 0.15,
 				output: 0.15,
-				cacheRead: 0,
+				cacheRead: 0.015,
 				cacheWrite: 0,
 			},
 			contextWindow: 128000,
@@ -6254,7 +6254,7 @@ export const MODELS = {
 			cost: {
 				input: 2,
 				output: 6,
-				cacheRead: 0,
+				cacheRead: 0.2,
 				cacheWrite: 0,
 			},
 			contextWindow: 128000,
@@ -11748,6 +11748,23 @@ export const MODELS = {
 			},
 			contextWindow: 200000,
 			maxTokens: 4096,
+		} satisfies Model<"openai-completions">,
+		"openrouter/fusion": {
+			id: "openrouter/fusion",
+			name: "OpenRouter: Fusion",
+			api: "openai-completions",
+			provider: "openrouter",
+			baseUrl: "https://openrouter.ai/api/v1",
+			reasoning: true,
+			input: ["text"],
+			cost: {
+				input: 0,
+				output: 0,
+				cacheRead: 0,
+				cacheWrite: 0,
+			},
+			contextWindow: 1000000,
+			maxTokens: 30000,
 		} satisfies Model<"openai-completions">,
 		"openrouter/owl-alpha": {
 			id: "openrouter/owl-alpha",
