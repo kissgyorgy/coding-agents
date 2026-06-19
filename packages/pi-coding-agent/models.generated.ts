@@ -10590,13 +10590,13 @@ export const MODELS = {
 			reasoning: true,
 			input: ["text", "image"],
 			cost: {
-				input: 0.74,
-				output: 3.5,
-				cacheRead: 0.15,
+				input: 0.68,
+				output: 3.41,
+				cacheRead: 0.144,
 				cacheWrite: 0,
 			},
 			contextWindow: 262144,
-			maxTokens: 16384,
+			maxTokens: 262144,
 		} satisfies Model<"openai-completions">,
 		"nex-agi/nex-n2-pro:free": {
 			id: "nex-agi/nex-n2-pro:free",
@@ -15981,8 +15981,8 @@ export const MODELS = {
 			cost: {
 				input: 0.09,
 				output: 0.3,
-				cacheRead: 0,
-				cacheWrite: 0.02,
+				cacheRead: 0.02,
+				cacheWrite: 0,
 			},
 			contextWindow: 262114,
 			maxTokens: 262114,
