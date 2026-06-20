@@ -101,32 +101,6 @@ function notifyAgent(
       messageLines.push(`- ${describePath(item.filePath, cwd)}${reason}`);
     }
   }
-
-  if (messageLines.length === 0) return;
-
-  const changed = changedFiles.length > 0;
-
-  messageLines.push(
-    changed
-      ? "Please review these files and fix any unintended changes if needed."
-      : "Please review these files manually and adjust formatting if needed.",
-  );
-
-  pi.sendMessage(
-    {
-      customType: "post-edit-format",
-      content: messageLines.join("\n"),
-      display: false,
-      details: {
-        changedFiles: changedFiles.map((entry) => entry.filePath),
-        failedFiles,
-      },
-    },
-    {
-      deliverAs: "followUp",
-      triggerTurn: true,
-    },
-  );
 }
 
 function scheduleEndOfTurnFormatting(
