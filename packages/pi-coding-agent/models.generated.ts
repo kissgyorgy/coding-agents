@@ -9154,13 +9154,13 @@ export const MODELS = {
 			reasoning: true,
 			input: ["text"],
 			cost: {
-				input: 0.22,
-				output: 0.85,
+				input: 0.25,
+				output: 0.8,
 				cacheRead: 0.06,
 				cacheWrite: 0,
 			},
 			contextWindow: 262144,
-			maxTokens: 262144,
+			maxTokens: 80000,
 		} satisfies Model<"openai-completions">,
 		"arcee-ai/trinity-mini": {
 			id: "arcee-ai/trinity-mini",
@@ -13033,11 +13033,11 @@ export const MODELS = {
 			cost: {
 				input: 0.98,
 				output: 3.08,
-				cacheRead: 0.182,
+				cacheRead: 0.49,
 				cacheWrite: 0,
 			},
 			contextWindow: 202752,
-			maxTokens: 4096,
+			maxTokens: 65535,
 		} satisfies Model<"openai-completions">,
 		"z-ai/glm-5.2": {
 			id: "z-ai/glm-5.2",
