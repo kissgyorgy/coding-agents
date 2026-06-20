@@ -14,6 +14,11 @@ Enable Python with the latest Python version:
 
 ## uv Integration
 
+For Python projects using uv, enable both `uv.sync.enable` and `venv.enable`.
+`uv.sync.enable` installs dependencies from `pyproject.toml` / `uv.lock`, while
+`venv.enable` activates that virtual environment in `devenv shell` / direnv
+(`VIRTUAL_ENV` is set and the venv `bin` directory is added to `PATH`).
+
 ### Basic uv Setup
 
 Enable uv package manager:
@@ -23,6 +28,7 @@ Enable uv package manager:
   languages.python = {
     enable = true;
     uv.enable = true;
+    venv.enable = true;
   };
 }
 ```
@@ -40,11 +46,12 @@ For projects with `pyproject.toml`, enable `uv sync`:
       enable = true;
       sync.enable = true;
     };
+    venv.enable = true;
   };
 }
 ```
 
-This automatically runs `uv sync` when entering the shell, installing dependencies from `pyproject.toml` and `uv.lock`.
+This automatically runs `uv sync` when entering the shell, installing dependencies from `pyproject.toml` and `uv.lock`, and activates the resulting virtual environment.
 
 ### Advanced uv Configuration
 
@@ -60,38 +67,19 @@ This automatically runs `uv sync` when entering the shell, installing dependenci
         allExtras = true;  # Install all extras
         allGroups = true;  # Install all dependency groups
         # Specific extras/groups:
-        # extras = [ "dev" "test" ];
-        # groups = [ "dev" ];
+        extras = [ "dev" "test" ];
+        groups = [ "dev" ];
       };
     };
-  };
-}
-```
-
-## Python with Virtual Environment (venv)
-
-If not using uv, use traditional venv:
-
-```nix
-{
-  languages.python = {
-    enable = true;
-    version = "3.11";
-    venv = {
-      enable = true;
-      requirements = ''
-        django>=4.2
-        psycopg2-binary
-        python-dotenv
-      '';
-    };
+    venv.enable = true;
   };
 }
 ```
 
 ## Adding System-Level Native Libraries
 
-Some Python packages need native libraries (e.g., PostgreSQL development headers):
+Some Python packages need native libraries (e.g., PostgreSQL development
+headers, Pillow image libraries, etc.):
 
 ```nix
 { pkgs, ... }: {
@@ -112,44 +100,17 @@ Some Python packages need native libraries (e.g., PostgreSQL development headers
 }
 ```
 
-## Complete Python + uv Example
-
-```nix
-{ pkgs, ... }: {
-  languages.python = {
-    enable = true;
-    version = "3.12";
-    uv = {
-      enable = true;
-      sync.enable = true;
-    };
-    libraries = with pkgs; [
-      # Native dependencies
-      postgresql
-      stdenv.cc.cc.lib
-    ];
-  };
-
-  # Environment variables
-  env.PYTHONUNBUFFERED = "1";
-  env.DJANGO_SETTINGS_MODULE = "myproject.settings";
-
-  # Add development packages
-  packages = with pkgs; [
-    postgresql  # For psql command-line tool
-  ];
-}
-```
-
 ## Workflow with uv
 
 1. **Initialize a new project:**
+
    ```bash
    uv init myproject
    cd myproject
    ```
 
 2. **Add dependencies:**
+
    ```bash
    uv add django
    uv add psycopg2-binary
@@ -158,20 +119,21 @@ Some Python packages need native libraries (e.g., PostgreSQL development headers
 
 3. **Devenv will auto-sync on shell entry** when `uv.sync.enable = true`
 
-4. **Manual sync if needed:**
+4. **Devenv will activate the virtual environment** when `venv.enable = true`,
+   so bare commands like `python`, `django-admin`, and console scripts use
+   project dependencies.
+
+5. **Manual sync if needed:**
    ```bash
    uv sync
    ```
 
 ## Troubleshooting
 
-### Issue: uv uses system installation instead of Nix
-
-If you have uv installed globally, devenv might use it. To ensure Nix's uv is used, the skill configuration should handle this automatically. If issues persist, unset any UV environment variables.
-
 ### Issue: Native library not found
 
 Add the required library to `languages.python.libraries`. Common libraries:
+
 - PostgreSQL: `postgresql`
 - MySQL: `mysql80`
 - Image processing: `libjpeg`, `zlib`, `libpng`

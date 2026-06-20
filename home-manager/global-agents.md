@@ -17,12 +17,8 @@
 - NEVER run find on big directories like `/` or `/nix` or `~`!
   It would never complete and might even crash the terminal you are running in.
 
-- When running commands, NEVER prefix it with a sleep. If you expect something
-  to take long, write a script which polls the result.
-
-- Don't run linting, formatting or type and syntax checking, they will run
-  automatically by Pi and you will be notified every error when you finish.
-  Run tests and other types of checks/experiments to verify your work.
+- Linting, formatting or type and syntax checking, will run automatically,
+  no need to run them.
 
 
 # Temporary files
@@ -34,8 +30,8 @@
 
 - Never delete anything from `claudetmp/`
 
-- Don't write one-off scripts inline, write reusable scripts in files instead
-  and run them afterwards.
+- Always write **reusable scripts in files** and run them instead of writing
+  inline scripts on stdin.
 
 
 # File operations and paths
@@ -43,20 +39,30 @@
 - When you want to write the exact same file to a different place with the exact same content,
   use the `mv` command instead of the Write tool. This makes the move faster and more precise.
 
-- If you got a Windows Path like `C:\Users\walkman\Downloads\picture.png`, you are running in WSL2,
-  translate this to the WSL path: `/mnt/c/Users/walkman/Downloads/picture.png`.
+- If you got a Windows Path like `C:\Users\walkman\Downloads\picture.png`, 
+  you are running in WSL2, translate this to the WSL path:
+  `/mnt/c/Users/walkman/Downloads/picture.png`.
 
-- When you want to revert file changes you made, use git operations instead of editing the file again.
+- When you want to revert file changes you made, use git operations instead of
+  editing the file again.
 
 
 # Git
 
-- NEVER modify previous commits, only when explicitly asked by the user.
+- NEVER modify previous commits, reset or run desctructive git operationsm, only
+  when explicitly asked by the user.
 
 - When making commits, explain in details **WHY** you did what you did. What was
   the problem you solved, why a specific design decision was made. Everything
   that you know but cannot seen in the code. Make sure the most important
   details are explained in the commit message.
+
+- Group logical changes in commits and explain the changes as instructed
+  in the previous point.
+
+- Commit these changes as you go.
+
+- ALWAYS use git. If the directory is empty, run `git init` first.
 
 - No need to write in the commit message what tests were you running or the thing
   "works", that should be the default.

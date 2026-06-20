@@ -122,6 +122,7 @@ Key files devenv manages:
       enable = true;
       sync.enable = true;
     };
+    venv.enable = true;  # Activate the synced virtualenv in shell/direnv
     libraries = with pkgs; [ postgresql stdenv.cc.cc.lib ];
   };
 
@@ -188,6 +189,10 @@ devenv search <package>
 ```
 
 Ensure using nixpkgs-unstable in `devenv.yaml`.
+
+### Issue: Python virtualenv is not activated
+
+For Python projects using uv, set both `languages.python.uv.sync.enable = true` and `languages.python.venv.enable = true`. `uv.sync` installs dependencies; `venv.enable` activates the virtualenv so `python` and console scripts come from the project environment.
 
 ### Issue: Python package won't install
 

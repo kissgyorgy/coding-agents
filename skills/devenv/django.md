@@ -3,13 +3,12 @@
 # Django Workflow
 
 1. Initialize devenv (if not yet initialized): `devenv init`
-2. Configure `devenv.nix` as above
+2. Configure `devenv.nix` as above, including `languages.python.venv.enable = true`
 3. Update `devenv.yaml` to use nixpkgs-unstable
 4. Enter shell: `devenv shell`
 5. Add Django: `uv add django`
 6. Create project: `uv run django-admin startproject myproject .`
-9. In another terminal: `devenv shell` then `python manage.py migrate`
-
+7. In another terminal: `devenv shell` then `python manage.py migrate`
 
 ## Complete Django + PostgreSQL Environment
 
@@ -23,6 +22,7 @@
       enable = true;
       sync.enable = true;
     };
+    venv.enable = true;
     libraries = with pkgs; [
       postgresql
     ];
@@ -114,6 +114,7 @@ This starts both PostgreSQL and Django together.
       enable = true;
       sync.enable = true;
     };
+    venv.enable = true;
   };
 
   services = {
@@ -160,6 +161,7 @@ This starts both PostgreSQL and Django together.
     version = "3.12";
     uv.enable = true;
     uv.sync.enable = true;
+    venv.enable = true;
   };
 
   services.postgres = {
