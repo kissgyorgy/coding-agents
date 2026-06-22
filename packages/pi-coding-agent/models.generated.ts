@@ -15919,6 +15919,23 @@ export const MODELS = {
 			contextWindow: 200000,
 			maxTokens: 8000,
 		} satisfies Model<"anthropic-messages">,
+		"sakana/fugu-ultra": {
+			id: "sakana/fugu-ultra",
+			name: "Fugu Ultra",
+			api: "anthropic-messages",
+			provider: "vercel-ai-gateway",
+			baseUrl: "https://ai-gateway.vercel.sh",
+			reasoning: true,
+			input: ["text", "image"],
+			cost: {
+				input: 5,
+				output: 30,
+				cacheRead: 0.5,
+				cacheWrite: 0,
+			},
+			contextWindow: 1000000,
+			maxTokens: 1000000,
+		} satisfies Model<"anthropic-messages">,
 		"stepfun/step-3.5-flash": {
 			id: "stepfun/step-3.5-flash",
 			name: "StepFun 3.5 Flash",
