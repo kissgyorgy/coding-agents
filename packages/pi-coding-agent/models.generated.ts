@@ -10522,12 +10522,12 @@ export const MODELS = {
 			input: ["text", "image"],
 			cost: {
 				input: 0.66,
-				output: 3.5,
-				cacheRead: 0.33,
+				output: 3.41,
+				cacheRead: 0.144,
 				cacheWrite: 0,
 			},
 			contextWindow: 262144,
-			maxTokens: 65535,
+			maxTokens: 262144,
 		} satisfies Model<"openai-completions">,
 		"moonshotai/kimi-k2.7-code": {
 			id: "moonshotai/kimi-k2.7-code",
@@ -13153,12 +13153,12 @@ export const MODELS = {
 			input: ["text", "image"],
 			cost: {
 				input: 0.66,
-				output: 3.5,
-				cacheRead: 0.33,
+				output: 3.41,
+				cacheRead: 0.144,
 				cacheWrite: 0,
 			},
 			contextWindow: 262144,
-			maxTokens: 65535,
+			maxTokens: 262144,
 		} satisfies Model<"openai-completions">,
 		"~openai/gpt-latest": {
 			id: "~openai/gpt-latest",
