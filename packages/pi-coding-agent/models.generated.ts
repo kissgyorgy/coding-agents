@@ -13024,6 +13024,23 @@ export const MODELS = {
 			contextWindow: 1048576,
 			maxTokens: 4096,
 		} satisfies Model<"openai-completions">,
+		"z-ai/glm-5v-turbo": {
+			id: "z-ai/glm-5v-turbo",
+			name: "Z.ai: GLM 5V Turbo",
+			api: "openai-completions",
+			provider: "openrouter",
+			baseUrl: "https://openrouter.ai/api/v1",
+			reasoning: true,
+			input: ["text", "image"],
+			cost: {
+				input: 1.2,
+				output: 4,
+				cacheRead: 0.24,
+				cacheWrite: 0,
+			},
+			contextWindow: 202752,
+			maxTokens: 131072,
+		} satisfies Model<"openai-completions">,
 		"~anthropic/claude-fable-latest": {
 			id: "~anthropic/claude-fable-latest",
 			name: "Anthropic: Claude Fable Latest",
