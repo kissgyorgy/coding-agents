@@ -4,7 +4,7 @@ let
   sources = {
     x86_64-linux = {
       asset = "Linux_x86_64";
-      hash = "sha256-wUTvCUETd5zbOnqcMnrpXuwvgwHntHrkFiTXXmyx6Dg=";
+      hash = "sha256-dzr3CNXLm/iWk0M1WJ6Uqgu3K5uKkY2fcWBmOoBqP4Q=";
     };
     aarch64-darwin = {
       asset = "Darwin_arm64";
@@ -15,7 +15,7 @@ let
 in
 stdenv.mkDerivation rec {
   pname = "crush";
-  version = "0.79.1";
+  version = "0.80.0";
 
   src = fetchurl {
     url = "https://github.com/charmbracelet/crush/releases/download/v${version}/crush_${version}_${source.asset}.tar.gz";
