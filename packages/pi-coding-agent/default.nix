@@ -1,7 +1,7 @@
 { lib, buildNpmPackage, callPackage, fetchFromGitHub, nodejs_22, makeBinaryWrapper, autoPatchelfHook ? null, stdenv, libcap_ng }:
 
 let
-  modelsDate = "20260626";
+  modelsDate = "20260627";
   fetchExtensionDeps = callPackage ./fetch-extension-deps.nix { };
 in
 
