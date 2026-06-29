@@ -12,7 +12,7 @@ let
   sources = {
     x86_64-linux = {
       target = "x86_64-unknown-linux-musl";
-      hash = "sha256-+WgT9BaStNiuRNCBIWWi/MQpGW6zSB9rwiGv3slqF/g=";
+      hash = "sha256-8KxDdRxtOympc6hgqN5SitecsgzBKWYRkwo9XJHd75U=";
     };
     aarch64-darwin = {
       target = "aarch64-apple-darwin";
@@ -23,7 +23,7 @@ let
 in
 stdenv.mkDerivation rec {
   pname = "codex";
-  version = "rust-v0.142.3";
+  version = "rust-v0.142.4";
 
   src = fetchurl {
     url = "https://github.com/openai/codex/releases/download/${version}/codex-${source.target}.tar.gz";
