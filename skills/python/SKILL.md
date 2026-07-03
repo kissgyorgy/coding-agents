@@ -17,12 +17,12 @@ description: Write clean, readable Pythonic code. Use this skill any time you wr
 # Type hints
 
 - ALWAYS type hint every function and method signature precisely even in tests.
-- "" -> None" return values are not necessary, they are just noise.
+- NEVER write "-> None" type hint for return values, they are not necessary.
 - No need to type hint variables from functions call return values inside function bodies, they are inferred from the method return type,
   except extreme cases when the type is a huge help or a generic and it's concrete type cannot be determined.
-- Only use APIs, class names, variables or objects which you already read or
-  know exist for sure.
+- Only use APIs, class names, variables or objects which you already read or know exist for sure.
 - Use the new pipe operator for `Optional` variables like this: `value | None`
+- Use `Any` for "all types" instead of `object`.
 
 # Testing
 
