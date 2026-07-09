@@ -9,6 +9,8 @@ import type { AutocompleteSuggestions } from "@earendil-works/pi-tui";
 
 const STATE_ENTRY = "codex-fast";
 const SETTINGS_PATH = join(getAgentDir(), "codex-fast.json");
+const FAST_MODEL_LABEL = "GPT-5.5/5.6 Codex";
+const FAST_MODEL_HINT = "openai-codex/gpt-5.5 or openai-codex/gpt-5.6-*";
 
 interface FastState {
   enabled: boolean;
@@ -63,8 +65,18 @@ function readEntryFastState(
   );
 }
 
-function isGpt55Codex(ctx: Pick<ExtensionContext, "model">): boolean {
-  return ctx.model?.provider === "openai-codex" && ctx.model.id === "gpt-5.5";
+function isFastCodexModelId(modelId: unknown): modelId is string {
+  return (
+    modelId === "gpt-5.5" ||
+    modelId === "gpt-5.6" ||
+    (typeof modelId === "string" && modelId.startsWith("gpt-5.6-"))
+  );
+}
+
+function isFastCodexModel(ctx: Pick<ExtensionContext, "model">): boolean {
+  return (
+    ctx.model?.provider === "openai-codex" && isFastCodexModelId(ctx.model.id)
+  );
 }
 
 function filterFastCommandSuggestions(
@@ -89,7 +101,7 @@ export default function codexFastExtension(pi: ExtensionAPI): void {
   }
 
   function updateStatus(ctx: ExtensionContext): void {
-    fastEligible = isGpt55Codex(ctx);
+    fastEligible = isFastCodexModel(ctx);
 
     if (!fastEligible) {
       ctx.ui.setStatus("codex-fast", undefined);
@@ -105,13 +117,13 @@ export default function codexFastExtension(pi: ExtensionAPI): void {
   }
 
   pi.registerCommand("fast", {
-    description: "Toggle GPT-5.5 Codex Fast mode (priority service tier)",
+    description: `Toggle ${FAST_MODEL_LABEL} Fast mode (priority service tier)`,
     handler: async (_args, ctx) => {
       updateStatus(ctx);
 
       if (!fastEligible) {
         ctx.ui.notify(
-          "/fast is only available for openai-codex/gpt-5.5",
+          `/fast is only available for ${FAST_MODEL_HINT}`,
           "warning",
         );
         return;
@@ -121,7 +133,7 @@ export default function codexFastExtension(pi: ExtensionAPI): void {
       persistState();
       updateStatus(ctx);
       ctx.ui.notify(
-        `GPT-5.5 Codex Fast mode ${fastEnabled ? "enabled" : "disabled"}`,
+        `${FAST_MODEL_LABEL} Fast mode ${fastEnabled ? "enabled" : "disabled"}`,
         "info",
       );
     },
@@ -180,9 +192,9 @@ export default function codexFastExtension(pi: ExtensionAPI): void {
   });
 
   pi.on("before_provider_request", (event, ctx) => {
-    if (!fastEnabled || !isGpt55Codex(ctx)) return;
+    if (!fastEnabled || !isFastCodexModel(ctx)) return;
     if (!isObject(event.payload)) return;
-    if (event.payload.model !== "gpt-5.5") return;
+    if (!isFastCodexModelId(event.payload.model)) return;
 
     return {
       ...event.payload,
