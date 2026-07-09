@@ -13,10 +13,12 @@ let
     x86_64-linux = {
       target = "x86_64-unknown-linux-musl";
       hash = "sha256-cliD/CCrSvMHKCmqoO320SwhYjj59zFaZla5UPsFyLs=";
+      codeModeHostHash = "sha256-JtnGXFqUfCv0iVE+9/geAnsMltwV4ngd5u7V4CoYmT0=";
     };
     aarch64-darwin = {
       target = "aarch64-apple-darwin";
       hash = "sha256-8GggLoqJjCQMjAaEAbzNMLp7VvYfX/zRSD1UXUeq89U=";
+      codeModeHostHash = "sha256-bPkoJDC+/lQTacfLKARgSn8N2UFvOjJB42dtsiAiokY=";
     };
   };
   source = sources.${stdenv.hostPlatform.system} or (throw "codex is not supported on ${stdenv.hostPlatform.system}");
@@ -28,6 +30,11 @@ stdenv.mkDerivation rec {
   src = fetchurl {
     url = "https://github.com/openai/codex/releases/download/${version}/codex-${source.target}.tar.gz";
     hash = source.hash;
+  };
+
+  codeModeHostSrc = fetchurl {
+    url = "https://github.com/openai/codex/releases/download/${version}/codex-code-mode-host-${source.target}.tar.gz";
+    hash = source.codeModeHostHash;
   };
 
   nativeBuildInputs = lib.optionals stdenv.hostPlatform.isLinux [ autoPatchelfHook ];
@@ -42,6 +49,8 @@ stdenv.mkDerivation rec {
     runHook preInstall
 
     install -Dm755 codex-${source.target} $out/bin/codex
+    tar -xzf ${codeModeHostSrc}
+    install -Dm755 codex-code-mode-host-${source.target} $out/bin/codex-code-mode-host
 
     runHook postInstall
   '';
