@@ -2,13 +2,13 @@
 
 rustPlatform.buildRustPackage rec {
   pname = "llmserve";
-  version = "0.0.8";
+  version = "0.0.10";
 
   src = fetchFromGitHub {
     owner = "AlexsJones";
     repo = "llmserve";
     rev = "v${version}";
-    hash = "sha256-j4ko8AkrIOWlM1Tkl/pGMI1PzQc6yImCAZXEmO/NBko=";
+    hash = "sha256-V0DtCjTQhgfO/WQy/OZc2ayDY9nl2YzstCnsoRAJDFo=";
   };
 
   cargoLock.lockFile = "${src}/Cargo.lock";
