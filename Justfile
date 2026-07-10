@@ -61,7 +61,50 @@ update-claude-code:
     fi
     git add -- packages/claude-code.nix
     git commit -m "$message"
-update-codex: (_update-pkg "codex" "openai/codex" "" "true")
+update-codex:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    pkg="codex"
+    repo="openai/codex"
+    pkg_file="packages/codex.nix"
+    tag=$(gh release list --repo "$repo" --exclude-pre-releases --limit 1 --json tagName -q '.[0].tagName')
+    latest=${tag#v}
+    current=$(nix eval --raw .#"$pkg".version)
+
+    asset_count=$(gh release view "$tag" --repo "$repo" --json assets -q '.assets | length')
+    if [[ "$asset_count" == "0" ]]; then
+        echo "$pkg: release $tag has no assets, skipping"
+        exit 0
+    fi
+
+    base_url="https://github.com/$repo/releases/download/$tag"
+    prefetch() {
+        nix store prefetch-file --json "$base_url/$1" | jq -r .hash
+    }
+
+    linux_hash=$(prefetch codex-x86_64-unknown-linux-musl.tar.gz)
+    linux_code_mode_host_hash=$(prefetch codex-code-mode-host-x86_64-unknown-linux-musl.tar.gz)
+    darwin_hash=$(prefetch codex-aarch64-apple-darwin.tar.gz)
+    darwin_code_mode_host_hash=$(prefetch codex-code-mode-host-aarch64-apple-darwin.tar.gz)
+
+    sed -i 's/version = "[^"]*";/version = "'"$latest"'";/' "$pkg_file"
+    sed -i '/x86_64-linux = {/,/};/ s|hash = ".*";|hash = "'"$linux_hash"'";|' "$pkg_file"
+    sed -i '/x86_64-linux = {/,/};/ s|codeModeHostHash = ".*";|codeModeHostHash = "'"$linux_code_mode_host_hash"'";|' "$pkg_file"
+    sed -i '/aarch64-darwin = {/,/};/ s|hash = ".*";|hash = "'"$darwin_hash"'";|' "$pkg_file"
+    sed -i '/aarch64-darwin = {/,/};/ s|codeModeHostHash = ".*";|codeModeHostHash = "'"$darwin_code_mode_host_hash"'";|' "$pkg_file"
+
+    if git diff --quiet -- "$pkg_file"; then
+        echo "$pkg: already at $current with current hashes"
+        exit 0
+    fi
+
+    if [[ "$current" == "$latest" ]]; then
+        message="$pkg: refresh $latest hashes"
+    else
+        message="$pkg: $current -> $latest"
+    fi
+    git add -- "$pkg_file"
+    git commit -m "$message"
 update-gemini-cli: (_update-pkg "gemini-cli" "google-gemini/gemini-cli" "" "true")
 update-crush: (_update-pkg "crush" "charmbracelet/crush" "" "true")
 update-hermes-agent:
