@@ -13,7 +13,7 @@ let
     x86_64-linux = {
       target = "x86_64-unknown-linux-musl";
       hash = "sha256-hAka4gxl/MfUEg25fRvVfX/435x2Cft4HHjC671PWig=";
-      codeModeHostHash = "sha256-JtnGXFqUfCv0iVE+9/geAnsMltwV4ngd5u7V4CoYmT0=";
+      codeModeHostHash = "sha256-GJrd8L4WqEaVQJMceKDSdnX2TgX2WaZcfVWBODg90l8=";
     };
     aarch64-darwin = {
       target = "aarch64-apple-darwin";
