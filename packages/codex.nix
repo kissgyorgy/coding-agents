@@ -17,8 +17,8 @@ let
     };
     aarch64-darwin = {
       target = "aarch64-apple-darwin";
-      hash = "sha256-8GggLoqJjCQMjAaEAbzNMLp7VvYfX/zRSD1UXUeq89U=";
-      codeModeHostHash = "sha256-bPkoJDC+/lQTacfLKARgSn8N2UFvOjJB42dtsiAiokY=";
+      hash = "sha256-iOcqyL0wgV99GOYtrDM9wgzjrRy6lL4WSaGXfdm/27g=";
+      codeModeHostHash = "sha256-AK2hytz03pE91Ech8mGCqwNoagRW2urjJIKfuvUNKJQ=";
     };
   };
   source = sources.${stdenv.hostPlatform.system} or (throw "codex is not supported on ${stdenv.hostPlatform.system}");
