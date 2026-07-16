@@ -113,7 +113,7 @@ update-whichllm: (_update-pkg "whichllm" "Andyyyy64/whichllm")
 update-llmfit: (_update-pkg "llmfit" "AlexsJones/llmfit")
 update-llmserve: (_update-pkg "llmserve" "AlexsJones/llmserve")
 
-update-pi-coding-agent: (_update-pkg "pi-coding-agent" "earendil-works/pi" "_pi-post-update") update-pi-models
+update-pi-coding-agent: (_update-pkg "pi-coding-agent" "earendil-works/pi" "_pi-post-update")
 
 _pi-post-update:
     #!/usr/bin/env bash
@@ -121,9 +121,6 @@ _pi-post-update:
     pkg_dir="packages/pi-coding-agent"
     src=$(nix build .#pi-coding-agent.src --no-link --print-out-paths)
     cp "$src/package-lock.json" "$pkg_dir/package-lock.generated.json"
-    cp "$src/packages/ai/src/models.generated.ts" "$pkg_dir/models.generated.ts"
-    today=$(date +%Y%m%d)
-    sed -i "s/modelsDate = \"[0-9]*\"/modelsDate = \"$today\"/" "$pkg_dir/default.nix"
 
     sed -i 's/npmDepsHash = "sha256-[^"]*";/npmDepsHash = lib.fakeHash;/' "$pkg_dir/default.nix"
     set +e
@@ -171,34 +168,3 @@ _update-pkg pkg repo pre_commit="" check_assets="":
     fi
     git add -- packages/"$pkg"*
     git commit -m "$pkg: $current -> $latest"
-
-# Update pi-coding-agent model definitions from upstream APIs
-update-pi-models:
-    #!/usr/bin/env bash
-    set -euo pipefail
-    pkg_dir="packages/pi-coding-agent"
-    src=$(nix build .#pi-coding-agent.src --no-link --print-out-paths)
-
-    tmpdir=$(mktemp -d)
-    trap "rm -rf $tmpdir" EXIT
-    cp -r "$src/." "$tmpdir/pi"
-    chmod -R u+w "$tmpdir/pi"
-
-    echo "Installing dependencies..."
-    cd "$tmpdir/pi"
-    npm ci --ignore-scripts
-
-    echo "Generating models..."
-    npm run --prefix packages/ai generate-models
-
-    cp packages/ai/src/models.generated.ts "$OLDPWD/$pkg_dir/models.generated.ts"
-    cd "$OLDPWD"
-
-    today=$(date +%Y%m%d)
-    sed -i "s/modelsDate = \"[0-9]*\"/modelsDate = \"$today\"/" "$pkg_dir/default.nix"
-
-    if ! git diff --quiet -- "$pkg_dir"; then
-        git add -- "$pkg_dir"
-        git commit -m "pi-coding-agent: update generated models"
-    fi
-    echo "Updated models.generated.ts ($(nix eval --raw .#pi-coding-agent.version))"

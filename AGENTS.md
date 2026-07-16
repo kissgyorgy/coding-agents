@@ -50,7 +50,7 @@ Each `.nix` file is a standalone Nix derivation that downloads a pre-built binar
 - **AppImage**: `emdash.nix` — extract and wrap AppImage with Wayland flags
 
 `pi-coding-agent/` is a subdirectory (not a single `.nix` file) because it also
-ships a `models.generated.ts` file updated from upstream.
+ships a generated package lock and a helper derivation for extension dependencies.
 
 Some packages exist in `packages/` but are not yet wired into `flake.nix`
 (e.g. `emdash.nix`, `pi-agent/`).

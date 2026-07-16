@@ -1,12 +1,11 @@
 { lib, buildNpmPackage, callPackage, fetchFromGitHub, nodejs_22, makeBinaryWrapper, autoPatchelfHook ? null, stdenv, libcap_ng }:
 
 let
-  modelsDate = "20260716";
   fetchExtensionDeps = callPackage ./fetch-extension-deps.nix { };
 in
 
 buildNpmPackage rec {
-  pname = "pi-coding-agent-models-${modelsDate}";
+  pname = "pi-coding-agent";
   version = "0.80.9";
 
   src = fetchFromGitHub {
@@ -35,13 +34,7 @@ buildNpmPackage rec {
     cp ${./package-lock.generated.json} $sourceRoot/package-lock.json
   '';
 
-  # Replace upstream models with our freshly generated ones.
-  postPatch = ''
-    cp ${./models.generated.ts} packages/ai/src/models.generated.ts
-  '';
-
   # Build workspace packages in dependency order: tui -> ai -> agent -> coding-agent
-  # Skip generate-models (needs network) — our local models.generated.ts is used instead
   npmBuildScript = "none";
   buildPhase = ''
     runHook preBuild
