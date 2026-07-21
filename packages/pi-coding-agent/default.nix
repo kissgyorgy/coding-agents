@@ -1,12 +1,17 @@
-{ lib, buildNpmPackage, callPackage, fetchFromGitHub, nodejs_22, makeBinaryWrapper, autoPatchelfHook ? null, stdenv, libcap_ng }:
+{ lib, buildNpmPackage, callPackage, fetchFromGitHub, fetchurl, nodejs_22, makeBinaryWrapper, autoPatchelfHook ? null, stdenv, libcap_ng }:
 
 let
+  version = "0.81.0";
   fetchExtensionDeps = callPackage ./fetch-extension-deps.nix { };
+  piAiNpm = fetchurl {
+    url = "https://registry.npmjs.org/@earendil-works/pi-ai/-/pi-ai-${version}.tgz";
+    hash = "sha512-n3lDV1Px/2BOp86rUJkoHcXuQ6uf7711VEtSjE5gTwrnPeMAEjzV3LnbQ3wTF9bUxl253Igi3U35U1CMF5POng==";
+  };
 in
 
 buildNpmPackage rec {
   pname = "pi-coding-agent";
-  version = "0.81.0";
+  inherit version;
 
   src = fetchFromGitHub {
     owner = "earendil-works";
@@ -32,6 +37,15 @@ buildNpmPackage rec {
   # immediately after unpacking, before the hook validates and installs deps.
   postUnpack = ''
     cp ${./package-lock.generated.json} $sourceRoot/package-lock.json
+
+    # Provider model data is generated during release and excluded from Git.
+    # Restore the matching snapshot from the published pi-ai package so the
+    # build stays offline and deterministic.
+    mkdir -p "$sourceRoot/packages/ai/src/providers/data"
+    tar -xzf ${piAiNpm} \
+      --strip-components=4 \
+      -C "$sourceRoot/packages/ai/src/providers/data" \
+      package/dist/providers/data
   '';
 
   # Build workspace packages in dependency order: tui -> ai -> agent -> coding-agent
