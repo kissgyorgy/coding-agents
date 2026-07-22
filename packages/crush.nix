@@ -8,7 +8,7 @@ let
     };
     aarch64-darwin = {
       asset = "Darwin_arm64";
-      hash = "sha256-ZeDKDTtMsdKFNnSvKBTlSltasFI6MBSYDfibLrDfccE=";
+      hash = "sha256-JQ1kdcy2Jf3pkkAg1zDxzmSDgLW55lDRv40zAtcMvV8=";
     };
   };
   source = sources.${stdenv.hostPlatform.system} or (throw "crush is not supported on ${stdenv.hostPlatform.system}");
