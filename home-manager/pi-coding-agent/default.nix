@@ -36,6 +36,9 @@ in
       typescript
       gopls
       go
+      rust-analyzer
+      cargo
+      rustc
     ] ++ lib.optionals pkgs.stdenv.hostPlatform.isLinux [
       wl-clipboard
     ];

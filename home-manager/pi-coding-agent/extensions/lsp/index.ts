@@ -115,7 +115,7 @@ export default function (pi: ExtensionAPI) {
     label: "LSP",
     description: `Language Server Protocol tool. Starts LSP servers on demand and provides editor-like features: go-to-definition, find references, rename symbols, list document/workspace symbols, completions, and diagnostics. Supported languages: ${getSupportedLanguages().join(", ")}. Line and character numbers are 1-based. Both 'definition' and 'references' support 'query' to look up symbols by name without file/position.`,
     promptSnippet:
-      "LSP operations (definition, references, rename, symbols, diagnostics) for nix, python, typescript, and go",
+      "LSP operations (definition, references, rename, symbols, diagnostics) for nix, python, typescript, go, and rust",
     promptGuidelines: [
       "ALWAYS use the lsp tool FOR ANY coding related action instead grep-based approaches.",
       "IMPORTANT: USE lsp tool instead of read or ripgrep for searching code snippets, functions, variables or symbols in code.",

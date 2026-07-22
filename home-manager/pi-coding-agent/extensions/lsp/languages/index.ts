@@ -34,17 +34,27 @@ export {
   languageIdForPath as goLanguageId,
   workspaceMarkers as goWorkspaceMarkers,
 } from "./go";
+export {
+  languageId as rust,
+  getConfig as rustConfig,
+  getWorkspaceRoot as rustWorkspaceRoot,
+  fileExtensions as rustExtensions,
+  languageIdForPath as rustLanguageId,
+  workspaceMarkers as rustWorkspaceMarkers,
+} from "./rust";
 
 import * as nix from "./nix";
 import * as python from "./python";
 import * as typescript from "./typescript";
 import * as go from "./go";
+import * as rust from "./rust";
 
 export const languages: Record<string, LanguagePlugin> = {
   nix,
   python,
   typescript,
   go,
+  rust,
 };
 
 export function getSupportedLanguages(): string[] {
