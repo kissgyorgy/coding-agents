@@ -106,7 +106,42 @@ update-codex:
     git add -- "$pkg_file"
     git commit -m "$message"
 update-gemini-cli: (_update-pkg "gemini-cli" "google-gemini/gemini-cli" "" "true")
-update-crush: (_update-pkg "crush" "charmbracelet/crush" "" "true")
+update-crush:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    pkg="crush"
+    repo="charmbracelet/crush"
+    pkg_file="packages/crush.nix"
+    tag=$(gh release list --repo "$repo" --exclude-pre-releases --limit 1 --json tagName -q '.[0].tagName')
+    latest=${tag#v}
+    current=$(nix eval --raw .#"$pkg".version)
+
+    asset_count=$(gh release view "$tag" --repo "$repo" --json assets -q '.assets | length')
+    if [[ "$asset_count" == "0" ]]; then
+        echo "$pkg: release $tag has no assets, skipping"
+        exit 0
+    fi
+
+    base_url="https://github.com/$repo/releases/download/$tag"
+    linux_hash=$(nix store prefetch-file --json "$base_url/crush_${latest}_Linux_x86_64.tar.gz" | jq -r .hash)
+    darwin_hash=$(nix store prefetch-file --json "$base_url/crush_${latest}_Darwin_arm64.tar.gz" | jq -r .hash)
+
+    sed -i 's/version = "[^"]*";/version = "'"$latest"'";/' "$pkg_file"
+    sed -i '/x86_64-linux = {/,/};/ s|hash = ".*";|hash = "'"$linux_hash"'";|' "$pkg_file"
+    sed -i '/aarch64-darwin = {/,/};/ s|hash = ".*";|hash = "'"$darwin_hash"'";|' "$pkg_file"
+
+    if git diff --quiet -- "$pkg_file"; then
+        echo "$pkg: already at $current with current hashes"
+        exit 0
+    fi
+
+    if [[ "$current" == "$latest" ]]; then
+        message="$pkg: refresh $latest hashes"
+    else
+        message="$pkg: $current -> $latest"
+    fi
+    git add -- "$pkg_file"
+    git commit -m "$message"
 update-hermes-agent:
     nix flake update hermes-agent
 update-whichllm: (_update-pkg "whichllm" "Andyyyy64/whichllm")
@@ -119,10 +154,16 @@ _pi-post-update:
     #!/usr/bin/env bash
     set -euo pipefail
     pkg_dir="packages/pi-coding-agent"
+    pkg_file="$pkg_dir/default.nix"
+    version=$(nix eval --raw .#pi-coding-agent.version)
+    pi_ai_url="https://registry.npmjs.org/@earendil-works/pi-ai/-/pi-ai-${version}.tgz"
+    pi_ai_hash=$(nix store prefetch-file --json "$pi_ai_url" | jq -r .hash)
+    sed -i '/piAiNpm = fetchurl {/,/};/ s|hash = ".*";|hash = "'"$pi_ai_hash"'";|' "$pkg_file"
+
     src=$(nix build .#pi-coding-agent.src --no-link --print-out-paths)
     cp "$src/package-lock.json" "$pkg_dir/package-lock.generated.json"
 
-    sed -i 's/npmDepsHash = "sha256-[^"]*";/npmDepsHash = lib.fakeHash;/' "$pkg_dir/default.nix"
+    sed -i 's/npmDepsHash = "sha256-[^"]*";/npmDepsHash = lib.fakeHash;/' "$pkg_file"
     set +e
     build_output=$(nix build .#pi-coding-agent 2>&1)
     build_status=$?
@@ -137,7 +178,7 @@ _pi-post-update:
         echo "pi-coding-agent: failed to extract npmDepsHash from nix build output" >&2
         exit 1
     fi
-    sed -i 's|npmDepsHash = lib\.fakeHash;|npmDepsHash = "'"$npm_deps_hash"'";|' "$pkg_dir/default.nix"
+    sed -i 's|npmDepsHash = lib\.fakeHash;|npmDepsHash = "'"$npm_deps_hash"'";|' "$pkg_file"
 
 _update-pkg pkg repo pre_commit="" check_assets="":
     #!/usr/bin/env bash
