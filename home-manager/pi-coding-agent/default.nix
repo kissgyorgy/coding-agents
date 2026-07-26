@@ -30,6 +30,7 @@ in
       if skillsDir != null then symlink skillsDir else ../../skills;
     home.packages = with pkgs; [
       pi-coding-agent
+      imagemagick
       nil
       basedpyright
       typescript-language-server
