@@ -102,5 +102,6 @@ A shared instructions file deployed as the top-level agent prompt for Claude Cod
 
 - If you update or add a package, don't forget to update README.md too!
 - CRITICAL: `home-manager/pi-coding-agent/extensions` and `~/.pi/agent/extensions` are the same files via symlink. If you edit Pi extensions through `~/.pi/agent/extensions`, you are editing this repo.
+- Pi extension changes do not require applying the NixOS/Home Manager configuration because the extension directory is symlinked. Use Pi's `/reload` or start a new Pi process to load extension changes. Only apply the configuration when package or module changes must be activated.
 - `packages/pi-agent/` and `packages/emdash.nix` exist but are not wired into `flake.nix`.
 - `vibe-kanban` and `playwright-cli` are packages only (no Home Manager module).
