@@ -150,6 +150,14 @@ update-llmserve: (_update-pkg "llmserve" "AlexsJones/llmserve")
 
 update-pi-coding-agent: (_update-pkg "pi-coding-agent" "earendil-works/pi" "_pi-post-update")
 
+# Regenerate Pi's model catalog locally and install it in the user model store
+update-pi-models:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    pi_source=$(nix build .#pi-coding-agent.src --no-link --print-out-paths)
+    pi_package=$(nix build .#pi-coding-agent --no-link --print-out-paths)
+    node scripts/update-pi-models.mjs "$pi_source" "$pi_package"
+
 _pi-post-update:
     #!/usr/bin/env bash
     set -euo pipefail
