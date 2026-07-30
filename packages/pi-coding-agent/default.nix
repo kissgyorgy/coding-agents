@@ -1,11 +1,11 @@
 { lib, buildNpmPackage, callPackage, fetchFromGitHub, fetchurl, nodejs_22, makeBinaryWrapper, autoPatchelfHook ? null, stdenv, libcap_ng }:
 
 let
-  version = "0.82.1";
+  version = "0.83.0";
   fetchExtensionDeps = callPackage ./fetch-extension-deps.nix { };
   piAiNpm = fetchurl {
     url = "https://registry.npmjs.org/@earendil-works/pi-ai/-/pi-ai-${version}.tgz";
-    hash = "sha256-L535UigItiHNNEmHZTfwPYqN+LjX7C1bGMapEKqFtJA=";
+    hash = "sha256-+YPCiiEgkwXtnCdJd+KRMPpNiEjfbN836QlNlcx7xtQ=";
   };
 in
 
@@ -17,13 +17,13 @@ buildNpmPackage rec {
     owner = "earendil-works";
     repo = "pi";
     rev = "v${version}";
-    hash = "sha256-LESpgd/KUoNqdBfnd1oyMN8coKm0Odbo9GYkUDry8Zk=";
+    hash = "sha256-+XRJua2TSXkZMnWtxtLMskSzEHrGEFFyvYcPATi7An4=";
   };
 
   nodejs = nodejs_22;
 
   npmDepsFetcherVersion = 2;
-  npmDepsHash = "sha256-+7Kss4l85CSC84Y9qHp65AXjxIlsWzITPuA6uqQ+9XE=";
+  npmDepsHash = "sha256-9UNt/vgx9ZHtzaL8vPGVsVZYuF9eVF2pAtAK799C9WA=";
 
   # Skip native addon compilation (canvas etc.) — koffi/clipboard ship pre-built binaries
   npmFlags = [ "--ignore-scripts" ];
