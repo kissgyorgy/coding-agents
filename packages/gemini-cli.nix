@@ -58,6 +58,8 @@ buildNpmPackage rec {
 
     mkdir -p $out/lib/gemini-cli
     cp -r bundle/* $out/lib/gemini-cli/
+    rm $out/lib/gemini-cli/docs/CONTRIBUTING.md
+    cp CONTRIBUTING.md $out/lib/gemini-cli/docs/CONTRIBUTING.md
 
     mkdir -p $out/bin
     makeBinaryWrapper ${nodejs}/bin/node $out/bin/gemini \
