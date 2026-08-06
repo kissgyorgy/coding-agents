@@ -19,6 +19,17 @@ buildNpmPackage rec {
 
   npmFlags = [ "--ignore-scripts" ];
 
+  # The 0.54.0 package manifests disagree with the release lockfile. Align them
+  # before npmConfigHook performs the offline install from the lockfile cache.
+  postUnpack = ''
+    substituteInPlace \
+      "$sourceRoot/packages/a2a-server/package.json" \
+      "$sourceRoot/packages/cli/package.json" \
+      --replace-fail '"tar": "7.5.8"' '"tar": "7.5.11"'
+    substituteInPlace "$sourceRoot/packages/cli/package.json" \
+      --replace-fail '"clipboardy": "5.2.0"' '"clipboardy": "5.2.1"'
+  '';
+
   postPatch = ''
     substituteInPlace package.json \
       --replace-fail '"prepare": "husky && npm run bundle"' '"prepare": ""'
