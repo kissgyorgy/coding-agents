@@ -48,12 +48,12 @@ buildNpmPackage rec {
       package/dist/providers/data
   '';
 
-  # Build workspace packages in dependency order: tui -> ai -> agent -> coding-agent
+  # Build workspace packages in dependency order: tui/telemetry -> ai/agent, protocol -> client, then coding-agent
   npmBuildScript = "none";
   buildPhase = ''
     runHook preBuild
 
-    for pkg in tui ai agent coding-agent; do
+    for pkg in tui telemetry ai agent protocol client coding-agent; do
       echo "Building packages/$pkg..."
       npx tsgo -p packages/$pkg/tsconfig.build.json
     done
@@ -99,7 +99,7 @@ buildNpmPackage rec {
     cp -r node_modules "$pkgDir/"
 
     # Workspace packages are symlinked in node_modules — replace with built copies
-    for pkg_entry in tui:pi-tui ai:pi-ai agent:pi-agent-core; do
+    for pkg_entry in tui:pi-tui telemetry:pi-telemetry ai:pi-ai agent:pi-agent-core protocol:pi-protocol client:pi-client; do
       local dir="''${pkg_entry%%:*}"
       local name="''${pkg_entry##*:}"
       rm -rf "$pkgDir/node_modules/@earendil-works/$name"
