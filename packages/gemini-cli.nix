@@ -12,7 +12,8 @@ buildNpmPackage rec {
   };
 
   nodejs = nodejs_22;
-  npmDepsHash = "sha256-lbOocj5Epgg25YuvZaJF1VPmdPMutXGcRcWRHRa64b0=";
+  npmDepsFetcherVersion = 2;
+  npmDepsHash = "sha256-WDLaFvrPAd9LJTLRtX2v4R0kbultzfz4yfVFgnxP07Y=";
 
   nativeBuildInputs = [ makeBinaryWrapper ];
 
