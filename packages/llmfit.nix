@@ -11,7 +11,13 @@ rustPlatform.buildRustPackage rec {
     hash = "sha256-6mARQqRsPtsN0WAp4oKqG1jl062BqDJ1D9AZBLomel8=";
   };
 
-  cargoLock.lockFile = "${src}/Cargo.lock";
+  cargoLock.lockFile = ./llmfit-Cargo.lock;
+
+  postUnpack = ''
+    cp ${./llmfit-Cargo.lock} "$sourceRoot/Cargo.lock"
+    substituteInPlace "$sourceRoot/llmfit-core/Cargo.toml" \
+      --replace-fail 'sysinfo = "0.39"' 'sysinfo = "0.38"'
+  '';
 
   buildAndTestSubdir = "llmfit-tui";
 
