@@ -4,18 +4,18 @@ let
   sources = {
     x86_64-linux = {
       asset = "Linux_x86_64";
-      hash = "sha256-S8Mn3nI3gtfusxFD2xhpWcwkz8mIoaV6UlIGmdMUNWg=";
+      hash = "sha256-gzdLT6bG4fmPBKxi4R5caY4FotqFp5PSjBBk4ml97fQ=";
     };
     aarch64-darwin = {
       asset = "Darwin_arm64";
-      hash = "sha256-T1Em6nGGj/KMeivd89kcomTR5HAnAcEVbmjns2AtIZE=";
+      hash = "sha256-2SOcJZnLZWBpsIOVo/zXn7/adsEd5IE18qD/HAei34s=";
     };
   };
   source = sources.${stdenv.hostPlatform.system} or (throw "crush is not supported on ${stdenv.hostPlatform.system}");
 in
 stdenv.mkDerivation rec {
   pname = "crush";
-  version = "0.88.0";
+  version = "0.88.1";
 
   src = fetchurl {
     url = "https://github.com/charmbracelet/crush/releases/download/v${version}/crush_${version}_${source.asset}.tar.gz";
