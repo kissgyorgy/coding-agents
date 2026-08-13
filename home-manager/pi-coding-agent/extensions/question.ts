@@ -1,17 +1,15 @@
 /**
- * Question Tool - Ask the user a question with pre-defined options + free-text input
+ * Question Tool - Ask the user a question with pre-defined options
  *
- * The LLM calls this tool when it needs user input. The user sees a list of
- * options to pick from, plus a "Type something…" option that opens an inline
- * editor for arbitrary text.
+ * The LLM calls this tool when it needs user input. The user can select one of
+ * the options, or press Escape to dismiss the picker and answer in the normal
+ * editor.
  *
  * Based on the upstream pi example: examples/extensions/question.ts
  */
 
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import {
-  Editor,
-  type EditorTheme,
   Key,
   matchesKey,
   Text,
@@ -23,18 +21,10 @@ import { Type } from "typebox";
 /*  Types                                                              */
 /* ------------------------------------------------------------------ */
 
-interface OptionWithDesc {
-  label: string;
-  description?: string;
-}
-
-type DisplayOption = OptionWithDesc & { isOther?: boolean };
-
 interface QuestionDetails {
   question: string;
   options: string[];
   answer: string | null;
-  wasCustom?: boolean;
 }
 
 /* ------------------------------------------------------------------ */
@@ -51,8 +41,7 @@ const OptionSchema = Type.Object({
 const QuestionParams = Type.Object({
   question: Type.String({ description: "The question to ask the user" }),
   options: Type.Array(OptionSchema, {
-    description:
-      "Pre-defined options for the user to choose from. A free-text 'Type something…' option is always appended automatically.",
+    description: "Pre-defined options for the user to choose from.",
   }),
 });
 
@@ -65,14 +54,16 @@ export default function question(pi: ExtensionAPI) {
     name: "question",
     label: "Question",
     description:
-      "Ask the user a question and let them pick from pre-defined options or type a free-form answer. " +
+      "Ask the user a question and let them pick from pre-defined options. " +
+      "The user can press Escape to dismiss the picker and answer in a normal message. " +
       "Use this whenever you need user input to proceed (e.g. choosing between alternatives, confirming a decision, or requesting clarification).",
     parameters: QuestionParams,
+    executionMode: "sequential",
 
     /* ---- execute ------------------------------------------------- */
     async execute(_toolCallId, params, _signal, _onUpdate, ctx) {
-      // Non-interactive fallback
-      if (!ctx.hasUI) {
+      // Custom components are only available in TUI mode.
+      if (ctx.mode !== "tui") {
         return {
           content: [
             {
@@ -99,45 +90,13 @@ export default function question(pi: ExtensionAPI) {
         };
       }
 
-      // Build the option list the user sees (originals + free-text entry)
-      const allOptions: DisplayOption[] = [
-        ...params.options,
-        { label: "Type something…", isOther: true },
-      ];
-
       /* ---------- custom UI --------------------------------------- */
       const result = await ctx.ui.custom<{
         answer: string;
-        wasCustom: boolean;
-        index?: number;
+        index: number;
       } | null>((tui, theme, _kb, done) => {
         let optionIndex = 0;
-        let editMode = false;
         let cachedLines: string[] | undefined;
-
-        const editorTheme: EditorTheme = {
-          borderColor: (s) => theme.fg("accent", s),
-          selectList: {
-            selectedPrefix: (t) => theme.fg("accent", t),
-            selectedText: (t) => theme.fg("accent", t),
-            description: (t) => theme.fg("muted", t),
-            scrollInfo: (t) => theme.fg("dim", t),
-            noMatch: (t) => theme.fg("warning", t),
-          },
-        };
-        const editor = new Editor(tui, editorTheme);
-
-        editor.onSubmit = (value) => {
-          const trimmed = value.trim();
-          if (trimmed) {
-            done({ answer: trimmed, wasCustom: true });
-          } else {
-            // Empty submit → go back to option list
-            editMode = false;
-            editor.setText("");
-            refresh();
-          }
-        };
 
         function refresh() {
           cachedLines = undefined;
@@ -146,41 +105,22 @@ export default function question(pi: ExtensionAPI) {
 
         /* -- input handler -- */
         function handleInput(data: string) {
-          if (editMode) {
-            if (matchesKey(data, Key.escape)) {
-              editMode = false;
-              editor.setText("");
-              refresh();
-              return;
-            }
-            editor.handleInput(data);
-            refresh();
-            return;
-          }
-
           if (matchesKey(data, Key.up)) {
             optionIndex = Math.max(0, optionIndex - 1);
             refresh();
             return;
           }
           if (matchesKey(data, Key.down)) {
-            optionIndex = Math.min(allOptions.length - 1, optionIndex + 1);
+            optionIndex = Math.min(params.options.length - 1, optionIndex + 1);
             refresh();
             return;
           }
 
           if (matchesKey(data, Key.enter)) {
-            const selected = allOptions[optionIndex];
-            if (selected.isOther) {
-              editMode = true;
-              refresh();
-            } else {
-              done({
-                answer: selected.label,
-                wasCustom: false,
-                index: optionIndex + 1,
-              });
-            }
+            done({
+              answer: params.options[optionIndex].label,
+              index: optionIndex + 1,
+            });
             return;
           }
 
@@ -206,15 +146,12 @@ export default function question(pi: ExtensionAPI) {
           }
           lines.push("");
 
-          for (let i = 0; i < allOptions.length; i++) {
-            const opt = allOptions[i];
+          for (let i = 0; i < params.options.length; i++) {
+            const opt = params.options[i];
             const selected = i === optionIndex;
-            const isOther = opt.isOther === true;
             const prefix = selected ? theme.fg("accent", "> ") : "  ";
 
-            if (isOther && editMode) {
-              wrap(prefix + theme.fg("accent", `${i + 1}. ${opt.label} ✎`));
-            } else if (selected) {
+            if (selected) {
               wrap(prefix + theme.fg("accent", `${i + 1}. ${opt.label}`));
             } else {
               wrap(`  ${theme.fg("text", `${i + 1}. ${opt.label}`)}`);
@@ -225,22 +162,13 @@ export default function question(pi: ExtensionAPI) {
             }
           }
 
-          if (editMode) {
-            lines.push("");
-            lines.push(theme.fg("muted", " Your answer:"));
-            for (const line of editor.render(width - 2)) {
-              lines.push(` ${line}`);
-            }
-          }
-
           lines.push("");
-          if (editMode) {
-            lines.push(theme.fg("dim", " Enter to submit • Esc to go back"));
-          } else {
-            lines.push(
-              theme.fg("dim", " ↑↓ navigate • Enter to select • Esc to cancel"),
-            );
-          }
+          lines.push(
+            theme.fg(
+              "dim",
+              " ↑↓ navigate • Enter to select • Esc to answer normally",
+            ),
+          );
           lines.push(theme.fg("accent", "─".repeat(width)));
 
           cachedLines = lines;
@@ -261,24 +189,13 @@ export default function question(pi: ExtensionAPI) {
 
       if (!result) {
         return {
-          content: [{ type: "text", text: "User cancelled the selection." }],
+          content: [],
           details: {
             question: params.question,
             options: simpleOptions,
             answer: null,
           } as QuestionDetails,
-        };
-      }
-
-      if (result.wasCustom) {
-        return {
-          content: [{ type: "text", text: `User wrote: ${result.answer}` }],
-          details: {
-            question: params.question,
-            options: simpleOptions,
-            answer: result.answer,
-            wasCustom: true,
-          } as QuestionDetails,
+          terminate: true,
         };
       }
 
@@ -293,7 +210,6 @@ export default function question(pi: ExtensionAPI) {
           question: params.question,
           options: simpleOptions,
           answer: result.answer,
-          wasCustom: false,
         } as QuestionDetails,
       };
     },
@@ -314,23 +230,7 @@ export default function question(pi: ExtensionAPI) {
       const questionLine = theme.fg("muted", details.question);
 
       if (details.answer === null) {
-        return new Text(
-          questionLine + "\n" + theme.fg("warning", "Cancelled"),
-          0,
-          0,
-        );
-      }
-
-      if (details.wasCustom) {
-        return new Text(
-          questionLine +
-            "\n" +
-            theme.fg("success", "✓ ") +
-            theme.fg("muted", "(wrote) ") +
-            theme.fg("accent", details.answer),
-          0,
-          0,
-        );
+        return new Text(questionLine, 0, 0);
       }
       const idx = details.options.indexOf(details.answer) + 1;
       const display = idx > 0 ? `${idx}. ${details.answer}` : details.answer;
