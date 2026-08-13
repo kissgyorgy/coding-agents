@@ -3,6 +3,7 @@ import { readFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import type { IndexingTracker } from "./languages";
+import type { Diagnostic } from "./types";
 
 export interface LspServerConfig {
   command: string;
@@ -37,6 +38,7 @@ export class LspClient {
   private config: LspServerConfig | null = null;
   private openDocuments = new Set<string>();
   private documentVersions = new Map<string, number>();
+  private documentContents = new Map<string, string>();
   private languagePlugins: Record<
     string,
     { languageIdForPath: (filePath: string) => string | null }
@@ -55,7 +57,7 @@ export class LspClient {
       }
     });
   }
-  private diagnostics = new Map<string, unknown[]>();
+  private diagnostics = new Map<string, Diagnostic[]>();
   private diagnosticsReceivedUris = new Set<string>();
   private diagnosticWaiters = new Map<
     string,
@@ -125,6 +127,7 @@ export class LspClient {
       this.buffer = Buffer.alloc(0);
       this.openDocuments.clear();
       this.documentVersions.clear();
+      this.documentContents.clear();
       this.diagnostics.clear();
       this.diagnosticsReceivedUris.clear();
       this.rejectAllPending(new Error("LSP server stopped"));
@@ -146,6 +149,7 @@ export class LspClient {
     this.config = null;
     this.openDocuments.clear();
     this.documentVersions.clear();
+    this.documentContents.clear();
     this.diagnostics.clear();
     this.diagnosticsReceivedUris.clear();
     this.buffer = Buffer.alloc(0);
@@ -272,16 +276,19 @@ export class LspClient {
     }
 
     if (msg.method === "textDocument/publishDiagnostics") {
-      const params = msg.params as { uri: string; diagnostics: unknown[] };
+      const params = msg.params as {
+        uri: string;
+        diagnostics: Diagnostic[];
+      };
       this.diagnostics.set(params.uri, params.diagnostics);
       if (!this.diagnosticsReceivedUris.has(params.uri)) {
         this.diagnosticsReceivedUris.add(params.uri);
         const waiters = this.diagnosticWaiters.get(params.uri);
         if (waiters) {
           this.diagnosticWaiters.delete(params.uri);
-          for (const w of waiters) {
-            clearTimeout(w.timer);
-            w.resolve();
+          for (const waiter of waiters) {
+            clearTimeout(waiter.timer);
+            waiter.resolve();
           }
         }
       }
@@ -422,6 +429,7 @@ export class LspClient {
         },
       });
       this.openDocuments.add(uri);
+      this.documentContents.set(uri, content);
     }
 
     return uri;
@@ -442,6 +450,13 @@ export class LspClient {
       throw error;
     }
 
+    if (
+      this.openDocuments.has(uri) &&
+      this.documentContents.get(uri) === content
+    ) {
+      return uri;
+    }
+
     const version = this.nextDocumentVersion(uri);
     this.resetDiagnosticsForUri(uri);
 
@@ -450,6 +465,7 @@ export class LspClient {
         textDocument: { uri, version },
         contentChanges: [{ text: content }],
       });
+      this.documentContents.set(uri, content);
       return uri;
     }
 
@@ -463,6 +479,7 @@ export class LspClient {
       },
     });
     this.openDocuments.add(uri);
+    this.documentContents.set(uri, content);
     return uri;
   }
 
@@ -481,6 +498,7 @@ export class LspClient {
     }
     this.openDocuments.delete(uri);
     this.documentVersions.delete(uri);
+    this.documentContents.delete(uri);
     this.diagnostics.delete(uri);
     this.diagnosticsReceivedUris.delete(uri);
     this.resolveDiagnosticWaiters(uri);
@@ -587,12 +605,20 @@ export class LspClient {
   async getDiagnostics(
     filePath: string,
     signal?: AbortSignal,
-  ): Promise<unknown[]> {
+  ): Promise<Diagnostic[]> {
     const absPath = resolve(filePath);
     const uri = pathToFileURL(absPath).href;
-    await this.refreshDocument(absPath);
+    if (!this.openDocuments.has(uri)) {
+      await this.refreshDocument(absPath);
+    }
     if (!this.openDocuments.has(uri)) return [];
-    await this.waitForDocumentDiagnostics(uri, 15000, signal);
+    await this.waitForDocumentDiagnostics(uri, 2000, signal);
+    return this.diagnostics.get(uri) ?? [];
+  }
+
+  getPublishedDiagnostics(filePath: string): Diagnostic[] | undefined {
+    const uri = pathToFileURL(resolve(filePath)).href;
+    if (!this.diagnosticsReceivedUris.has(uri)) return undefined;
     return this.diagnostics.get(uri) ?? [];
   }
 
@@ -643,7 +669,7 @@ export class LspClient {
 
   private async waitForDocumentDiagnostics(
     uri: string,
-    timeoutMs = 15000,
+    timeoutMs = 2000,
     signal?: AbortSignal,
   ): Promise<void> {
     if (this.diagnosticsReceivedUris.has(uri)) return;

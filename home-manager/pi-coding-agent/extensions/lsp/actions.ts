@@ -6,7 +6,6 @@ import {
 } from "@earendil-works/pi-coding-agent";
 import {
   formatCompletion,
-  formatDiagnostics,
   formatDocumentSymbols,
   formatReferences,
   formatRename,
@@ -278,11 +277,6 @@ async function runAction(
         signal,
       );
       return formatCompletion(result);
-    }
-
-    case "diagnostics": {
-      const diags = await client.getDiagnostics(file, signal);
-      return formatDiagnostics(diags);
     }
 
     default:

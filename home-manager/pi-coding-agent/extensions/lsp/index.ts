@@ -1,19 +1,35 @@
 import { execFileSync } from "node:child_process";
 import { stat } from "node:fs/promises";
 import { homedir } from "node:os";
-import { join, resolve } from "node:path";
-import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
-import { Text } from "@earendil-works/pi-tui";
+import { join, relative, resolve } from "node:path";
+import {
+  truncateHead,
+  type ExtensionAPI,
+} from "@earendil-works/pi-coding-agent";
+import { Loader, Text } from "@earendil-works/pi-tui";
 import { executeLspAction, type LspParams as LspToolParams } from "./actions";
 import { FileSync } from "./file-sync";
+import { formatDiagnostics } from "./formatters";
 import { getSupportedLanguages } from "./languages";
-import { ServerManager } from "./server-manager";
+import { ServerManager, type FileDiagnostics } from "./server-manager";
 import { LspParamsSchema } from "./tool-schema";
 import {
   discoverWorkspaceInstancesAsync,
   workspaceKey,
   type WorkspaceInstance,
 } from "./workspace-discovery";
+
+class DiagnosticsLoader extends Loader {
+  override render(width: number): string[] {
+    // The widget container supplies the blank line above. Move Loader's own
+    // leading blank below the message to match Pi's status + editor spacing.
+    return [...super.render(width).slice(1), ""];
+  }
+
+  dispose(): void {
+    this.stop();
+  }
+}
 
 function normalizeCommandPath(cwd: string, args: string | undefined): string {
   const path = args?.trim();
@@ -61,11 +77,41 @@ function isInsideGitWorkTree(directory: string): boolean {
   }
 }
 
+function displayPath(filePath: string, cwd: string): string {
+  const path = relative(cwd, filePath);
+  return path && path !== ".." && !path.startsWith("../") ? path : filePath;
+}
+
+function formatAutomaticDiagnostics(
+  results: FileDiagnostics[],
+  cwd: string,
+): string {
+  const lines = [
+    "Automatic LSP diagnostics for files changed during the completed agent run:",
+  ];
+
+  for (const result of results) {
+    lines.push(`\n${displayPath(result.filePath, cwd)} (${result.language}):`);
+    if (result.error) {
+      lines.push(`  Diagnostics failed: ${result.error}`);
+      continue;
+    }
+
+    for (const line of formatDiagnostics(result.diagnostics).split("\n")) {
+      lines.push(`  ${line}`);
+    }
+  }
+
+  return lines.join("\n");
+}
+
 export default function (pi: ExtensionAPI) {
   if (!isInsideGitWorkTree(process.cwd())) return;
 
   const manager = new ServerManager();
   const fileSync = new FileSync(manager);
+  let diagnosticsController: AbortController | undefined;
+  let diagnosticsLoader: DiagnosticsLoader | undefined;
 
   async function discoverAndStartDirectory(
     directory: string,
@@ -97,15 +143,95 @@ export default function (pi: ExtensionAPI) {
     );
   }
 
-  pi.on("session_start", (_event, ctx) => {
-    void discoverAndStartDirectory(ctx.cwd).catch(() => {});
+  pi.on("session_start", async (_event, ctx) => {
+    await discoverAndStartDirectory(ctx.cwd).catch(() => {});
   });
 
-  pi.on("tool_result", async (event, ctx) => {
-    fileSync.handleToolResult(event, ctx.cwd);
+  pi.on("agent_start", () => {
+    fileSync.beginAgentRun();
   });
 
-  pi.on("session_shutdown", async () => {
+  pi.on("tool_execution_end", async (event, ctx) => {
+    await fileSync.handleToolExecutionEnd(event, ctx.cwd);
+  });
+
+  pi.on("agent_settled", async (_event, ctx) => {
+    const changedPaths = await fileSync.takeChangedPathsAfterQuiet();
+    if (changedPaths.length === 0) return;
+
+    diagnosticsController?.abort();
+    const controller = new AbortController();
+    diagnosticsController = controller;
+
+    if (ctx.mode === "tui") {
+      ctx.ui.setWidget("lsp-diagnostics", (tui, theme) => {
+        diagnosticsLoader?.stop();
+        diagnosticsLoader = new DiagnosticsLoader(
+          tui,
+          (spinner) => theme.fg("accent", spinner),
+          (message) => theme.fg("muted", message),
+          `Running LSP diagnostics for ${changedPaths.length} changed path(s)…`,
+        );
+        return diagnosticsLoader;
+      });
+    }
+
+    try {
+      const results = await manager.getDiagnosticsForChangedPaths(
+        ctx.cwd,
+        changedPaths,
+        controller.signal,
+      );
+      if (controller.signal.aborted || results.length === 0) return;
+
+      const failures = results.filter((result) => result.error);
+      if (failures.length > 0) {
+        ctx.ui.notify(
+          `lsp: diagnostics failed for ${failures.length} changed file(s): ${failures[0].error}`,
+          "warning",
+        );
+      }
+
+      const reportable = results.filter(
+        (result) => !result.error && result.diagnostics.length > 0,
+      );
+      if (reportable.length === 0) {
+        if (failures.length === 0) {
+          ctx.ui.notify("lsp: diagnostics done", "info");
+        }
+        return;
+      }
+
+      const report = truncateHead(
+        formatAutomaticDiagnostics(reportable, ctx.cwd),
+      );
+      const truncationNote = report.truncated
+        ? "\n\n[Diagnostics truncated to the tool output limit.]"
+        : "";
+      pi.sendMessage(
+        {
+          customType: "lsp-diagnostics",
+          content: report.content + truncationNote,
+          display: true,
+        },
+        { triggerTurn: true },
+      );
+    } finally {
+      if (diagnosticsController === controller) {
+        diagnosticsController = undefined;
+        diagnosticsLoader?.stop();
+        diagnosticsLoader = undefined;
+        ctx.ui.setWidget("lsp-diagnostics", undefined);
+      }
+    }
+  });
+
+  pi.on("session_shutdown", async (_event, ctx) => {
+    diagnosticsController?.abort();
+    diagnosticsController = undefined;
+    diagnosticsLoader?.stop();
+    diagnosticsLoader = undefined;
+    ctx.ui.setWidget("lsp-diagnostics", undefined);
     fileSync.stop();
     await manager.stop().catch(() => {});
   });
@@ -113,9 +239,9 @@ export default function (pi: ExtensionAPI) {
   pi.registerTool({
     name: "lsp",
     label: "LSP",
-    description: `Language Server Protocol tool. Starts LSP servers on demand and provides editor-like features: go-to-definition, find references, rename symbols, list document/workspace symbols, completions, and diagnostics. Supported languages: ${getSupportedLanguages().join(", ")}. Line and character numbers are 1-based. Both 'definition' and 'references' support 'query' to look up symbols by name without file/position.`,
+    description: `Language Server Protocol tool. Starts LSP servers on demand and provides editor-like features: go-to-definition, find references, rename symbols, list document/workspace symbols, and completions. Supported languages: ${getSupportedLanguages().join(", ")}. Line and character numbers are 1-based. Both 'definition' and 'references' support 'query' to look up symbols by name without file/position.`,
     promptSnippet:
-      "LSP operations (definition, references, rename, symbols, diagnostics) for nix, python, typescript, go, and rust",
+      "LSP operations (definition, references, rename, symbols, completions) for nix, python, typescript, go, and rust",
     promptGuidelines: [
       "ALWAYS use the lsp tool FOR ANY coding related action instead grep-based approaches.",
       "IMPORTANT: USE lsp tool instead of read or ripgrep for searching code snippets, functions, variables or symbols in code.",

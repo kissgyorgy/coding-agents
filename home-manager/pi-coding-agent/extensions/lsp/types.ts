@@ -5,7 +5,6 @@ export const ACTIONS = [
   "document_symbols",
   "workspace_symbol",
   "completion",
-  "diagnostics",
 ] as const;
 
 export type Action = (typeof ACTIONS)[number];

@@ -8,14 +8,15 @@ import {
 } from "./workspace-discovery";
 import { isPathInsideOrSame } from "./languages/utils";
 
-type ToolResultEventLike = {
+type ToolExecutionEndEventLike = {
   toolName: string;
-  input: unknown;
-  isError?: boolean;
+  args: unknown;
+  isError: boolean;
 };
 
 type FileSyncOptions = {
   debounceMs?: number;
+  maxQuietWaitMs?: number;
   maxWatchers?: number;
   maxDepth?: number;
   skipDirs?: Set<string>;
@@ -24,11 +25,16 @@ type FileSyncOptions = {
 export class FileSync {
   private watchers = new Map<string, FSWatcher>();
   private pendingRefreshes = new Map<string, ReturnType<typeof setTimeout>>();
+  private activeRefreshes = new Set<Promise<void>>();
   private pendingDirectoryChecks = new Map<
     string,
     ReturnType<typeof setTimeout>
   >();
+  private changedPaths = new Set<string>();
+  private collectingChanges = false;
+  private changeGeneration = 0;
   private debounceMs: number;
+  private maxQuietWaitMs: number;
   private maxWatchers: number;
   private maxDepth: number;
   private skipDirs: Set<string>;
@@ -38,6 +44,7 @@ export class FileSync {
     options: FileSyncOptions = {},
   ) {
     this.debounceMs = options.debounceMs ?? 150;
+    this.maxQuietWaitMs = options.maxQuietWaitMs ?? 2000;
     this.maxWatchers = options.maxWatchers ?? 1000;
     this.maxDepth = options.maxDepth ?? 16;
     this.skipDirs = options.skipDirs ?? DEFAULT_SKIP_DIRS;
@@ -56,21 +63,59 @@ export class FileSync {
     this.stopWatchers();
     this.clearPendingRefreshes();
     this.clearPendingDirectoryChecks();
+    this.activeRefreshes.clear();
+    this.collectingChanges = false;
+    this.changedPaths.clear();
   }
 
-  handleToolResult(event: ToolResultEventLike, cwd: string): void {
+  beginAgentRun(): void {
+    if (this.collectingChanges) return;
+    this.collectingChanges = true;
+    this.changedPaths.clear();
+    this.changeGeneration++;
+  }
+
+  async takeChangedPathsAfterQuiet(): Promise<string[]> {
+    if (!this.collectingChanges) return [];
+
+    const deadline = Date.now() + this.maxQuietWaitMs;
+    while (Date.now() < deadline) {
+      const generation = this.changeGeneration;
+      await new Promise((resolve) => setTimeout(resolve, this.debounceMs));
+      if (
+        generation === this.changeGeneration &&
+        this.pendingRefreshes.size === 0 &&
+        this.activeRefreshes.size === 0 &&
+        this.pendingDirectoryChecks.size === 0
+      )
+        break;
+    }
+
+    this.collectingChanges = false;
+    const paths = [...this.changedPaths].sort();
+    this.changedPaths.clear();
+    return paths;
+  }
+
+  async handleToolExecutionEnd(
+    event: ToolExecutionEndEventLike,
+    cwd: string,
+  ): Promise<void> {
     if (event.isError) return;
     if (event.toolName !== "write" && event.toolName !== "edit") return;
 
-    const input = event.input as { path?: unknown } | null;
-    if (!input || typeof input.path !== "string") return;
+    const args = event.args as { path?: unknown } | null;
+    if (!args || typeof args.path !== "string") return;
 
-    const absolutePath = normalizeToolPath(cwd, input.path);
-    void this.manager.refreshChangedPath(absolutePath).catch(() => {});
+    const absolutePath = normalizeToolPath(cwd, args.path);
+    this.recordChangedPath(absolutePath);
+    await this.manager.refreshFile(cwd, absolutePath).catch(() => {});
   }
 
   notifyChangedPath(path: string): void {
-    this.queueRefresh(resolve(path));
+    const absolutePath = resolve(path);
+    this.recordChangedPath(absolutePath);
+    this.queueRefresh(absolutePath);
   }
 
   private minimalRoots(instances: WorkspaceInstance[]): string[] {
@@ -91,6 +136,7 @@ export class FileSync {
     directory: string,
     depth: number,
     isRoot = false,
+    recordExistingFiles = false,
   ): void {
     const root = resolve(directory);
     if (this.watchers.has(root)) return;
@@ -111,6 +157,7 @@ export class FileSync {
         const changedPath = fileName
           ? resolve(root, fileName.toString())
           : root;
+        this.recordChangedPath(changedPath);
         this.queueRefresh(changedPath);
         if (eventType === "rename")
           this.queueDirectoryCheck(changedPath, depth + 1);
@@ -132,10 +179,25 @@ export class FileSync {
     }
 
     for (const entry of entries) {
+      const entryPath = join(root, entry.name);
+      if (recordExistingFiles && entry.isFile()) {
+        this.recordChangedPath(entryPath);
+      }
       if (!entry.isDirectory()) continue;
       if (this.skipDirs.has(entry.name)) continue;
-      this.watchDirectoryRecursive(join(root, entry.name), depth + 1);
+      this.watchDirectoryRecursive(
+        entryPath,
+        depth + 1,
+        false,
+        recordExistingFiles,
+      );
     }
+  }
+
+  private recordChangedPath(path: string): void {
+    if (!this.collectingChanges) return;
+    this.changedPaths.add(resolve(path));
+    this.changeGeneration++;
   }
 
   private queueRefresh(path: string): void {
@@ -145,9 +207,17 @@ export class FileSync {
 
     const timer = setTimeout(() => {
       this.pendingRefreshes.delete(absolutePath);
-      void this.manager.refreshChangedPath(absolutePath).catch(() => {});
+      this.trackRefresh(this.manager.refreshChangedPath(absolutePath));
     }, this.debounceMs);
     this.pendingRefreshes.set(absolutePath, timer);
+  }
+
+  private trackRefresh(refresh: Promise<void>): void {
+    let tracked: Promise<void>;
+    tracked = refresh
+      .catch(() => {})
+      .finally(() => this.activeRefreshes.delete(tracked));
+    this.activeRefreshes.add(tracked);
   }
 
   private queueDirectoryCheck(path: string, depth: number): void {
@@ -157,7 +227,7 @@ export class FileSync {
 
     const timer = setTimeout(() => {
       this.pendingDirectoryChecks.delete(absolutePath);
-      this.watchDirectoryRecursive(absolutePath, depth);
+      this.watchDirectoryRecursive(absolutePath, depth, false, true);
     }, this.debounceMs);
     this.pendingDirectoryChecks.set(absolutePath, timer);
   }

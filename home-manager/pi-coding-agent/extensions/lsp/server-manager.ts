@@ -1,8 +1,10 @@
+import { stat } from "node:fs/promises";
 import { resolve } from "node:path";
 import { invalidateFilePreviewCache } from "./formatters";
 import { LspClient } from "./lsp-client";
 import { languages, type LanguagePlugin } from "./languages";
 import { isPathInsideOrSame } from "./languages/utils";
+import type { Diagnostic } from "./types";
 import {
   acceptsFilePath,
   selectWorkspaceForFile,
@@ -34,6 +36,13 @@ type ServerEntry = {
 };
 
 type LanguagePlugins = Record<string, LanguagePlugin>;
+
+export type FileDiagnostics = {
+  filePath: string;
+  language: string;
+  diagnostics: Diagnostic[];
+  error?: string;
+};
 
 export class ServerManager {
   private entries = new Map<string, ServerEntry>();
@@ -190,6 +199,77 @@ export class ServerManager {
     await Promise.all(uniquePaths.map((path) => this.refreshChangedPath(path)));
   }
 
+  async refreshFile(cwd: string, filePath: string): Promise<void> {
+    const absolutePath = resolve(filePath);
+    invalidateFilePreviewCache(absolutePath);
+
+    const refreshes = this.getLanguagesForFile(cwd, absolutePath).map(
+      async (language) => {
+        const { client } = await this.getClientForFile(
+          cwd,
+          language,
+          absolutePath,
+        );
+        await client.refreshDocument(absolutePath);
+      },
+    );
+    await Promise.all(refreshes);
+  }
+
+  async getDiagnosticsForChangedPaths(
+    cwd: string,
+    filePaths: string[],
+    signal?: AbortSignal,
+  ): Promise<FileDiagnostics[]> {
+    const uniquePaths = [...new Set(filePaths.map((path) => resolve(path)))];
+    const results = await Promise.all(
+      uniquePaths.map(async (filePath): Promise<FileDiagnostics[]> => {
+        try {
+          if (!(await stat(filePath)).isFile()) return [];
+        } catch {
+          return [];
+        }
+
+        return Promise.all(
+          this.getLanguagesForFile(cwd, filePath).map(
+            async (language): Promise<FileDiagnostics> => {
+              try {
+                const { client } = await this.getClientForFile(
+                  cwd,
+                  language,
+                  filePath,
+                );
+                const diagnostics = client.getPublishedDiagnostics(filePath);
+                if (diagnostics !== undefined) {
+                  return { filePath, language, diagnostics };
+                }
+
+                const awaitedDiagnostics = (await client.getDiagnostics(
+                  filePath,
+                  signal,
+                )) as Diagnostic[];
+                return {
+                  filePath,
+                  language,
+                  diagnostics: awaitedDiagnostics,
+                };
+              } catch (error) {
+                return {
+                  filePath,
+                  language,
+                  diagnostics: [],
+                  error: error instanceof Error ? error.message : String(error),
+                };
+              }
+            },
+          ),
+        );
+      }),
+    );
+
+    return results.flat();
+  }
+
   getStatus(): ServerStatus[] {
     return [...this.entries.values()]
       .map((entry) => ({
@@ -242,6 +322,20 @@ export class ServerManager {
 
     if (!languageOrKey) this.discoveredInstances = [];
     return entries.length;
+  }
+
+  private getLanguagesForFile(cwd: string, filePath: string): string[] {
+    return Object.entries(this.plugins).flatMap(([language, plugin]) => {
+      if (!acceptsFilePath(plugin, filePath)) return [];
+      const workspace = selectWorkspaceForFile(
+        this.discoveredInstances,
+        cwd,
+        language,
+        filePath,
+        this.plugins,
+      );
+      return workspace ? [language] : [];
+    });
   }
 
   private ensureEntry(instance: WorkspaceInstance): ServerEntry {

@@ -11,7 +11,7 @@ export const LspParamsSchema = Type.Object({
   file: Type.Optional(
     Type.String({
       description:
-        "File path (relative to cwd). Required for: references, rename, document_symbols, completion, diagnostics. Optional for definition (uses query instead).",
+        "File path (relative to cwd). Required for: references, rename, document_symbols, completion. Optional for definition (uses query instead).",
     }),
   ),
   line: Type.Optional(

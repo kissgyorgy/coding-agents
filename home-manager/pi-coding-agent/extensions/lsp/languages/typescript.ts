@@ -48,7 +48,7 @@ export function formatNoProjectExplanation(
   return [
     `TypeScript ${operation} could not search for ${JSON.stringify(query)} because tsserver has no project loaded yet.`,
     "This usually happens when a TypeScript LSP server was started for a workspace root, but no .ts/.tsx file from that workspace has been opened, so tsserver has not attached a tsconfig/jsconfig project.",
-    `Try a file-based LSP action first, for example document_symbols or diagnostics on a source file inside the target TypeScript workspace, then retry ${operation}. If you know the file, prefer file+position definition/references.`,
+    `Try document_symbols on a source file inside the target TypeScript workspace, then retry ${operation}. If you know the file, prefer file+position definition/references.`,
   ].join("\n");
 }
 

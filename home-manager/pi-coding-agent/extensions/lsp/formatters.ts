@@ -308,21 +308,19 @@ export function formatCompletion(result: unknown): string {
   return lines.join("\n");
 }
 
-export function formatDiagnostics(diagnostics: unknown[]): string {
-  if (diagnostics.length === 0) return "No diagnostics (clean).";
+export function formatDiagnostics(diagnostics: Diagnostic[]): string {
+  const lines: string[] = [];
 
-  const diags = diagnostics as Diagnostic[];
-  const lines = [`${diags.length} diagnostic(s):`];
-
-  for (const d of diags) {
-    const severity = d.severity
-      ? (SEVERITY_LABELS[d.severity] ?? "Unknown")
+  for (const diagnostic of diagnostics) {
+    const severity = diagnostic.severity
+      ? (SEVERITY_LABELS[diagnostic.severity] ?? "Unknown")
       : "Unknown";
-    const source = d.source ? `[${d.source}] ` : "";
-    const code = d.code !== undefined ? ` (${d.code})` : "";
+    const source = diagnostic.source ? `[${diagnostic.source}] ` : "";
+    const code = diagnostic.code !== undefined ? ` (${diagnostic.code})` : "";
     lines.push(
-      `  ${severity} at line ${d.range.start.line + 1}:${d.range.start.character + 1}: ${source}${d.message}${code}`,
+      `${severity} at ${diagnostic.range.start.line + 1}:${diagnostic.range.start.character + 1}: ${source}${diagnostic.message}${code}`,
     );
   }
+
   return lines.join("\n");
 }
