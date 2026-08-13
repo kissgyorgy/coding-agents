@@ -39,7 +39,7 @@
 - When you want to write the exact same file to a different place with the exact same content,
   use the `mv` command instead of the Write tool. This makes the move faster and more precise.
 
-- If you got a Windows Path like `C:\Users\walkman\Downloads\picture.png`, 
+- If you got a Windows Path like `C:\Users\walkman\Downloads\picture.png`,
   you are running in WSL2, translate this to the WSL path:
   `/mnt/c/Users/walkman/Downloads/picture.png`.
 
@@ -66,3 +66,12 @@
 
 - No need to write in the commit message what tests were you running or the thing
   "works", that should be the default.
+
+
+# External project discovery and source code
+
+When a user asks about how an external project works, implements something, it's
+source code or similar questions, you can find checked out upstream git repos in
+~/Upstream folder. You can use the existing repositories or even clone new repos you
+need to inspect. Make sure the repo is updated and the right version is checked
+out.
