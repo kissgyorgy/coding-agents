@@ -8,6 +8,9 @@
 - When I ask a question, don't start coding, don't write files, just answer the question.
   You can use tools and write scripts, but only if you need additional information to answer.
 
+- When you can determine how something works locally, don't make a `web_search`.
+  Use command line programs help, manual pages or source code to look things up
+  locally instead.
 
 # Running commands
 
@@ -31,7 +34,7 @@
 - Never delete anything from `claudetmp/`
 
 - Always write **reusable scripts in files** and run them instead of writing
-  inline scripts on stdin.
+  inline scripts. Write wrapper scripts for repeating patterns.
 
 
 # File operations and paths
@@ -49,7 +52,7 @@
 
 # Git
 
-- NEVER modify previous commits, reset or run desctructive git operationsm, only
+- NEVER modify previous commits, reset or run desctructive git operations, only
   when explicitly asked by the user.
 
 - When making commits, explain in details **WHY** you did what you did. What was
