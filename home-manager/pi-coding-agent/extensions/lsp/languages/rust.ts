@@ -47,6 +47,6 @@ export function createIndexingTracker() {
         }
       }
     },
-    isDone: () => !started || tokens.size === 0,
+    isDone: () => started && tokens.size === 0,
   };
 }

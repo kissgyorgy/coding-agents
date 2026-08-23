@@ -50,7 +50,7 @@ export function createIndexingTracker() {
     handleMessage(msg: { method?: string; params?: unknown }) {
       if (msg.method === "window/logMessage") {
         const params = msg.params as { message: string };
-        if (/Found \d+ source files/.test(params.message)) done = true;
+        if (/Found \d+ source files?/.test(params.message)) done = true;
       }
     },
     isDone: () => done,

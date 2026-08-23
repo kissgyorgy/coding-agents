@@ -190,8 +190,10 @@ export default function (pi: ExtensionAPI) {
 
       const failures = results.filter((result) => result.error);
       if (failures.length > 0) {
+        const firstFailure = failures[0];
+        const firstFailureLocation = `${displayPath(firstFailure.filePath, ctx.cwd)} (${firstFailure.language})`;
         ctx.ui.notify(
-          `lsp: diagnostics failed for ${failures.length} changed file(s): ${failures[0].error}`,
+          `lsp: diagnostics failed for ${failures.length} changed file(s); first: ${firstFailureLocation}: ${firstFailure.error}`,
           "warning",
         );
       }

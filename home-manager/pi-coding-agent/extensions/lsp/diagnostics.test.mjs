@@ -77,6 +77,50 @@ test(
   },
 );
 
+test(
+  "diagnostics handle Python files excluded from workspace analysis",
+  { timeout: 20_000 },
+  async (context) => {
+    const root = await mkdtemp(join(tmpdir(), "pi-lsp-excluded-python-"));
+    const sourceRoot = join(root, "src");
+    const excludedRoot = join(root, "claudetmp");
+    const filePath = join(excludedRoot, "probe.py");
+    await mkdir(sourceRoot);
+    await mkdir(excludedRoot);
+    await writeFile(
+      join(root, "pyproject.toml"),
+      '[project]\nname = "probe"\nversion = "0"\n',
+    );
+    await writeFile(
+      join(root, "pyrightconfig.json"),
+      '{ "include": ["src"] }\n',
+    );
+    await writeFile(join(sourceRoot, "included.py"), "VALUE = 42\n");
+    await writeFile(filePath, "VALUE: str = 42\n");
+
+    const manager = new ServerManager({ python });
+    context.after(async () => {
+      await manager.stop();
+      await rm(root, { recursive: true, force: true });
+    });
+    manager.setDiscoveredInstances([
+      { language: "python", root, marker: "pyproject.toml" },
+    ]);
+
+    await manager.refreshFile(root, filePath, FILE_CHANGE_TYPE.Created);
+    const [result] = await manager.getDiagnosticsForChangedPaths(root, [
+      filePath,
+    ]);
+
+    assert.equal(result.error, undefined);
+    assert.ok(
+      result.diagnostics.some(
+        (diagnostic) => diagnostic.code === "reportAssignmentType",
+      ),
+    );
+  },
+);
+
 test("write tool synchronization reports newly created files", async (context) => {
   const root = await mkdtemp(join(tmpdir(), "pi-lsp-file-sync-"));
   const filePath = join(root, "created.ts");

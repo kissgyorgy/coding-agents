@@ -49,6 +49,8 @@ export class LspClient {
   private configs: LspServerConfig[];
   private config: LspServerConfig | null = null;
   private diagnosticProvider: { identifier?: string } | null = null;
+  private pullDiagnosticsSupport: "unknown" | "supported" | "unsupported" =
+    "unknown";
   private openDocuments = new Set<string>();
   private documentVersions = new Map<string, number>();
   private documentContents = new Map<string, string>();
@@ -137,6 +139,7 @@ export class LspClient {
       this.initialized = false;
       this.config = null;
       this.diagnosticProvider = null;
+      this.pullDiagnosticsSupport = "unknown";
       this.buffer = Buffer.alloc(0);
       this.openDocuments.clear();
       this.documentVersions.clear();
@@ -164,6 +167,7 @@ export class LspClient {
     this.initialized = false;
     this.config = null;
     this.diagnosticProvider = null;
+    this.pullDiagnosticsSupport = "unknown";
     this.openDocuments.clear();
     this.documentVersions.clear();
     this.documentContents.clear();
@@ -254,6 +258,9 @@ export class LspClient {
     };
     this.diagnosticProvider =
       initializeResult.capabilities?.diagnosticProvider ?? null;
+    this.pullDiagnosticsSupport = this.diagnosticProvider
+      ? "supported"
+      : "unknown";
 
     this.markIndexingPending();
     this.notify("initialized", {});
@@ -294,15 +301,15 @@ export class LspClient {
   }
 
   private handleMessage(msg: LspMessage): void {
-    // Work-done progress is the only reliable signal that slower servers such
-    // as rust-analyzer have finished replacing their provisional diagnostics.
+    // Language-specific trackers normalize work-done progress and log-based
+    // indexing signals before diagnostics select a server's final result.
     if (this.indexingTracker) {
       this.indexingTracker.handleMessage(msg);
-      if (msg.method === "$/progress") {
+      if (this.indexingTracker.isDone()) {
+        if (!this.indexingDone) this.scheduleIndexingDone();
+      } else {
         this.indexingDone = false;
-        if (this.indexingTracker.isDone()) {
-          this.scheduleIndexingDone();
-        } else if (this.indexingQuietTimer) {
+        if (this.indexingQuietTimer) {
           clearTimeout(this.indexingQuietTimer);
           this.indexingQuietTimer = undefined;
         }
@@ -773,25 +780,59 @@ export class LspClient {
     expectedVersion: number,
     signal?: AbortSignal,
   ): Promise<Diagnostic[] | null> {
-    if (!this.diagnosticProvider) return null;
+    if (this.pullDiagnosticsSupport === "unsupported") return null;
 
-    const report = (await this.request(
-      "textDocument/diagnostic",
-      {
-        textDocument: { uri },
-        identifier: this.diagnosticProvider.identifier,
-      },
-      signal,
-    )) as { kind?: string; items?: unknown };
-
-    if (report.kind === "unchanged") {
-      return this.diagnostics.get(uri) ?? [];
+    let report: unknown;
+    try {
+      report = await this.request(
+        "textDocument/diagnostic",
+        {
+          textDocument: { uri },
+          identifier: this.diagnosticProvider?.identifier,
+        },
+        signal,
+      );
+    } catch (error) {
+      if (
+        !this.diagnosticProvider &&
+        error instanceof Error &&
+        error.message.includes("LSP error -32601")
+      ) {
+        this.pullDiagnosticsSupport = "unsupported";
+        return null;
+      }
+      throw error;
     }
-    if (report.kind !== "full" || !Array.isArray(report.items)) {
+
+    if (typeof report !== "object" || report === null || !("kind" in report)) {
+      if (!this.diagnosticProvider) {
+        this.pullDiagnosticsSupport = "unsupported";
+        return null;
+      }
       throw new Error("LSP server returned an invalid diagnostic report");
     }
 
-    const diagnostics = report.items as Diagnostic[];
+    const diagnosticReport = report as { kind?: string; items?: unknown };
+    if (
+      diagnosticReport.kind !== "full" &&
+      diagnosticReport.kind !== "unchanged"
+    ) {
+      if (!this.diagnosticProvider) {
+        this.pullDiagnosticsSupport = "unsupported";
+        return null;
+      }
+      throw new Error("LSP server returned an invalid diagnostic report");
+    }
+
+    this.pullDiagnosticsSupport = "supported";
+    if (diagnosticReport.kind === "unchanged") {
+      return this.diagnostics.get(uri) ?? [];
+    }
+    if (!Array.isArray(diagnosticReport.items)) {
+      throw new Error("LSP server returned an invalid diagnostic report");
+    }
+
+    const diagnostics = diagnosticReport.items as Diagnostic[];
     this.diagnostics.set(uri, diagnostics);
     this.diagnosticVersions.set(uri, expectedVersion);
     this.diagnosticGenerations.set(uri, this.nextDiagnosticGeneration++);
