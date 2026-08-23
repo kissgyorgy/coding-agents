@@ -37,6 +37,7 @@ interface DiagnosticWaiter {
 }
 
 const DIAGNOSTIC_QUIET_MS = 200;
+const INDEXING_QUIET_MS = 500;
 
 export class LspClient {
   private process: ChildProcess | null = null;
@@ -47,9 +48,12 @@ export class LspClient {
   private language: string;
   private configs: LspServerConfig[];
   private config: LspServerConfig | null = null;
+  private diagnosticProvider: { identifier?: string } | null = null;
   private openDocuments = new Set<string>();
   private documentVersions = new Map<string, number>();
   private documentContents = new Map<string, string>();
+  private documentWorkspaceGenerations = new Map<string, number>();
+  private workspaceGeneration = 0;
   private languagePlugins: Record<
     string,
     { languageIdForPath: (filePath: string) => string | null }
@@ -74,6 +78,7 @@ export class LspClient {
   private nextDiagnosticGeneration = 1;
   private diagnosticWaiters = new Map<string, DiagnosticWaiter[]>();
   private indexingDone = false;
+  private indexingQuietTimer: ReturnType<typeof setTimeout> | undefined;
   private indexingWaiters: Array<{
     resolve: () => void;
     timer: ReturnType<typeof setTimeout>;
@@ -131,10 +136,13 @@ export class LspClient {
     if (!this.process) {
       this.initialized = false;
       this.config = null;
+      this.diagnosticProvider = null;
       this.buffer = Buffer.alloc(0);
       this.openDocuments.clear();
       this.documentVersions.clear();
       this.documentContents.clear();
+      this.documentWorkspaceGenerations.clear();
+      this.workspaceGeneration = 0;
       this.diagnostics.clear();
       this.diagnosticVersions.clear();
       this.diagnosticGenerations.clear();
@@ -155,9 +163,12 @@ export class LspClient {
     this.process = null;
     this.initialized = false;
     this.config = null;
+    this.diagnosticProvider = null;
     this.openDocuments.clear();
     this.documentVersions.clear();
     this.documentContents.clear();
+    this.documentWorkspaceGenerations.clear();
+    this.workspaceGeneration = 0;
     this.diagnostics.clear();
     this.diagnosticVersions.clear();
     this.diagnosticGenerations.clear();
@@ -203,7 +214,7 @@ export class LspClient {
   private async initialize(): Promise<void> {
     if (!this.config) throw new Error("No LSP config selected");
 
-    await this.request("initialize", {
+    const initializeResult = (await this.request("initialize", {
       processId: process.pid,
       capabilities: {
         textDocument: {
@@ -220,10 +231,15 @@ export class LspClient {
             },
           },
           publishDiagnostics: { versionSupport: true },
+          diagnostic: {
+            dynamicRegistration: false,
+            relatedDocumentSupport: false,
+          },
         },
         workspace: {
           symbol: {},
           workspaceFolders: true,
+          diagnostics: { refreshSupport: true },
         },
         window: {
           workDoneProgress: true,
@@ -231,8 +247,15 @@ export class LspClient {
       },
       rootUri: this.config.rootUri,
       workspaceFolders: [{ uri: this.config.rootUri, name: "workspace" }],
-    });
+    })) as {
+      capabilities?: {
+        diagnosticProvider?: { identifier?: string };
+      };
+    };
+    this.diagnosticProvider =
+      initializeResult.capabilities?.diagnosticProvider ?? null;
 
+    this.markIndexingPending();
     this.notify("initialized", {});
     if (this.config.settings !== undefined) {
       this.notify("workspace/didChangeConfiguration", {
@@ -271,16 +294,18 @@ export class LspClient {
   }
 
   private handleMessage(msg: LspMessage): void {
-    // Forward to indexing tracker first
+    // Work-done progress is the only reliable signal that slower servers such
+    // as rust-analyzer have finished replacing their provisional diagnostics.
     if (this.indexingTracker) {
       this.indexingTracker.handleMessage(msg);
-      if (!this.indexingDone && this.indexingTracker.isDone()) {
-        this.indexingDone = true;
-        for (const w of this.indexingWaiters) {
-          clearTimeout(w.timer);
-          w.resolve();
+      if (msg.method === "$/progress") {
+        this.indexingDone = false;
+        if (this.indexingTracker.isDone()) {
+          this.scheduleIndexingDone();
+        } else if (this.indexingQuietTimer) {
+          clearTimeout(this.indexingQuietTimer);
+          this.indexingQuietTimer = undefined;
         }
-        this.indexingWaiters = [];
       }
     }
 
@@ -329,11 +354,40 @@ export class LspClient {
       return;
     }
 
-    if (
-      msg.method === "window/workDoneProgress/create" &&
-      msg.id !== undefined
-    ) {
-      this.send({ jsonrpc: "2.0", id: msg.id, result: null });
+    if (msg.id !== undefined && msg.method) {
+      if (msg.method === "workspace/configuration") {
+        const params = msg.params as { items?: unknown[] } | undefined;
+        this.send({
+          jsonrpc: "2.0",
+          id: msg.id,
+          result: (params?.items ?? []).map(() => null),
+        });
+      } else if (msg.method === "workspace/workspaceFolders") {
+        this.send({
+          jsonrpc: "2.0",
+          id: msg.id,
+          result: this.config
+            ? [{ uri: this.config.rootUri, name: "workspace" }]
+            : [],
+        });
+      } else if (
+        msg.method === "window/workDoneProgress/create" ||
+        msg.method === "workspace/diagnostic/refresh" ||
+        msg.method === "client/registerCapability" ||
+        msg.method === "client/unregisterCapability" ||
+        msg.method === "window/showMessageRequest"
+      ) {
+        this.send({ jsonrpc: "2.0", id: msg.id, result: null });
+      } else {
+        this.send({
+          jsonrpc: "2.0",
+          id: msg.id,
+          error: {
+            code: -32601,
+            message: `Unsupported request: ${msg.method}`,
+          },
+        });
+      }
       return;
     }
 
@@ -427,6 +481,12 @@ export class LspClient {
     this.diagnosticGenerations.delete(uri);
   }
 
+  private isDocumentSynchronized(uri: string): boolean {
+    return (
+      this.documentWorkspaceGenerations.get(uri) === this.workspaceGeneration
+    );
+  }
+
   private hasCurrentDiagnostics(
     uri: string,
     expectedVersion: number,
@@ -470,6 +530,8 @@ export class LspClient {
       const languageId = this.getLanguageId(absPath);
       const version = this.nextDocumentVersion(uri);
       this.resetDiagnosticsForUri(uri);
+      this.documentWorkspaceGenerations.set(uri, this.workspaceGeneration);
+      this.markIndexingPending();
       this.notify("textDocument/didOpen", {
         textDocument: {
           uri,
@@ -510,6 +572,8 @@ export class LspClient {
 
     const version = this.nextDocumentVersion(uri);
     this.resetDiagnosticsForUri(uri);
+    this.documentWorkspaceGenerations.set(uri, this.workspaceGeneration);
+    this.markIndexingPending();
 
     if (this.openDocuments.has(uri)) {
       this.notify("textDocument/didChange", {
@@ -534,6 +598,43 @@ export class LspClient {
     return uri;
   }
 
+  private async reopenDocumentForDiagnostics(
+    filePath: string,
+  ): Promise<string> {
+    const absPath = resolve(filePath);
+    const uri = pathToFileURL(absPath).href;
+
+    let content: string;
+    try {
+      content = await readFile(absPath, "utf8");
+    } catch (error) {
+      if (this.isMissingFileError(error)) {
+        await this.closeDocument(absPath);
+        return uri;
+      }
+      throw error;
+    }
+
+    if (this.openDocuments.has(uri)) {
+      this.notify("textDocument/didClose", { textDocument: { uri } });
+    }
+
+    this.openDocuments.delete(uri);
+    this.documentContents.delete(uri);
+    this.resetDiagnosticsForUri(uri);
+
+    const version = this.nextDocumentVersion(uri);
+    const languageId = this.getLanguageId(absPath);
+    this.documentWorkspaceGenerations.set(uri, this.workspaceGeneration);
+    this.markIndexingPending();
+    this.notify("textDocument/didOpen", {
+      textDocument: { uri, languageId, version, text: content },
+    });
+    this.openDocuments.add(uri);
+    this.documentContents.set(uri, content);
+    return uri;
+  }
+
   async refreshOpenDocument(filePath: string): Promise<void> {
     if (!this.hasDocumentOpen(filePath)) return;
     await this.refreshDocument(filePath);
@@ -550,6 +651,7 @@ export class LspClient {
     this.openDocuments.delete(uri);
     this.documentVersions.delete(uri);
     this.documentContents.delete(uri);
+    this.documentWorkspaceGenerations.delete(uri);
     this.diagnostics.delete(uri);
     this.diagnosticVersions.delete(uri);
     this.diagnosticGenerations.delete(uri);
@@ -558,6 +660,8 @@ export class LspClient {
 
   notifyWatchedFileChanges(changes: WatchedFileChange[]): void {
     if (changes.length === 0) return;
+    this.workspaceGeneration++;
+    this.markIndexingPending();
     this.notify("workspace/didChangeWatchedFiles", {
       changes: changes.map((change) => ({
         uri: pathToFileURL(resolve(change.filePath)).href,
@@ -664,21 +768,105 @@ export class LspClient {
     );
   }
 
+  private async pullDocumentDiagnostics(
+    uri: string,
+    expectedVersion: number,
+    signal?: AbortSignal,
+  ): Promise<Diagnostic[] | null> {
+    if (!this.diagnosticProvider) return null;
+
+    const report = (await this.request(
+      "textDocument/diagnostic",
+      {
+        textDocument: { uri },
+        identifier: this.diagnosticProvider.identifier,
+      },
+      signal,
+    )) as { kind?: string; items?: unknown };
+
+    if (report.kind === "unchanged") {
+      return this.diagnostics.get(uri) ?? [];
+    }
+    if (report.kind !== "full" || !Array.isArray(report.items)) {
+      throw new Error("LSP server returned an invalid diagnostic report");
+    }
+
+    const diagnostics = report.items as Diagnostic[];
+    this.diagnostics.set(uri, diagnostics);
+    this.diagnosticVersions.set(uri, expectedVersion);
+    this.diagnosticGenerations.set(uri, this.nextDiagnosticGeneration++);
+    return diagnostics;
+  }
+
   async getDiagnostics(
     filePath: string,
     signal?: AbortSignal,
   ): Promise<Diagnostic[]> {
     const absPath = resolve(filePath);
-    const minimumGeneration = this.nextDiagnosticGeneration - 1;
-    // A same-content didChange gives this diagnostic pass a new document
-    // version instead of reusing whichever publication happens to be cached.
-    const uri = await this.refreshDocument(absPath, true);
+    let uri = await this.refreshDocument(absPath);
     if (!this.openDocuments.has(uri)) return [];
 
-    const expectedVersion = this.documentVersions.get(uri);
+    // A watched workspace change can invalidate diagnostics even when this
+    // document's text stayed identical. Reopen only those stale documents;
+    // unlike a no-op didChange, all supported servers analyze a new didOpen.
+    if (!this.isDocumentSynchronized(uri)) {
+      uri = await this.reopenDocumentForDiagnostics(absPath);
+      if (!this.openDocuments.has(uri)) return [];
+    }
+
+    let expectedVersion = this.documentVersions.get(uri);
     if (expectedVersion === undefined) {
       throw new Error(`No document version available for ${absPath}`);
     }
+
+    // Slow servers may publish provisional empty diagnostics while indexing.
+    // Wait for work-done progress to settle before selecting the final burst.
+    await this.waitForIndexing(15000, signal);
+
+    const pulledDiagnostics = await this.pullDocumentDiagnostics(
+      uri,
+      expectedVersion,
+      signal,
+    );
+    if (pulledDiagnostics) {
+      if (!this.isDocumentSynchronized(uri)) {
+        throw new Error(
+          "Workspace changed while diagnostics were being collected",
+        );
+      }
+      return pulledDiagnostics;
+    }
+
+    let generation = this.diagnosticGenerations.get(uri);
+    let publishedVersion = this.diagnosticVersions.get(uri);
+    if (
+      generation === undefined ||
+      (publishedVersion !== undefined && publishedVersion !== expectedVersion)
+    ) {
+      // Some servers do not publish an empty result after didChange clears the
+      // last error. A close/open cycle requires them to state the full current
+      // diagnostic set instead of leaving an absent publication ambiguous.
+      uri = await this.reopenDocumentForDiagnostics(absPath);
+      expectedVersion = this.documentVersions.get(uri);
+      if (expectedVersion === undefined) {
+        throw new Error(`No document version available for ${absPath}`);
+      }
+      await this.waitForIndexing(15000, signal);
+      generation = this.diagnosticGenerations.get(uri);
+      publishedVersion = this.diagnosticVersions.get(uri);
+    }
+
+    if (!this.isDocumentSynchronized(uri)) {
+      throw new Error(
+        "Workspace changed while diagnostics were being collected",
+      );
+    }
+
+    const minimumGeneration =
+      generation !== undefined &&
+      (publishedVersion === undefined || publishedVersion === expectedVersion)
+        ? generation - 1
+        : this.nextDiagnosticGeneration - 1;
 
     await this.waitForDocumentDiagnostics(
       uri,
@@ -702,11 +890,39 @@ export class LspClient {
     this.diagnosticWaiters.clear();
   }
 
+  private scheduleIndexingDone(): void {
+    if (!this.indexingTracker) return;
+    if (this.indexingQuietTimer) clearTimeout(this.indexingQuietTimer);
+
+    this.indexingQuietTimer = setTimeout(() => {
+      this.indexingQuietTimer = undefined;
+      if (!this.indexingTracker?.isDone()) return;
+
+      this.indexingDone = true;
+      const waiters = this.indexingWaiters;
+      this.indexingWaiters = [];
+      for (const waiter of waiters) {
+        clearTimeout(waiter.timer);
+        waiter.resolve();
+      }
+    }, INDEXING_QUIET_MS);
+  }
+
+  private markIndexingPending(): void {
+    if (!this.indexingTracker) return;
+    this.indexingDone = false;
+    this.scheduleIndexingDone();
+  }
+
   private clearIndexingWaiters(): void {
     this.indexingDone = false;
-    for (const w of this.indexingWaiters) {
-      clearTimeout(w.timer);
-      w.resolve();
+    if (this.indexingQuietTimer) {
+      clearTimeout(this.indexingQuietTimer);
+      this.indexingQuietTimer = undefined;
+    }
+    for (const waiter of this.indexingWaiters) {
+      clearTimeout(waiter.timer);
+      waiter.resolve();
     }
     this.indexingWaiters = [];
   }

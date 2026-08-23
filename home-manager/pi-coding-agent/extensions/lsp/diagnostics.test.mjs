@@ -5,7 +5,9 @@ import { join } from "node:path";
 import test from "node:test";
 
 import { FileSync } from "./file-sync.ts";
+import * as nix from "./languages/nix.ts";
 import * as python from "./languages/python.ts";
+import * as rust from "./languages/rust.ts";
 import { ServerManager } from "./server-manager.ts";
 import { FILE_CHANGE_TYPE } from "./types.ts";
 
@@ -143,3 +145,91 @@ test("filesystem watcher reports files created outside tools", async (context) =
     ),
   );
 });
+
+test(
+  "diagnostics work when a server ignores same-content changes",
+  { timeout: 20_000 },
+  async (context) => {
+    const root = await mkdtemp(join(tmpdir(), "pi-lsp-nix-diagnostics-"));
+    const filePath = join(root, "flake.nix");
+    await writeFile(filePath, "{ outputs = { self }: { broken = ; }; }\n");
+
+    const manager = new ServerManager({ nix });
+    context.after(async () => {
+      await manager.stop();
+      await rm(root, { recursive: true, force: true });
+    });
+    manager.setDiscoveredInstances([
+      { language: "nix", root, marker: "flake.nix" },
+    ]);
+
+    await manager.refreshFile(root, filePath, FILE_CHANGE_TYPE.Created);
+    const [result] = await manager.getDiagnosticsForChangedPaths(root, [
+      filePath,
+    ]);
+
+    assert.equal(result.error, undefined);
+    assert.ok(
+      result.diagnostics.some(
+        (diagnostic) => diagnostic.code === "syntax_error",
+      ),
+    );
+
+    await writeFile(filePath, "{ outputs = { self }: {}; }\n");
+    await manager.refreshFile(root, filePath, FILE_CHANGE_TYPE.Changed);
+    const [fixedResult] = await manager.getDiagnosticsForChangedPaths(root, [
+      filePath,
+    ]);
+    assert.equal(fixedResult.error, undefined);
+    assert.deepEqual(fixedResult.diagnostics, []);
+  },
+);
+
+test(
+  "diagnostics wait for rust-analyzer to replace provisional results",
+  { timeout: 30_000 },
+  async (context) => {
+    const root = await mkdtemp(join(tmpdir(), "pi-lsp-rust-diagnostics-"));
+    const sourceDir = join(root, "src");
+    const filePath = join(sourceDir, "main.rs");
+    await mkdir(sourceDir);
+    await writeFile(
+      join(root, "Cargo.toml"),
+      '[package]\nname = "probe"\nversion = "0.1.0"\nedition = "2021"\n',
+    );
+    await writeFile(
+      filePath,
+      'fn main() {\n    let value: String = 42;\n    println!("{value}");\n}\n',
+    );
+
+    const manager = new ServerManager({ rust });
+    context.after(async () => {
+      await manager.stop();
+      await rm(root, { recursive: true, force: true });
+    });
+    manager.setDiscoveredInstances([
+      { language: "rust", root, marker: "Cargo.toml" },
+    ]);
+
+    await manager.refreshFile(root, filePath, FILE_CHANGE_TYPE.Created);
+    const [result] = await manager.getDiagnosticsForChangedPaths(root, [
+      filePath,
+    ]);
+
+    assert.equal(result.error, undefined);
+    assert.ok(
+      result.diagnostics.some((diagnostic) => diagnostic.code === "E0308"),
+    );
+
+    await writeFile(
+      filePath,
+      'fn main() {\n    let value: String = "ok".to_owned();\n    println!("{value}");\n}\n',
+    );
+    await manager.refreshFile(root, filePath, FILE_CHANGE_TYPE.Changed);
+    const [fixedResult] = await manager.getDiagnosticsForChangedPaths(root, [
+      filePath,
+    ]);
+    assert.equal(fixedResult.error, undefined);
+    assert.deepEqual(fixedResult.diagnostics, []);
+  },
+);
