@@ -5,7 +5,25 @@
     "moduleResolution": "Bundler",
     "strict": true,
     "noEmit": true,
-    "skipLibCheck": true
+    "skipLibCheck": true,
+    "baseUrl": ".",
+    "typeRoots": [
+      "/run/current-system/sw/lib/pi-coding-agent/node_modules/@types"
+    ],
+    "paths": {
+      "@earendil-works/pi-ai": [
+        "/run/current-system/sw/lib/pi-coding-agent/node_modules/@earendil-works/pi-ai/dist/index.d.ts"
+      ],
+      "@earendil-works/pi-coding-agent": [
+        "/run/current-system/sw/lib/pi-coding-agent/dist/index.d.ts"
+      ],
+      "@earendil-works/pi-tui": [
+        "/run/current-system/sw/lib/pi-coding-agent/node_modules/@earendil-works/pi-tui/dist/index.d.ts"
+      ],
+      "typebox": [
+        "/run/current-system/sw/lib/pi-coding-agent/node_modules/typebox"
+      ]
+    }
   },
   "include": ["**/*.ts"]
 }
