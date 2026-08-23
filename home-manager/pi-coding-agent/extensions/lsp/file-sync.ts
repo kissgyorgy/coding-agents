@@ -1,6 +1,7 @@
 import { readdirSync, statSync, watch, type FSWatcher } from "node:fs";
 import { basename, join, resolve } from "node:path";
 import type { ServerManager } from "./server-manager";
+import { FILE_CHANGE_TYPE, type FileChangeType } from "./types";
 import {
   DEFAULT_SKIP_DIRS,
   normalizeToolPath,
@@ -8,10 +9,21 @@ import {
 } from "./workspace-discovery";
 import { isPathInsideOrSame } from "./languages/utils";
 
-type ToolExecutionEndEventLike = {
+type ToolExecutionStartEventLike = {
+  toolCallId: string;
   toolName: string;
   args: unknown;
+};
+
+type ToolExecutionEndEventLike = {
+  toolCallId: string;
+  toolName: string;
   isError: boolean;
+};
+
+type ToolMutationState = {
+  filePath: string;
+  existed: boolean;
 };
 
 type FileSyncOptions = {
@@ -30,6 +42,8 @@ export class FileSync {
     string,
     ReturnType<typeof setTimeout>
   >();
+  private knownFiles = new Set<string>();
+  private toolMutationStates = new Map<string, ToolMutationState>();
   private changedPaths = new Set<string>();
   private collectingChanges = false;
   private changeGeneration = 0;
@@ -54,6 +68,7 @@ export class FileSync {
     this.stopWatchers();
     this.clearPendingRefreshes();
     this.clearPendingDirectoryChecks();
+    this.knownFiles.clear();
     for (const root of this.minimalRoots(instances)) {
       this.watchDirectoryRecursive(root, 0, true);
     }
@@ -64,6 +79,8 @@ export class FileSync {
     this.clearPendingRefreshes();
     this.clearPendingDirectoryChecks();
     this.activeRefreshes.clear();
+    this.knownFiles.clear();
+    this.toolMutationStates.clear();
     this.collectingChanges = false;
     this.changedPaths.clear();
   }
@@ -72,6 +89,7 @@ export class FileSync {
     if (this.collectingChanges) return;
     this.collectingChanges = true;
     this.changedPaths.clear();
+    this.toolMutationStates.clear();
     this.changeGeneration++;
   }
 
@@ -97,19 +115,55 @@ export class FileSync {
     return paths;
   }
 
-  async handleToolExecutionEnd(
-    event: ToolExecutionEndEventLike,
+  handleToolExecutionStart(
+    event: ToolExecutionStartEventLike,
     cwd: string,
-  ): Promise<void> {
-    if (event.isError) return;
+  ): void {
     if (event.toolName !== "write" && event.toolName !== "edit") return;
 
     const args = event.args as { path?: unknown } | null;
     if (!args || typeof args.path !== "string") return;
 
-    const absolutePath = normalizeToolPath(cwd, args.path);
+    const filePath = normalizeToolPath(cwd, args.path);
+    // Once write finishes, filesystem state alone cannot distinguish creation
+    // from replacement. Capture it before the tool mutates the path.
+    this.toolMutationStates.set(event.toolCallId, {
+      filePath,
+      existed: this.isRegularFile(filePath),
+    });
+  }
+
+  async handleToolExecutionEnd(
+    event: ToolExecutionEndEventLike,
+    cwd: string,
+  ): Promise<void> {
+    const mutation = this.toolMutationStates.get(event.toolCallId);
+    this.toolMutationStates.delete(event.toolCallId);
+
+    if (event.isError) return;
+    if (event.toolName !== "write" && event.toolName !== "edit") return;
+    if (!mutation) return;
+
+    const absolutePath = mutation.filePath;
+    const existed = mutation.existed;
+    const exists = this.isRegularFile(absolutePath);
+    let changeType: FileChangeType;
+    if (exists) {
+      changeType = existed
+        ? FILE_CHANGE_TYPE.Changed
+        : FILE_CHANGE_TYPE.Created;
+      this.knownFiles.add(absolutePath);
+    } else if (existed) {
+      changeType = FILE_CHANGE_TYPE.Deleted;
+      this.knownFiles.delete(absolutePath);
+    } else {
+      return;
+    }
+
     this.recordChangedPath(absolutePath);
-    await this.manager.refreshFile(cwd, absolutePath).catch(() => {});
+    await this.manager
+      .refreshFile(cwd, absolutePath, changeType)
+      .catch(() => {});
   }
 
   notifyChangedPath(path: string): void {
@@ -180,8 +234,17 @@ export class FileSync {
 
     for (const entry of entries) {
       const entryPath = join(root, entry.name);
-      if (recordExistingFiles && entry.isFile()) {
-        this.recordChangedPath(entryPath);
+      if (entry.isFile()) {
+        const absolutePath = resolve(entryPath);
+        const wasKnown = this.knownFiles.has(absolutePath);
+        this.knownFiles.add(absolutePath);
+        if (recordExistingFiles) {
+          this.recordChangedPath(absolutePath);
+          this.queueRefresh(
+            absolutePath,
+            wasKnown ? FILE_CHANGE_TYPE.Changed : FILE_CHANGE_TYPE.Created,
+          );
+        }
       }
       if (!entry.isDirectory()) continue;
       if (this.skipDirs.has(entry.name)) continue;
@@ -194,20 +257,45 @@ export class FileSync {
     }
   }
 
+  private isRegularFile(path: string): boolean {
+    try {
+      return statSync(path).isFile();
+    } catch {
+      return false;
+    }
+  }
+
+  private detectFileChange(path: string): FileChangeType | undefined {
+    const absolutePath = resolve(path);
+    const wasKnown = this.knownFiles.has(absolutePath);
+    if (this.isRegularFile(absolutePath)) {
+      this.knownFiles.add(absolutePath);
+      return wasKnown ? FILE_CHANGE_TYPE.Changed : FILE_CHANGE_TYPE.Created;
+    }
+    if (!wasKnown) return undefined;
+
+    this.knownFiles.delete(absolutePath);
+    return FILE_CHANGE_TYPE.Deleted;
+  }
+
   private recordChangedPath(path: string): void {
     if (!this.collectingChanges) return;
     this.changedPaths.add(resolve(path));
     this.changeGeneration++;
   }
 
-  private queueRefresh(path: string): void {
+  private queueRefresh(path: string, changeType?: FileChangeType): void {
     const absolutePath = resolve(path);
     const existing = this.pendingRefreshes.get(absolutePath);
     if (existing) clearTimeout(existing);
 
     const timer = setTimeout(() => {
       this.pendingRefreshes.delete(absolutePath);
-      this.trackRefresh(this.manager.refreshChangedPath(absolutePath));
+      const detectedChange = changeType ?? this.detectFileChange(absolutePath);
+      if (detectedChange === undefined) return;
+      this.trackRefresh(
+        this.manager.refreshChangedPath(absolutePath, detectedChange),
+      );
     }, this.debounceMs);
     this.pendingRefreshes.set(absolutePath, timer);
   }

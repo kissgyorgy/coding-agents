@@ -3,7 +3,7 @@ import { readFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import type { IndexingTracker } from "./languages";
-import type { Diagnostic } from "./types";
+import type { Diagnostic, WatchedFileChange } from "./types";
 
 export interface LspServerConfig {
   command: string;
@@ -26,6 +26,17 @@ interface PendingRequest {
   reject: (error: Error) => void;
   timeout: ReturnType<typeof setTimeout>;
 }
+
+interface DiagnosticWaiter {
+  expectedVersion: number;
+  minimumGeneration: number;
+  updated: () => void;
+  resolve: () => void;
+  reject: (error: Error) => void;
+  timer: ReturnType<typeof setTimeout>;
+}
+
+const DIAGNOSTIC_QUIET_MS = 200;
 
 export class LspClient {
   private process: ChildProcess | null = null;
@@ -58,14 +69,10 @@ export class LspClient {
     });
   }
   private diagnostics = new Map<string, Diagnostic[]>();
-  private diagnosticsReceivedUris = new Set<string>();
-  private diagnosticWaiters = new Map<
-    string,
-    Array<{
-      resolve: () => void;
-      timer: ReturnType<typeof setTimeout>;
-    }>
-  >();
+  private diagnosticVersions = new Map<string, number>();
+  private diagnosticGenerations = new Map<string, number>();
+  private nextDiagnosticGeneration = 1;
+  private diagnosticWaiters = new Map<string, DiagnosticWaiter[]>();
   private indexingDone = false;
   private indexingWaiters: Array<{
     resolve: () => void;
@@ -129,7 +136,8 @@ export class LspClient {
       this.documentVersions.clear();
       this.documentContents.clear();
       this.diagnostics.clear();
-      this.diagnosticsReceivedUris.clear();
+      this.diagnosticVersions.clear();
+      this.diagnosticGenerations.clear();
       this.rejectAllPending(new Error("LSP server stopped"));
       this.clearDiagnosticWaiters();
       this.clearIndexingWaiters();
@@ -151,7 +159,8 @@ export class LspClient {
     this.documentVersions.clear();
     this.documentContents.clear();
     this.diagnostics.clear();
-    this.diagnosticsReceivedUris.clear();
+    this.diagnosticVersions.clear();
+    this.diagnosticGenerations.clear();
     this.buffer = Buffer.alloc(0);
     this.clearDiagnosticWaiters();
     this.clearIndexingWaiters();
@@ -210,7 +219,7 @@ export class LspClient {
               documentationFormat: ["markdown", "plaintext"],
             },
           },
-          publishDiagnostics: {},
+          publishDiagnostics: { versionSupport: true },
         },
         workspace: {
           symbol: {},
@@ -278,17 +287,42 @@ export class LspClient {
     if (msg.method === "textDocument/publishDiagnostics") {
       const params = msg.params as {
         uri: string;
+        version?: number;
         diagnostics: Diagnostic[];
       };
+      const documentVersion = this.documentVersions.get(params.uri);
+      // Analysis is asynchronous. Do not let a delayed publication for an old
+      // buffer version replace diagnostics for the current document.
+      if (
+        params.version !== undefined &&
+        documentVersion !== undefined &&
+        params.version < documentVersion
+      ) {
+        return;
+      }
+
       this.diagnostics.set(params.uri, params.diagnostics);
-      if (!this.diagnosticsReceivedUris.has(params.uri)) {
-        this.diagnosticsReceivedUris.add(params.uri);
-        const waiters = this.diagnosticWaiters.get(params.uri);
-        if (waiters) {
-          this.diagnosticWaiters.delete(params.uri);
-          for (const waiter of waiters) {
-            clearTimeout(waiter.timer);
-            waiter.resolve();
+      if (params.version !== undefined) {
+        this.diagnosticVersions.set(params.uri, params.version);
+      } else {
+        this.diagnosticVersions.delete(params.uri);
+      }
+      this.diagnosticGenerations.set(
+        params.uri,
+        this.nextDiagnosticGeneration++,
+      );
+
+      const waiters = this.diagnosticWaiters.get(params.uri);
+      if (waiters) {
+        for (const waiter of [...waiters]) {
+          if (
+            this.hasCurrentDiagnostics(
+              params.uri,
+              waiter.expectedVersion,
+              waiter.minimumGeneration,
+            )
+          ) {
+            waiter.updated();
           }
         }
       }
@@ -389,17 +423,33 @@ export class LspClient {
 
   private resetDiagnosticsForUri(uri: string): void {
     this.diagnostics.delete(uri);
-    this.diagnosticsReceivedUris.delete(uri);
+    this.diagnosticVersions.delete(uri);
+    this.diagnosticGenerations.delete(uri);
   }
 
-  private resolveDiagnosticWaiters(uri: string): void {
+  private hasCurrentDiagnostics(
+    uri: string,
+    expectedVersion: number,
+    minimumGeneration: number,
+  ): boolean {
+    const generation = this.diagnosticGenerations.get(uri);
+    if (generation === undefined || generation <= minimumGeneration) {
+      return false;
+    }
+
+    const publishedVersion = this.diagnosticVersions.get(uri);
+    return (
+      publishedVersion === undefined || publishedVersion === expectedVersion
+    );
+  }
+
+  private rejectDiagnosticWaiters(uri: string): void {
     const waiters = this.diagnosticWaiters.get(uri);
     if (!waiters) return;
-    this.diagnosticWaiters.delete(uri);
-    for (const waiter of waiters) {
-      clearTimeout(waiter.timer);
-      waiter.resolve();
-    }
+    const error = new Error(
+      "Document closed before diagnostics were published",
+    );
+    for (const waiter of [...waiters]) waiter.reject(error);
   }
 
   private isMissingFileError(error: unknown): boolean {
@@ -435,7 +485,7 @@ export class LspClient {
     return uri;
   }
 
-  async refreshDocument(filePath: string): Promise<string> {
+  async refreshDocument(filePath: string, force = false): Promise<string> {
     const absPath = resolve(filePath);
     const uri = pathToFileURL(absPath).href;
 
@@ -451,6 +501,7 @@ export class LspClient {
     }
 
     if (
+      !force &&
       this.openDocuments.has(uri) &&
       this.documentContents.get(uri) === content
     ) {
@@ -500,8 +551,19 @@ export class LspClient {
     this.documentVersions.delete(uri);
     this.documentContents.delete(uri);
     this.diagnostics.delete(uri);
-    this.diagnosticsReceivedUris.delete(uri);
-    this.resolveDiagnosticWaiters(uri);
+    this.diagnosticVersions.delete(uri);
+    this.diagnosticGenerations.delete(uri);
+    this.rejectDiagnosticWaiters(uri);
+  }
+
+  notifyWatchedFileChanges(changes: WatchedFileChange[]): void {
+    if (changes.length === 0) return;
+    this.notify("workspace/didChangeWatchedFiles", {
+      changes: changes.map((change) => ({
+        uri: pathToFileURL(resolve(change.filePath)).href,
+        type: change.type,
+      })),
+    });
   }
 
   private getLanguageId(filePath: string): string {
@@ -607,18 +669,24 @@ export class LspClient {
     signal?: AbortSignal,
   ): Promise<Diagnostic[]> {
     const absPath = resolve(filePath);
-    const uri = pathToFileURL(absPath).href;
-    if (!this.openDocuments.has(uri)) {
-      await this.refreshDocument(absPath);
-    }
+    const minimumGeneration = this.nextDiagnosticGeneration - 1;
+    // A same-content didChange gives this diagnostic pass a new document
+    // version instead of reusing whichever publication happens to be cached.
+    const uri = await this.refreshDocument(absPath, true);
     if (!this.openDocuments.has(uri)) return [];
-    await this.waitForDocumentDiagnostics(uri, 2000, signal);
-    return this.diagnostics.get(uri) ?? [];
-  }
 
-  getPublishedDiagnostics(filePath: string): Diagnostic[] | undefined {
-    const uri = pathToFileURL(resolve(filePath)).href;
-    if (!this.diagnosticsReceivedUris.has(uri)) return undefined;
+    const expectedVersion = this.documentVersions.get(uri);
+    if (expectedVersion === undefined) {
+      throw new Error(`No document version available for ${absPath}`);
+    }
+
+    await this.waitForDocumentDiagnostics(
+      uri,
+      expectedVersion,
+      minimumGeneration,
+      5000,
+      signal,
+    );
     return this.diagnostics.get(uri) ?? [];
   }
 
@@ -627,11 +695,9 @@ export class LspClient {
   }
 
   private clearDiagnosticWaiters(): void {
-    for (const waiters of this.diagnosticWaiters.values()) {
-      for (const waiter of waiters) {
-        clearTimeout(waiter.timer);
-        waiter.resolve();
-      }
+    const error = new Error("LSP server stopped");
+    for (const waiters of [...this.diagnosticWaiters.values()]) {
+      for (const waiter of [...waiters]) waiter.reject(error);
     }
     this.diagnosticWaiters.clear();
   }
@@ -669,26 +735,73 @@ export class LspClient {
 
   private async waitForDocumentDiagnostics(
     uri: string,
-    timeoutMs = 2000,
+    expectedVersion: number,
+    minimumGeneration: number,
+    timeoutMs = 5000,
     signal?: AbortSignal,
   ): Promise<void> {
-    if (this.diagnosticsReceivedUris.has(uri)) return;
+    const alreadyCurrent = this.hasCurrentDiagnostics(
+      uri,
+      expectedVersion,
+      minimumGeneration,
+    );
 
     return new Promise<void>((resolve, reject) => {
       let settled = false;
+      let timer: ReturnType<typeof setTimeout>;
+      let quietTimer: ReturnType<typeof setTimeout> | undefined;
+      let waiter: DiagnosticWaiter;
+
+      const removeWaiter = () => {
+        const waiters = this.diagnosticWaiters.get(uri);
+        if (!waiters) return;
+        const remaining = waiters.filter((candidate) => candidate !== waiter);
+        if (remaining.length > 0) {
+          this.diagnosticWaiters.set(uri, remaining);
+        } else {
+          this.diagnosticWaiters.delete(uri);
+        }
+      };
       const settle = (fn: () => void) => {
         if (settled) return;
         settled = true;
         clearTimeout(timer);
+        if (quietTimer) clearTimeout(quietTimer);
         signal?.removeEventListener("abort", onAbort);
+        removeWaiter();
         fn();
       };
       const onAbort = () => settle(() => reject(new Error("Aborted")));
       signal?.addEventListener("abort", onAbort, { once: true });
-      const timer = setTimeout(() => settle(resolve), timeoutMs);
+      timer = setTimeout(
+        () =>
+          settle(() =>
+            reject(
+              new Error(
+                `Timed out waiting for diagnostics for document version ${expectedVersion}`,
+              ),
+            ),
+          ),
+        timeoutMs,
+      );
+      waiter = {
+        expectedVersion,
+        minimumGeneration,
+        // Some servers publish an empty result immediately before their real
+        // diagnostics. Accept the latest matching publication after a short
+        // quiet period rather than racing the first notification.
+        updated: () => {
+          if (quietTimer) clearTimeout(quietTimer);
+          quietTimer = setTimeout(() => settle(resolve), DIAGNOSTIC_QUIET_MS);
+        },
+        resolve: () => settle(resolve),
+        reject: (error) => settle(() => reject(error)),
+        timer,
+      };
       const waiters = this.diagnosticWaiters.get(uri) ?? [];
-      waiters.push({ resolve: () => settle(resolve), timer });
+      waiters.push(waiter);
       this.diagnosticWaiters.set(uri, waiters);
+      if (alreadyCurrent) waiter.updated();
     });
   }
 }

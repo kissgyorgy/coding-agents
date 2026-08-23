@@ -4,7 +4,11 @@ import { invalidateFilePreviewCache } from "./formatters";
 import { LspClient } from "./lsp-client";
 import { languages, type LanguagePlugin } from "./languages";
 import { isPathInsideOrSame } from "./languages/utils";
-import type { Diagnostic } from "./types";
+import {
+  FILE_CHANGE_TYPE,
+  type Diagnostic,
+  type FileChangeType,
+} from "./types";
 import {
   acceptsFilePath,
   selectWorkspaceForFile,
@@ -177,17 +181,30 @@ export class ServerManager {
     );
   }
 
-  async refreshChangedPath(filePath: string): Promise<void> {
+  async refreshChangedPath(
+    filePath: string,
+    changeType: FileChangeType = FILE_CHANGE_TYPE.Changed,
+  ): Promise<void> {
     const absolutePath = resolve(filePath);
     invalidateFilePreviewCache(absolutePath);
 
     const refreshes = this.getRunningClients().flatMap(
       ({ client, instance }) => {
-        const plugin = this.plugins[instance.language];
-        if (!plugin) return [];
         if (!isPathInsideOrSame(absolutePath, instance.root)) return [];
-        if (!acceptsFilePath(plugin, absolutePath)) return [];
-        return [client.refreshOpenDocument(absolutePath)];
+
+        // didOpen alone does not invalidate every server's workspace/module
+        // index for a newly created file. Mirror an editor's watched-file event.
+        client.notifyWatchedFileChanges([
+          { filePath: absolutePath, type: changeType },
+        ]);
+
+        const plugin = this.plugins[instance.language];
+        if (!plugin || !acceptsFilePath(plugin, absolutePath)) return [];
+        return [
+          changeType === FILE_CHANGE_TYPE.Deleted
+            ? client.closeDocument(absolutePath)
+            : client.refreshOpenDocument(absolutePath),
+        ];
       },
     );
 
@@ -199,21 +216,28 @@ export class ServerManager {
     await Promise.all(uniquePaths.map((path) => this.refreshChangedPath(path)));
   }
 
-  async refreshFile(cwd: string, filePath: string): Promise<void> {
+  async refreshFile(
+    cwd: string,
+    filePath: string,
+    changeType: FileChangeType = FILE_CHANGE_TYPE.Changed,
+  ): Promise<void> {
     const absolutePath = resolve(filePath);
-    invalidateFilePreviewCache(absolutePath);
-
-    const refreshes = this.getLanguagesForFile(cwd, absolutePath).map(
-      async (language) => {
+    const clients = await Promise.all(
+      this.getLanguagesForFile(cwd, absolutePath).map(async (language) => {
         const { client } = await this.getClientForFile(
           cwd,
           language,
           absolutePath,
         );
-        await client.refreshDocument(absolutePath);
-      },
+        return client;
+      }),
     );
-    await Promise.all(refreshes);
+
+    await this.refreshChangedPath(absolutePath, changeType);
+    if (changeType === FILE_CHANGE_TYPE.Deleted) return;
+    await Promise.all(
+      clients.map((client) => client.refreshDocument(absolutePath)),
+    );
   }
 
   async getDiagnosticsForChangedPaths(
@@ -239,20 +263,11 @@ export class ServerManager {
                   language,
                   filePath,
                 );
-                const diagnostics = client.getPublishedDiagnostics(filePath);
-                if (diagnostics !== undefined) {
-                  return { filePath, language, diagnostics };
-                }
-
-                const awaitedDiagnostics = (await client.getDiagnostics(
+                const diagnostics = (await client.getDiagnostics(
                   filePath,
                   signal,
                 )) as Diagnostic[];
-                return {
-                  filePath,
-                  language,
-                  diagnostics: awaitedDiagnostics,
-                };
+                return { filePath, language, diagnostics };
               } catch (error) {
                 return {
                   filePath,

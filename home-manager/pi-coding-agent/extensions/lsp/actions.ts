@@ -1,4 +1,7 @@
-import type { ExtensionContext } from "@earendil-works/pi-coding-agent";
+import type {
+  AgentToolUpdateCallback,
+  ExtensionContext,
+} from "@earendil-works/pi-coding-agent";
 import {
   DEFAULT_MAX_BYTES,
   DEFAULT_MAX_LINES,
@@ -33,10 +36,6 @@ export type LspParams = {
   query?: string;
 };
 
-type ToolUpdate = (update: {
-  content: Array<{ type: "text"; text: string }>;
-}) => void;
-
 export type LspActionResult = {
   content: string;
   details: {
@@ -45,6 +44,20 @@ export type LspActionResult = {
     summary: string;
   };
 };
+
+type ToolUpdate = AgentToolUpdateCallback<LspActionResult["details"]>;
+
+function updateProgress(
+  onUpdate: ToolUpdate | undefined,
+  language: string,
+  action: string,
+  text: string,
+): void {
+  onUpdate?.({
+    content: [{ type: "text", text }],
+    details: { language, action, summary: text },
+  });
+}
 
 function requireFile(file?: string): string {
   if (!file) throw new Error("'file' parameter is required for this action");
@@ -149,14 +162,7 @@ async function runAction(
   const language = params.language;
   const action = params.action as Action;
 
-  onUpdate?.({
-    content: [
-      {
-        type: "text",
-        text: `Using ${language} LSP...`,
-      },
-    ],
-  });
+  updateProgress(onUpdate, language, action, `Using ${language} LSP...`);
 
   if (!ACTIONS.includes(action)) {
     throw new Error(
@@ -165,9 +171,7 @@ async function runAction(
   }
 
   if (action === "workspace_symbol") {
-    onUpdate?.({
-      content: [{ type: "text", text: `Running ${action}...` }],
-    });
+    updateProgress(onUpdate, language, action, `Running ${action}...`);
     const result = await runWorkspaceSymbol(
       manager,
       ctx,
@@ -192,9 +196,7 @@ async function runAction(
       signal,
     );
 
-    onUpdate?.({
-      content: [{ type: "text", text: `Running ${action}...` }],
-    });
+    updateProgress(onUpdate, language, action, `Running ${action}...`);
 
     if (action === "definition") {
       return formatDefinitionWithImplementation([location], client);
@@ -213,9 +215,7 @@ async function runAction(
   const file = resolveFile(ctx.cwd, params.file);
   const { client } = await manager.getClientForFile(ctx.cwd, language, file);
 
-  onUpdate?.({
-    content: [{ type: "text", text: `Running ${action}...` }],
-  });
+  updateProgress(onUpdate, language, action, `Running ${action}...`);
 
   switch (action) {
     case "definition": {

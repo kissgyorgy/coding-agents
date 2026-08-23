@@ -7,6 +7,7 @@ import type {
   DocumentSymbol,
   Location,
   LocationLink,
+  Position,
   Range,
   SymbolInformation,
   WorkspaceEdit,

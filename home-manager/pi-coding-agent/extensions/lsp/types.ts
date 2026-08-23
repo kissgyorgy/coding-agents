@@ -77,3 +77,17 @@ export type Diagnostic = {
   source?: string;
   message: string;
 };
+
+export const FILE_CHANGE_TYPE = {
+  Created: 1,
+  Changed: 2,
+  Deleted: 3,
+} as const;
+
+export type FileChangeType =
+  (typeof FILE_CHANGE_TYPE)[keyof typeof FILE_CHANGE_TYPE];
+
+export type WatchedFileChange = {
+  filePath: string;
+  type: FileChangeType;
+};

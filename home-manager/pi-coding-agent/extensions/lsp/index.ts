@@ -151,6 +151,10 @@ export default function (pi: ExtensionAPI) {
     fileSync.beginAgentRun();
   });
 
+  pi.on("tool_execution_start", (event, ctx) => {
+    fileSync.handleToolExecutionStart(event, ctx.cwd);
+  });
+
   pi.on("tool_execution_end", async (event, ctx) => {
     await fileSync.handleToolExecutionEnd(event, ctx.cwd);
   });
