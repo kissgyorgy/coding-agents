@@ -110,6 +110,7 @@ export default function (pi: ExtensionAPI) {
 
   const manager = new ServerManager();
   const fileSync = new FileSync(manager);
+  let endTurnDiagnosticsEnabled = true;
   let diagnosticsController: AbortController | undefined;
   let diagnosticsLoader: DiagnosticsLoader | undefined;
 
@@ -148,7 +149,7 @@ export default function (pi: ExtensionAPI) {
   });
 
   pi.on("agent_start", () => {
-    fileSync.beginAgentRun();
+    if (endTurnDiagnosticsEnabled) fileSync.beginAgentRun();
   });
 
   pi.on("tool_execution_start", (event, ctx) => {
@@ -161,7 +162,7 @@ export default function (pi: ExtensionAPI) {
 
   pi.on("agent_settled", async (_event, ctx) => {
     const changedPaths = await fileSync.takeChangedPathsAfterQuiet();
-    if (changedPaths.length === 0) return;
+    if (!endTurnDiagnosticsEnabled || changedPaths.length === 0) return;
 
     diagnosticsController?.abort();
     const controller = new AbortController();
@@ -318,6 +319,23 @@ export default function (pi: ExtensionAPI) {
     description: "Show discovered LSP servers",
     handler: async (_args, ctx) => {
       ctx.ui.notify(`LSP servers:\n${manager.formatStatus()}`, "info");
+    },
+  });
+
+  pi.registerCommand("lsp:end-turn-diagnostics", {
+    description: "Toggle automatic end-of-turn LSP diagnostics",
+    handler: async (_args, ctx) => {
+      endTurnDiagnosticsEnabled = !endTurnDiagnosticsEnabled;
+      if (!endTurnDiagnosticsEnabled) {
+        diagnosticsController?.abort();
+        diagnosticsLoader?.stop();
+        diagnosticsLoader = undefined;
+        ctx.ui.setWidget("lsp-diagnostics", undefined);
+      }
+      ctx.ui.notify(
+        `End-of-turn LSP diagnostics ${endTurnDiagnosticsEnabled ? "enabled" : "disabled"}`,
+        "info",
+      );
     },
   });
 
