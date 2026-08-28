@@ -2,13 +2,13 @@
 
 rustPlatform.buildRustPackage rec {
   pname = "llmfit";
-  version = "1.1.11";
+  version = "1.1.12";
 
   src = fetchFromGitHub {
     owner = "AlexsJones";
     repo = "llmfit";
     rev = "v${version}";
-    hash = "sha256-fecb52SZHgrqv4KV9tGiEEWF9EROv7kK9ZT2fOqnO6Y=";
+    hash = "sha256-JUlCHA/KM9M/71a2XCVIq5+5O43bvceXFxWwSaA6Qak=";
   };
 
   cargoLock.lockFile = ./llmfit-Cargo.lock;
