@@ -1,15 +1,20 @@
 import assert from "node:assert/strict";
+import { execFile } from "node:child_process";
 import { mkdtemp, mkdir, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
+import { promisify } from "node:util";
 
 import { FileSync } from "./file-sync.ts";
+import { GitIgnoreFilter } from "./ignore-files.ts";
 import * as nix from "./languages/nix.ts";
 import * as python from "./languages/python.ts";
 import * as rust from "./languages/rust.ts";
 import { ServerManager } from "./server-manager.ts";
 import { FILE_CHANGE_TYPE } from "./types.ts";
+
+const execFileAsync = promisify(execFile);
 
 async function createPythonProject() {
   const root = await mkdtemp(join(tmpdir(), "pi-lsp-diagnostics-"));
@@ -28,6 +33,49 @@ async function createPythonProject() {
   );
   return { root, mainPath, dependencyPath };
 }
+
+test("automatic diagnostics honor standard Git ignore files", async (context) => {
+  const root = await mkdtemp(join(tmpdir(), "pi-lsp-ignore-"));
+  const ignoredDirectoryPath = join(root, "generated", "ignored.ts");
+  const ignoredPatternPath = join(root, "src", "ignored.generated.ts");
+  const unignoredPatternPath = join(root, "src", "keep.generated.ts");
+  const excludedPath = join(root, "private.py");
+  const includedPath = join(root, "src", "main.ts");
+  context.after(async () => {
+    await rm(root, { recursive: true, force: true });
+  });
+
+  await execFileAsync("git", ["init", "--quiet", root]);
+  const ignoreFilter = new GitIgnoreFilter();
+  await ignoreFilter.addDirectory(root);
+
+  await mkdir(join(root, "generated"));
+  await mkdir(join(root, "src"));
+  await writeFile(join(root, ".gitignore"), "generated/\n*.generated.ts\n");
+  await writeFile(join(root, "src", ".gitignore"), "!keep.generated.ts\n");
+  await mkdir(join(root, ".git", "info"), { recursive: true });
+  await writeFile(join(root, ".git", "info", "exclude"), "private.py\n");
+  for (const filePath of [
+    ignoredDirectoryPath,
+    ignoredPatternPath,
+    unignoredPatternPath,
+    excludedPath,
+    includedPath,
+  ]) {
+    await writeFile(filePath, "export const value = 42;\n");
+  }
+
+  assert.deepEqual(
+    await ignoreFilter.excludeIgnored([
+      ignoredDirectoryPath,
+      ignoredPatternPath,
+      unignoredPatternPath,
+      excludedPath,
+      includedPath,
+    ]),
+    [unignoredPatternPath, includedPath],
+  );
+});
 
 test(
   "diagnostics are refreshed after a new imported file is created",

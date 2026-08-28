@@ -10,6 +10,7 @@ import { Loader, Text } from "@earendil-works/pi-tui";
 import { executeLspAction, type LspParams as LspToolParams } from "./actions";
 import { FileSync } from "./file-sync";
 import { formatDiagnostics } from "./formatters";
+import { GitIgnoreFilter } from "./ignore-files";
 import { getSupportedLanguages } from "./languages";
 import { ServerManager, type FileDiagnostics } from "./server-manager";
 import { LspParamsSchema } from "./tool-schema";
@@ -111,6 +112,7 @@ export default function (pi: ExtensionAPI) {
   const manager = new ServerManager();
   const fileSync = new FileSync(manager);
   let endTurnDiagnosticsEnabled = true;
+  const ignoreFilter = new GitIgnoreFilter();
   let diagnosticsController: AbortController | undefined;
   let diagnosticsLoader: DiagnosticsLoader | undefined;
 
@@ -122,7 +124,10 @@ export default function (pi: ExtensionAPI) {
       };
     },
   ): Promise<void> {
-    const discovered = await discoverWorkspaceInstancesAsync(directory);
+    const [discovered] = await Promise.all([
+      discoverWorkspaceInstancesAsync(directory),
+      ignoreFilter.addDirectory(directory),
+    ]);
     if (discovered.length === 0) {
       ctx?.ui?.notify(
         `No LSP workspaces discovered under ${directory}`,
@@ -162,7 +167,8 @@ export default function (pi: ExtensionAPI) {
 
   pi.on("agent_settled", async (_event, ctx) => {
     const changedPaths = await fileSync.takeChangedPathsAfterQuiet();
-    if (!endTurnDiagnosticsEnabled || changedPaths.length === 0) return;
+    const diagnosticPaths = await ignoreFilter.excludeIgnored(changedPaths);
+    if (!endTurnDiagnosticsEnabled || diagnosticPaths.length === 0) return;
 
     diagnosticsController?.abort();
     const controller = new AbortController();
@@ -175,7 +181,7 @@ export default function (pi: ExtensionAPI) {
           tui,
           (spinner) => theme.fg("accent", spinner),
           (message) => theme.fg("muted", message),
-          `Running LSP diagnostics for ${changedPaths.length} changed path(s)…`,
+          `Running LSP diagnostics for ${diagnosticPaths.length} changed path(s)…`,
         );
         return diagnosticsLoader;
       });
@@ -184,7 +190,7 @@ export default function (pi: ExtensionAPI) {
     try {
       const results = await manager.getDiagnosticsForChangedPaths(
         ctx.cwd,
-        changedPaths,
+        diagnosticPaths,
         controller.signal,
       );
       if (controller.signal.aborted || results.length === 0) return;
