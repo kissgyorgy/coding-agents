@@ -13,7 +13,7 @@ export const workspaceMarkers = [
 export function getConfig(cwd: string): LspServerConfig[] {
   const rootUri = pathToFileURL(cwd).href;
   const settings = {
-    basedpyright: {
+    python: {
       analysis: {
         diagnosticMode: "openFilesOnly",
       },
@@ -22,7 +22,7 @@ export function getConfig(cwd: string): LspServerConfig[] {
 
   return [
     {
-      command: "basedpyright-langserver",
+      command: "pyright-langserver",
       args: ["--stdio"],
       rootUri,
       settings,

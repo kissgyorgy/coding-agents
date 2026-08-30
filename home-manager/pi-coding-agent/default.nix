@@ -32,7 +32,7 @@ in
       pi-coding-agent
       imagemagick
       nil
-      basedpyright
+      pyright
       typescript-language-server
       typescript
       gopls
