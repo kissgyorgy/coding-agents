@@ -10,7 +10,7 @@ jobs:
     name: Build aarch64-darwin packages
     runs-on: macos-15
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - uses: DeterminateSystems/nix-installer-action@main
 
