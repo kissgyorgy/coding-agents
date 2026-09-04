@@ -1,5 +1,10 @@
-{ lib, rustPlatform, fetchFromGitHub }:
+{ lib, rustPlatform, fetchFromGitHub, fetchurl }:
 
+let
+  mkStaticCratesCargoDeps = import ./_static-crates-cargo-deps.nix {
+    inherit rustPlatform fetchurl;
+  };
+in
 rustPlatform.buildRustPackage rec {
   pname = "llmserve";
   version = "0.0.10";
@@ -11,7 +16,7 @@ rustPlatform.buildRustPackage rec {
     hash = "sha256-V0DtCjTQhgfO/WQy/OZc2ayDY9nl2YzstCnsoRAJDFo=";
   };
 
-  cargoLock.lockFile = "${src}/Cargo.lock";
+  cargoDeps = mkStaticCratesCargoDeps "${src}/Cargo.lock";
 
   meta = {
     description = "TUI for serving local LLM models — pick a model, pick a backend, serve it";
