@@ -23,6 +23,7 @@
 - Linting, formatting or type and syntax checking, will run automatically,
   no need to run them.
 
+- Never write subheadings on any kind of software, they are not helpful.
 
 # Temporary files
 
