@@ -1,5 +1,24 @@
-{ lib, rustPlatform, fetchFromGitHub }:
+{ lib, rustPlatform, fetchFromGitHub, fetchurl }:
 
+let
+  # crates.io's API download endpoint currently returns HTTP 403, while the
+  # immutable static crate endpoint remains available.
+  fetchStaticCrate = args:
+    let
+      urlParts = builtins.match "https://crates.io/api/v1/crates/([^/]+)/([^/]+)/download" args.url;
+      crateName = builtins.elemAt urlParts 0;
+      crateVersion = builtins.elemAt urlParts 1;
+    in
+    fetchurl (args // {
+      url = "https://static.crates.io/crates/${crateName}/${crateName}-${crateVersion}.crate";
+    });
+
+  cargoDeps = (rustPlatform.importCargoLock.override {
+    fetchurl = fetchStaticCrate;
+  }) {
+    lockFile = ./llmfit-Cargo.lock;
+  };
+in
 rustPlatform.buildRustPackage rec {
   pname = "llmfit";
   version = "1.1.14";
@@ -11,7 +30,7 @@ rustPlatform.buildRustPackage rec {
     hash = "sha256-+N2NFqIhIRIxhXASapGd8CSnmvRzYxUMwgKiGuYlefc=";
   };
 
-  cargoLock.lockFile = ./llmfit-Cargo.lock;
+  inherit cargoDeps;
 
   postUnpack = ''
     cp ${./llmfit-Cargo.lock} "$sourceRoot/Cargo.lock"
