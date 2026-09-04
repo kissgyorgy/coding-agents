@@ -91,98 +91,107 @@ export default function question(pi: ExtensionAPI) {
       }
 
       /* ---------- custom UI --------------------------------------- */
-      const result = await ctx.ui.custom<{
-        answer: string;
-        index: number;
-      } | null>((tui, theme, _kb, done) => {
-        let optionIndex = 0;
-        let cachedLines: string[] | undefined;
+      let result: { answer: string; index: number } | null;
+      ctx.ui.setWorkingVisible(false);
+      try {
+        result = await ctx.ui.custom<{
+          answer: string;
+          index: number;
+        } | null>((tui, theme, _kb, done) => {
+          let optionIndex = 0;
+          let cachedLines: string[] | undefined;
 
-        function refresh() {
-          cachedLines = undefined;
-          tui.requestRender();
-        }
-
-        /* -- input handler -- */
-        function handleInput(data: string) {
-          if (matchesKey(data, Key.up)) {
-            optionIndex = Math.max(0, optionIndex - 1);
-            refresh();
-            return;
-          }
-          if (matchesKey(data, Key.down)) {
-            optionIndex = Math.min(params.options.length - 1, optionIndex + 1);
-            refresh();
-            return;
-          }
-
-          if (matchesKey(data, Key.enter)) {
-            done({
-              answer: params.options[optionIndex].label,
-              index: optionIndex + 1,
-            });
-            return;
-          }
-
-          if (matchesKey(data, Key.escape)) {
-            done(null);
-          }
-        }
-
-        /* -- render -- */
-        function render(width: number): string[] {
-          if (cachedLines) return cachedLines;
-
-          const lines: string[] = [];
-          const wrap = (s: string) => {
-            for (const wl of wrapTextWithAnsi(s, width)) {
-              lines.push(wl);
-            }
-          };
-
-          lines.push(theme.fg("accent", "─".repeat(width)));
-          for (const wl of wrapTextWithAnsi(` ${params.question}`, width)) {
-            lines.push(theme.fg("text", wl));
-          }
-          lines.push("");
-
-          for (let i = 0; i < params.options.length; i++) {
-            const opt = params.options[i];
-            const selected = i === optionIndex;
-            const prefix = selected ? theme.fg("accent", "> ") : "  ";
-
-            if (selected) {
-              wrap(prefix + theme.fg("accent", `${i + 1}. ${opt.label}`));
-            } else {
-              wrap(`  ${theme.fg("text", `${i + 1}. ${opt.label}`)}`);
-            }
-
-            if (opt.description) {
-              wrap(`     ${theme.fg("muted", opt.description)}`);
-            }
-          }
-
-          lines.push("");
-          lines.push(
-            theme.fg(
-              "dim",
-              " ↑↓ navigate • Enter to select • Esc to answer normally",
-            ),
-          );
-          lines.push(theme.fg("accent", "─".repeat(width)));
-
-          cachedLines = lines;
-          return lines;
-        }
-
-        return {
-          render,
-          invalidate: () => {
+          function refresh() {
             cachedLines = undefined;
-          },
-          handleInput,
-        };
-      });
+            tui.requestRender();
+          }
+
+          /* -- input handler -- */
+          function handleInput(data: string) {
+            if (matchesKey(data, Key.up)) {
+              optionIndex = Math.max(0, optionIndex - 1);
+              refresh();
+              return;
+            }
+            if (matchesKey(data, Key.down)) {
+              optionIndex = Math.min(
+                params.options.length - 1,
+                optionIndex + 1,
+              );
+              refresh();
+              return;
+            }
+
+            if (matchesKey(data, Key.enter)) {
+              done({
+                answer: params.options[optionIndex].label,
+                index: optionIndex + 1,
+              });
+              return;
+            }
+
+            if (matchesKey(data, Key.escape)) {
+              done(null);
+            }
+          }
+
+          /* -- render -- */
+          function render(width: number): string[] {
+            if (cachedLines) return cachedLines;
+
+            const lines: string[] = [];
+            const wrap = (s: string) => {
+              for (const wl of wrapTextWithAnsi(s, width)) {
+                lines.push(wl);
+              }
+            };
+
+            lines.push(theme.fg("accent", "─".repeat(width)));
+            for (const wl of wrapTextWithAnsi(` ${params.question}`, width)) {
+              lines.push(theme.fg("text", wl));
+            }
+            lines.push("");
+
+            for (let i = 0; i < params.options.length; i++) {
+              const opt = params.options[i];
+              const selected = i === optionIndex;
+              const prefix = selected ? theme.fg("accent", "> ") : "  ";
+
+              if (selected) {
+                wrap(prefix + theme.fg("accent", `${i + 1}. ${opt.label}`));
+              } else {
+                wrap(`  ${theme.fg("text", `${i + 1}. ${opt.label}`)}`);
+              }
+
+              if (opt.description) {
+                wrap(`     ${theme.fg("muted", opt.description)}`);
+              }
+            }
+
+            lines.push("");
+            lines.push(
+              theme.fg(
+                "dim",
+                " ↑↓ navigate • Enter to select • Esc to answer normally",
+              ),
+            );
+            lines.push(theme.fg("accent", "─".repeat(width)));
+
+            cachedLines = lines;
+            return lines;
+          }
+
+          return {
+            render,
+            invalidate: () => {
+              cachedLines = undefined;
+            },
+            handleInput,
+          };
+        });
+      } finally {
+        ctx.ui.setWorkingVisible(true);
+      }
 
       /* ---------- build result ---------------------------------- */
       const simpleOptions = params.options.map((o) => o.label);
