@@ -9,8 +9,9 @@ import type { AutocompleteSuggestions } from "@earendil-works/pi-tui";
 
 const STATE_ENTRY = "codex-fast";
 const SETTINGS_PATH = join(getAgentDir(), "codex-fast.json");
-const FAST_MODEL_LABEL = "GPT-5.5/5.6 Codex";
-const FAST_MODEL_HINT = "openai-codex/gpt-5.5 or openai-codex/gpt-5.6-*";
+const FAST_MODEL_LABEL = "GPT-5.5/5.6 Codex and GPT-6 Astra";
+const FAST_MODEL_HINT =
+  "openai-codex/gpt-5.5, openai-codex/gpt-5.6-*, or openai-codex/gpt-6-astra";
 
 interface FastState {
   enabled: boolean;
@@ -69,6 +70,7 @@ function isFastCodexModelId(modelId: unknown): modelId is string {
   return (
     modelId === "gpt-5.5" ||
     modelId === "gpt-5.6" ||
+    modelId === "gpt-6-astra" ||
     (typeof modelId === "string" && modelId.startsWith("gpt-5.6-"))
   );
 }
