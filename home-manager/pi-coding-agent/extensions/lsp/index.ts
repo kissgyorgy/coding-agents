@@ -112,6 +112,7 @@ export default function (pi: ExtensionAPI) {
   const manager = new ServerManager();
   const fileSync = new FileSync(manager);
   let endTurnDiagnosticsEnabled = true;
+  let agentRunCancelled = false;
   const ignoreFilter = new GitIgnoreFilter();
   let diagnosticsController: AbortController | undefined;
   let diagnosticsLoader: DiagnosticsLoader | undefined;
@@ -154,7 +155,17 @@ export default function (pi: ExtensionAPI) {
   });
 
   pi.on("agent_start", () => {
+    agentRunCancelled = false;
     if (endTurnDiagnosticsEnabled) fileSync.beginAgentRun();
+  });
+
+  pi.on("agent_end", (event, ctx) => {
+    agentRunCancelled =
+      ctx.signal?.aborted === true ||
+      event.messages.some(
+        (message) =>
+          message.role === "assistant" && message.stopReason === "aborted",
+      );
   });
 
   pi.on("tool_execution_start", (event, ctx) => {
@@ -166,9 +177,13 @@ export default function (pi: ExtensionAPI) {
   });
 
   pi.on("agent_settled", async (_event, ctx) => {
+    const cancelled = agentRunCancelled;
     const changedPaths = await fileSync.takeChangedPathsAfterQuiet();
+    if (cancelled || !endTurnDiagnosticsEnabled || changedPaths.length === 0)
+      return;
+
     const diagnosticPaths = await ignoreFilter.excludeIgnored(changedPaths);
-    if (!endTurnDiagnosticsEnabled || diagnosticPaths.length === 0) return;
+    if (diagnosticPaths.length === 0) return;
 
     diagnosticsController?.abort();
     const controller = new AbortController();
