@@ -7,13 +7,13 @@ let
 in
 rustPlatform.buildRustPackage rec {
   pname = "llmfit";
-  version = "1.1.14";
+  version = "1.1.15";
 
   src = fetchFromGitHub {
     owner = "AlexsJones";
     repo = "llmfit";
     rev = "v${version}";
-    hash = "sha256-+N2NFqIhIRIxhXASapGd8CSnmvRzYxUMwgKiGuYlefc=";
+    hash = "sha256-rAlWEpoHuh03sU+Ma9LqvjNMq8/1x8e0MAQRmt4etk4=";
   };
 
   inherit cargoDeps;
