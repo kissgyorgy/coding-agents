@@ -2,18 +2,18 @@
 
 buildNpmPackage rec {
   pname = "gemini-cli";
-  version = "0.59.0";
+  version = "0.60.0";
 
   src = fetchFromGitHub {
     owner = "google-gemini";
     repo = "gemini-cli";
     rev = "v${version}";
-    hash = "sha256-5VHGOXrB35dM3CxbZtpF5W8HovN7KrLcRM3oIRdS7+U=";
+    hash = "sha256-Wy6/jolAbvXDc5Z0JznvgJLHHnqnVpz0dNZyCX3zy6Q=";
   };
 
   nodejs = nodejs_22;
   npmDepsFetcherVersion = 2;
-  npmDepsHash = "sha256-iYOBmsz2OhTHY29/TDzQZD3K5eeYThMlCAgpihrDo7w=";
+  npmDepsHash = "sha256-0UVuGuPnmXLNQmgHzpaon+gsDrEW9yAT+OeWCgbRYWk=";
 
   nativeBuildInputs = [ makeBinaryWrapper ];
 
