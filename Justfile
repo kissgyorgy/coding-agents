@@ -168,6 +168,7 @@ _pi-post-update:
         "$pkg_dir/package.json"
     cp "$src/packages/coding-agent/install-lock/package-lock.json" \
         "$pkg_dir/package-lock.json"
+    node scripts/fill-pi-lock-integrities.mjs "$pkg_dir/package-lock.json"
 
     sed -i 's/npmDepsHash = "sha256-[^"]*";/npmDepsHash = lib.fakeHash;/' "$pkg_file"
     set +e
