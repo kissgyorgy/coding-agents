@@ -148,7 +148,26 @@ update-whichllm: (_update-pkg "whichllm" "Andyyyy64/whichllm")
 update-llmfit: (_update-pkg "llmfit" "AlexsJones/llmfit")
 update-llmserve: (_update-pkg "llmserve" "AlexsJones/llmserve")
 
-update-pi-coding-agent: (_update-pkg "pi-coding-agent" "earendil-works/pi" "_pi-post-update")
+update-pi-coding-agent:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    pkg="pi-coding-agent"
+    repo="earendil-works/pi"
+    tag=$(gh release list --repo "$repo" --exclude-pre-releases --limit 1 --json tagName -q '.[0].tagName')
+    latest=${tag#v}
+    current=$(nix eval --raw .#"$pkg".version)
+    if [[ "$current" == "$latest" ]]; then
+        echo "$pkg: already at $current"
+        exit 0
+    fi
+
+    # The release manifest and lock must be refreshed before npmDeps can be
+    # calculated, so update only the Git source first.
+    nix-update --flake --version "$latest" --src-only packages.x86_64-linux."$pkg"
+    just _pi-post-update
+
+    git add -- packages/"$pkg"*
+    git commit -m "$pkg: $current -> $latest"
 
 # Regenerate Pi's model catalog locally and install it in the user model store
 update-pi-models:
