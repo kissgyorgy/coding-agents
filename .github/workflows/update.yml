@@ -38,18 +38,6 @@ jobs:
         run: git push
 
       - name: Build and push to cachix
-        run: |
-          failed=()
-          for pkg in aichat claude-code claude-code-ui gemini-cli ccusage codex pi-coding-agent; do
-            echo "::group::Building $pkg"
-            if nix build .#"$pkg" 2>&1; then
-              cachix push coding-agents ./result*
-            else
-              echo "::warning::Failed to build $pkg, skipping"
-              failed+=("$pkg")
-            fi
-            echo "::endgroup::"
-          done
-          if [[ ${#failed[@]} -gt 0 ]]; then
-            echo "::warning::Failed to build: ${failed[*]}"
-          fi
+        env:
+          ALLOW_FAILURES: "1"
+        run: scripts/build-and-cache.sh

@@ -41,3 +41,23 @@ jobs:
             "$out/bin/$mainProgram" --help
             echo "::endgroup::"
           done
+
+  x86_64-linux-cache:
+    name: Build and cache x86_64-linux packages
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: DeterminateSystems/nix-installer-action@main
+
+      - uses: DeterminateSystems/magic-nix-cache-action@main
+
+      - uses: cachix/cachix-action@v17
+        with:
+          name: coding-agents
+          authToken: "${{ secrets.CACHIX_AUTH_TOKEN }}"
+          skipPush: true
+
+      - name: Build and push to cachix
+        run: scripts/build-and-cache.sh
