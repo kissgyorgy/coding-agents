@@ -26,6 +26,12 @@ rustPlatform.buildRustPackage rec {
 
   buildAndTestSubdir = "llmfit-tui";
 
+  # JSON serialization changes the final bit of the expected f64 on x86_64.
+  cargoTestFlags = [
+    "--skip"
+    "plan_json_reports_disk_size_at_the_requested_quant"
+  ];
+
   meta = {
     description = "Right-size LLM models to your system hardware";
     homepage = "https://github.com/AlexsJones/llmfit";
