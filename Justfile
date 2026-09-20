@@ -161,32 +161,26 @@ update-pi-coding-agent:
         exit 0
     fi
 
-    # The release manifest and lock must be refreshed before npmDeps can be
-    # calculated, so update only the Git source first.
-    nix-update --flake --version "$latest" --src-only packages.x86_64-linux."$pkg"
+    sed -i 's/version = "'"$current"'";/version = "'"$latest"'";/' \
+        packages/"$pkg"/default.nix
     just _pi-post-update
 
     git add -- packages/"$pkg"*
     git commit -m "$pkg: $current -> $latest"
-
-# Regenerate Pi's model catalog locally and install it in the user model store
-update-pi-models:
-    #!/usr/bin/env bash
-    set -euo pipefail
-    pi_source=$(nix build .#pi-coding-agent.src --no-link --print-out-paths)
-    pi_package=$(nix build .#pi-coding-agent --no-link --print-out-paths)
-    node scripts/update-pi-models.mjs "$pi_source" "$pi_package"
 
 _pi-post-update:
     #!/usr/bin/env bash
     set -euo pipefail
     pkg_dir="packages/pi-coding-agent"
     pkg_file="$pkg_dir/default.nix"
-    src=$(nix build .#pi-coding-agent.src --no-link --print-out-paths)
-    cp "$src/packages/coding-agent/install-lock/package.json" \
+    version=$(nix eval --raw .#pi-coding-agent.version)
+
+    sed -i 's/"version": "[^"]*"/"version": "'"$version"'"/' \
         "$pkg_dir/package.json"
-    cp "$src/packages/coding-agent/install-lock/package-lock.json" \
-        "$pkg_dir/package-lock.json"
+    sed -i 's/"@earendil-works\/pi-coding-agent": "[^"]*"/"@earendil-works\/pi-coding-agent": "'"$version"'"/' \
+        "$pkg_dir/package.json"
+    npm install --prefix "$pkg_dir" --package-lock-only --ignore-scripts \
+        --no-audit --no-fund
     node scripts/fill-pi-lock-integrities.mjs "$pkg_dir/package-lock.json"
 
     sed -i 's/npmDepsHash = "sha256-[^"]*";/npmDepsHash = lib.fakeHash;/' "$pkg_file"

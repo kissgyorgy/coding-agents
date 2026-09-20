@@ -1,4 +1,4 @@
-{ lib, buildNpmPackage, callPackage, fetchFromGitHub, fetchNpmDeps, nodejs_22, makeBinaryWrapper, autoPatchelfHook ? null, stdenv, libxcb }:
+{ lib, buildNpmPackage, callPackage, fetchNpmDeps, nodejs_22, makeBinaryWrapper, autoPatchelfHook ? null, stdenv, libxcb }:
 
 let
   version = "0.86.1";
@@ -9,12 +9,7 @@ buildNpmPackage rec {
   pname = "pi-coding-agent";
   inherit version;
 
-  src = fetchFromGitHub {
-    owner = "earendil-works";
-    repo = "pi";
-    rev = "v${version}";
-    hash = "sha256-/7+VoRfXdeOwtiNXQYOKg5OHeKuNLIHfODGDNBhWop0=";
-  };
+  src = ./.;
 
   nodejs = nodejs_22;
 
@@ -26,15 +21,8 @@ buildNpmPackage rec {
     fetcherVersion = npmDepsFetcherVersion;
   };
 
-  # Use the installer's lockfile instead of the monorepo lockfile. It is the
-  # upstream-tested, exact production dependency closure for this Pi release.
-  # buildNpmPackage runs npmConfigHook in prePatch, so replace both files as
-  # soon as the source is unpacked.
-  postUnpack = ''
-    cp ${./package.json} "$sourceRoot/package.json"
-    cp ${./package-lock.json} "$sourceRoot/package-lock.json"
-  '';
-
+  # Use an installer-style root package and lockfile containing the exact
+  # production dependency closure for this Pi release.
   # Pi's published packages contain the release-built bundle, generated model
   # catalogs, documentation, assets, and native TUI helpers. Lifecycle scripts
   # are neither needed nor safe in the sandbox for a release installation.
