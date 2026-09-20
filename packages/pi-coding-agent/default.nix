@@ -55,6 +55,7 @@ buildNpmPackage rec {
     # lockfile-complete runtime dependency tree beside the package itself.
     mv node_modules/@earendil-works/pi-coding-agent "$pkgDir"
     cp -r node_modules "$pkgDir/"
+    rm "$pkgDir/node_modules/.bin/pi"
 
     makeBinaryWrapper ${nodejs_22}/bin/node "$out/bin/pi" \
       --add-flags "$pkgDir/dist/bundle/cli.js" \
