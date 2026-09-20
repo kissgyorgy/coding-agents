@@ -788,7 +788,7 @@ ${todoList}
       if (!setting) return;
 
       // Second: pick model
-      const available = await ctx.modelRegistry.getAvailable();
+      const available = ctx.modelRegistry.getAvailable();
       const modelItems: SelectItem[] = available.map((m) => ({
         value: `${m.provider}/${m.id}`,
         label: `${m.provider}/${m.id}`,

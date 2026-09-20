@@ -298,7 +298,7 @@ export default function (pi: ExtensionAPI) {
       return new Text(theme.fg("toolOutput", text), 0, 0);
     },
 
-    async execute(toolCallId, params, signal, onUpdate, ctx) {
+    async execute(_toolCallId, params, signal, onUpdate, _ctx) {
       const url = params.url.replace(/^@/, "");
 
       onUpdate?.({

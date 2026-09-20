@@ -145,7 +145,7 @@ export default function (pi: ExtensionAPI) {
   pi.registerCommand("websearch:model", {
     description: "Configure web search provider and model",
     handler: async (_args, ctx) => {
-      const available = await ctx.modelRegistry.getAvailable();
+      const available = ctx.modelRegistry.getAvailable();
 
       // Filter to providers that have a web-search backend
       const supported = available.filter(
@@ -421,7 +421,7 @@ export default function (pi: ExtensionAPI) {
       return new Text(linkify(theme.fg("toolOutput", text)), 0, 0);
     },
 
-    async execute(toolCallId, params, signal, onUpdate, ctx) {
+    async execute(_toolCallId, params, signal, onUpdate, ctx) {
       const auth = await backend.getAuth(ctx);
       if (!auth) {
         throw new Error(`No API key found for ${backend.name}.`);
