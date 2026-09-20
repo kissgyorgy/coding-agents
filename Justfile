@@ -105,7 +105,7 @@ update-codex:
     fi
     git add -- "$pkg_file"
     git commit -m "$message"
-update-gemini-cli: (_update-pkg "gemini-cli" "google-gemini/gemini-cli" "" "true")
+update-gemini-cli: (_update-pkg "gemini-cli" "google-gemini/gemini-cli" "true")
 update-crush:
     #!/usr/bin/env bash
     set -euo pipefail
@@ -161,23 +161,12 @@ update-pi-coding-agent:
         exit 0
     fi
 
-    sed -i 's/version = "'"$current"'";/version = "'"$latest"'";/' \
-        packages/"$pkg"/default.nix
-    just _pi-post-update
-
-    git add -- packages/"$pkg"*
-    git commit -m "$pkg: $current -> $latest"
-
-_pi-post-update:
-    #!/usr/bin/env bash
-    set -euo pipefail
-    pkg_dir="packages/pi-coding-agent"
+    pkg_dir="packages/$pkg"
     pkg_file="$pkg_dir/default.nix"
-    version=$(nix eval --raw .#pi-coding-agent.version)
-
-    sed -i 's/"version": "[^"]*"/"version": "'"$version"'"/' \
+    sed -i 's/version = "'"$current"'";/version = "'"$latest"'";/' "$pkg_file"
+    sed -i 's/"version": "[^"]*"/"version": "'"$latest"'"/' \
         "$pkg_dir/package.json"
-    sed -i 's/"@earendil-works\/pi-coding-agent": "[^"]*"/"@earendil-works\/pi-coding-agent": "'"$version"'"/' \
+    sed -i 's/"@earendil-works\/pi-coding-agent": "[^"]*"/"@earendil-works\/pi-coding-agent": "'"$latest"'"/' \
         "$pkg_dir/package.json"
     npm install --prefix "$pkg_dir" --package-lock-only --ignore-scripts \
         --no-audit --no-fund
@@ -200,7 +189,10 @@ _pi-post-update:
     fi
     sed -i 's|npmDepsHash = lib\.fakeHash;|npmDepsHash = "'"$npm_deps_hash"'";|' "$pkg_file"
 
-_update-pkg pkg repo pre_commit="" check_assets="":
+    git add -- packages/"$pkg"*
+    git commit -m "$pkg: $current -> $latest"
+
+_update-pkg pkg repo check_assets="":
     #!/usr/bin/env bash
     set -euo pipefail
     pkg="{{pkg}}"
@@ -223,9 +215,6 @@ _update-pkg pkg repo pre_commit="" check_assets="":
     if git diff --quiet -- packages/"$pkg"*; then
         echo "$pkg: no changes after nix-update"
         exit 0
-    fi
-    if [[ -n "{{pre_commit}}" ]]; then
-        just {{pre_commit}}
     fi
     git add -- packages/"$pkg"*
     git commit -m "$pkg: $current -> $latest"
