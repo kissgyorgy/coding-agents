@@ -14,7 +14,7 @@ buildNpmPackage rec {
   nodejs = nodejs_22;
 
   npmDepsFetcherVersion = 2;
-  npmDepsHash = "sha256-fBqdudaoEX/jpBKZtvreWpGiloYcBnz3/iG1miyVAcs=";
+  npmDepsHash = "sha256-whgCx3bacDdHkYqKc3hh+sHGv5HQbqafP0HHBJ81cYo=";
   npmDeps = fetchNpmDeps {
     src = ./.;
     hash = npmDepsHash;
