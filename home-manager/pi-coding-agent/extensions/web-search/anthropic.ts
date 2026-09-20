@@ -4,6 +4,7 @@
  * Uses the Anthropic Messages streaming format (not OpenAI Responses API),
  * so provides a custom parseSSE implementation.
  */
+import { requestHeaders } from "./types";
 import type { AuthResult, SearchBackend, SearchResult } from "./types";
 
 const ANTHROPIC_API_VERSION = "2023-06-01";
@@ -17,12 +18,17 @@ export function anthropic(model: string): SearchBackend {
       const resolved = ctx.modelRegistry.find(provider, model);
       if (resolved) {
         const auth = await ctx.modelRegistry.getApiKeyAndHeaders(resolved);
-        if (auth.ok) return { apiKey: auth.apiKey, headers: auth.headers };
+        if (auth.ok && auth.apiKey) {
+          return { apiKey: auth.apiKey, headers: auth.headers };
+        }
       }
-      const key = await (ctx.modelRegistry as any).getApiKeyForProvider?.(
-        provider,
-      );
-      if (key) return { apiKey: key };
+      const providerAuth = await ctx.modelRegistry.getProviderAuth(provider);
+      if (providerAuth?.auth.apiKey) {
+        return {
+          apiKey: providerAuth.auth.apiKey,
+          headers: providerAuth.auth.headers,
+        };
+      }
       return undefined;
     },
 
@@ -33,7 +39,7 @@ export function anthropic(model: string): SearchBackend {
       return {
         url: `${baseUrl}/v1/messages`,
         headers: {
-          ...auth.headers,
+          ...requestHeaders(auth.headers),
           "x-api-key": auth.apiKey,
           "anthropic-version": ANTHROPIC_API_VERSION,
           "Content-Type": "application/json",

@@ -2,25 +2,38 @@
  * Shared types and SSE parsing for web-search backends.
  */
 
+import type { ProviderHeaders } from "@earendil-works/pi-ai";
+import type { ExtensionContext } from "@earendil-works/pi-coding-agent";
+
 // ---------------------------------------------------------------------------
 // Backend interface
 // ---------------------------------------------------------------------------
 
 export interface AuthResult {
   apiKey: string;
-  headers?: Record<string, string>;
+  headers?: ProviderHeaders;
+}
+
+export function requestHeaders(
+  headers?: ProviderHeaders,
+): Record<string, string> {
+  return Object.fromEntries(
+    Object.entries(headers ?? {}).filter(
+      (entry): entry is [string, string] => entry[1] !== null,
+    ),
+  );
 }
 
 export interface SearchBackend {
   /** Human-readable name for error messages. */
   name: string;
   /** Obtain an API key (and optional extra headers) from the model registry. */
-  getAuth(ctx: any): Promise<AuthResult | undefined>;
+  getAuth(ctx: ExtensionContext): Promise<AuthResult | undefined>;
   buildRequest(
     auth: AuthResult,
     query: string,
     instructions: string,
-    ctx: any,
+    ctx: ExtensionContext,
   ):
     | { url: string; headers: Record<string, string>; body: string }
     | { error: string };

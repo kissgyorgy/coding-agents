@@ -2,6 +2,7 @@
  * OpenAI Subscription backend — ChatGPT Codex endpoint with JWT auth.
  */
 import * as os from "node:os";
+import { requestHeaders } from "./types";
 import type { AuthResult, SearchBackend } from "./types";
 
 const CODEX_BASE_URL = "https://chatgpt.com/backend-api";
@@ -26,12 +27,17 @@ export function openaiSubscription(model: string): SearchBackend {
       const codexModel = ctx.modelRegistry.find(provider, model);
       if (codexModel) {
         const auth = await ctx.modelRegistry.getApiKeyAndHeaders(codexModel);
-        if (auth.ok) return { apiKey: auth.apiKey, headers: auth.headers };
+        if (auth.ok && auth.apiKey) {
+          return { apiKey: auth.apiKey, headers: auth.headers };
+        }
       }
-      const key = await (ctx.modelRegistry as any).getApiKeyForProvider?.(
-        provider,
-      );
-      if (key) return { apiKey: key };
+      const providerAuth = await ctx.modelRegistry.getProviderAuth(provider);
+      if (providerAuth?.auth.apiKey) {
+        return {
+          apiKey: providerAuth.auth.apiKey,
+          headers: providerAuth.auth.headers,
+        };
+      }
       return undefined;
     },
 
@@ -48,7 +54,7 @@ export function openaiSubscription(model: string): SearchBackend {
       return {
         url: `${CODEX_BASE_URL}/codex/responses`,
         headers: {
-          ...auth.headers,
+          ...requestHeaders(auth.headers),
           Authorization: `Bearer ${auth.apiKey}`,
           "chatgpt-account-id": accountId,
           "OpenAI-Beta": "responses=experimental",

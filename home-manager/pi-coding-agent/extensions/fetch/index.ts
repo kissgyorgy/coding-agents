@@ -116,7 +116,8 @@ async function fetchPage(
       );
     }
     const { bytes } = await readBodyBytes(response.body!, MAX_PDF_BYTES);
-    return { type: "pdf", buffer: bytes.buffer, finalUrl };
+    const buffer = Uint8Array.from(bytes).buffer;
+    return { type: "pdf", buffer, finalUrl };
   }
 
   if (contentLength > MAX_DOWNLOAD_BYTES) {
@@ -189,7 +190,11 @@ function extractContent(
 
   const reader = new Readability(document.cloneNode(true) as any);
   const article = reader.parse();
-  if (article && article.textContent.trim().length > 50) {
+  if (
+    article?.content &&
+    article.textContent &&
+    article.textContent.trim().length > 50
+  ) {
     const turndown = createTurndown();
     turndown.remove("noscript");
     turndown.remove("nav");
@@ -197,9 +202,9 @@ function extractContent(
     turndown.remove("header");
     const markdown = cleanMarkdown(turndown.turndown(article.content));
     return {
-      title: article.title,
+      title: article.title ?? "",
       markdown,
-      excerpt: article.excerpt,
+      excerpt: article.excerpt ?? "",
     };
   }
 
@@ -298,34 +303,27 @@ export default function (pi: ExtensionAPI) {
 
       onUpdate?.({
         content: [{ type: "text", text: `Fetching ${url}...` }],
+        details: {},
       });
 
       let result: FetchResult;
       try {
         result = await fetchPage(url, signal);
-      } catch (err: any) {
-        if (err.name === "AbortError") {
-          return { content: [{ type: "text", text: "Fetch cancelled." }] };
+      } catch (error: unknown) {
+        if (error instanceof Error && error.name === "AbortError") {
+          throw new Error("Fetch cancelled.");
         }
-        return {
-          content: [{ type: "text", text: `Fetch error: ${err.message}` }],
-          isError: true,
-        };
+        const message = error instanceof Error ? error.message : String(error);
+        throw new Error(`Fetch error: ${message}`);
       }
 
       if (result.type === "pdf") {
         try {
           const text = await extractPdf(result.buffer);
           if (text.trim().length < 20) {
-            return {
-              content: [
-                {
-                  type: "text",
-                  text: `PDF at ${result.finalUrl} contains no extractable text (may be scanned/image-only).`,
-                },
-              ],
-              isError: true,
-            };
+            throw new Error(
+              `PDF at ${result.finalUrl} contains no extractable text (may be scanned/image-only).`,
+            );
           }
           const output = `Source: ${result.finalUrl}\n\n---\n\n${text}`;
           return {
@@ -336,13 +334,10 @@ export default function (pi: ExtensionAPI) {
               extracted: true,
             },
           };
-        } catch (err: any) {
-          return {
-            content: [
-              { type: "text", text: `PDF extraction error: ${err.message}` },
-            ],
-            isError: true,
-          };
+        } catch (error: unknown) {
+          const message =
+            error instanceof Error ? error.message : String(error);
+          throw new Error(`PDF extraction error: ${message}`);
         }
       }
 
@@ -360,15 +355,9 @@ export default function (pi: ExtensionAPI) {
 
       const extracted = extractContent(result.html, result.finalUrl);
       if (!extracted) {
-        return {
-          content: [
-            {
-              type: "text",
-              text: `Could not extract content from ${result.finalUrl} — the page is not reader-friendly (may require JavaScript rendering, or is not an article).`,
-            },
-          ],
-          isError: true,
-        };
+        throw new Error(
+          `Could not extract content from ${result.finalUrl} — the page is not reader-friendly (may require JavaScript rendering, or is not an article).`,
+        );
       }
 
       let output = `# ${extracted.title}\n\n`;

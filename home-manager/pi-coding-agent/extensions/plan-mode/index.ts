@@ -11,7 +11,6 @@ import { fileURLToPath } from "node:url";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 import type { AgentMessage } from "@earendil-works/pi-agent-core";
-import { complete, getModel } from "@earendil-works/pi-ai";
 import type { AssistantMessage, TextContent } from "@earendil-works/pi-ai";
 import {
   CustomEditor,
@@ -239,13 +238,10 @@ async function showPlanViewModal(
               offset++;
               tui.requestRender();
             }
-          } else if (matchesKey(data, "pageUp") || matchesKey(data, "pageup")) {
+          } else if (matchesKey(data, Key.pageUp)) {
             offset = Math.max(0, offset - vh);
             tui.requestRender();
-          } else if (
-            matchesKey(data, "pageDown") ||
-            matchesKey(data, "pagedown")
-          ) {
+          } else if (matchesKey(data, Key.pageDown)) {
             offset = Math.min(maxOff, offset + vh);
             tui.requestRender();
           } else if (matchesKey(data, Key.home)) {
@@ -298,14 +294,9 @@ export default function planModeExtension(pi: ExtensionAPI): void {
     try {
       const slugProvider = settings.slugModel?.provider ?? "anthropic";
       const slugModelId = settings.slugModel?.id ?? "claude-haiku-4-5";
-      const model =
-        ctx.modelRegistry.find(slugProvider, slugModelId) ??
-        getModel("anthropic", "claude-haiku-4-5");
-      const apiKey = model
-        ? await ctx.modelRegistry.getApiKey(model)
-        : undefined;
-      if (model && apiKey) {
-        const response = await complete(
+      const model = ctx.modelRegistry.find(slugProvider, slugModelId);
+      if (model) {
+        const response = await ctx.modelRegistry.complete(
           model,
           {
             messages: [
@@ -326,7 +317,7 @@ ${text}`,
               },
             ],
           },
-          { apiKey, maxTokens: 50, signal: AbortSignal.timeout(5_000) },
+          { maxTokens: 50, signal: AbortSignal.timeout(5_000) },
         );
         const raw = response.content
           .filter((c): c is { type: "text"; text: string } => c.type === "text")
@@ -630,7 +621,7 @@ ${todoList}
       const isNew = !planFilePath || !existsSync(planFilePath);
       const currentContent = isNew
         ? PLAN_TEMPLATE
-        : readFileSync(planFilePath, "utf-8");
+        : readFileSync(planFilePath!, "utf-8");
 
       const edited = await ctx.ui.editor("Edit plan:", currentContent);
       if (edited == null || edited === currentContent) return;
@@ -1110,7 +1101,7 @@ ${todoList}
         const isNew = !planFilePath || !existsSync(planFilePath);
         const planContent = isNew
           ? PLAN_TEMPLATE
-          : readFileSync(planFilePath, "utf-8");
+          : readFileSync(planFilePath!, "utf-8");
 
         // Save current prompt text so we can restore it after
         const originalText = editorCtx.ui.getEditorText();
@@ -1169,8 +1160,7 @@ ${todoList}
           e.type === "custom" && e.customType === "plan-mode",
       )
       .pop() as
-      | { data?: { enabled: boolean; executing?: boolean } }
-      | undefined;
+      { data?: { enabled: boolean; executing?: boolean } } | undefined;
 
     if (planModeEntry?.data) {
       planModeEnabled = planModeEntry.data.enabled ?? planModeEnabled;

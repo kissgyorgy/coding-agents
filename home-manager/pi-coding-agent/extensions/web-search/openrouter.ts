@@ -1,6 +1,7 @@
 /**
  * OpenRouter backend — standard Responses API via model registry baseUrl.
  */
+import { requestHeaders } from "./types";
 import type { AuthResult, SearchBackend } from "./types";
 
 export function openrouter(model: string): SearchBackend {
@@ -9,11 +10,12 @@ export function openrouter(model: string): SearchBackend {
     name: `${provider}/${model}`,
 
     async getAuth(ctx): Promise<AuthResult | undefined> {
-      const key = await (ctx.modelRegistry as any).getApiKeyForProvider?.(
-        provider,
-      );
-      if (key) return { apiKey: key };
-      return undefined;
+      const providerAuth = await ctx.modelRegistry.getProviderAuth(provider);
+      if (!providerAuth?.auth.apiKey) return undefined;
+      return {
+        apiKey: providerAuth.auth.apiKey,
+        headers: providerAuth.auth.headers,
+      };
     },
 
     buildRequest(auth, query, instructions, ctx) {
@@ -27,7 +29,7 @@ export function openrouter(model: string): SearchBackend {
       return {
         url: `${resolved.baseUrl}/responses`,
         headers: {
-          ...auth.headers,
+          ...requestHeaders(auth.headers),
           Authorization: `Bearer ${auth.apiKey}`,
           "Content-Type": "application/json",
         },

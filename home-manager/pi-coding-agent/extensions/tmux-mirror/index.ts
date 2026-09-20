@@ -454,16 +454,7 @@ export default function (pi: ExtensionAPI) {
               backend.label === "tmux"
                 ? "Are you inside tmux?"
                 : "Is kitty remote control enabled? (allow_remote_control in kitty.conf)";
-            return {
-              content: [
-                {
-                  type: "text",
-                  text: `Error: could not create terminal pane. ${hint}`,
-                },
-              ],
-              details: { command: params.command, exitCode: 1, cwd: ctx.cwd },
-              isError: true,
-            };
+            throw new Error(`Could not create terminal pane. ${hint}`);
           }
 
           onUpdate?.({
@@ -473,6 +464,7 @@ export default function (pi: ExtensionAPI) {
                 text: `Running in ${backend.label} → ${backend.displayTarget()}…`,
               },
             ],
+            details: {},
           });
 
           const ms = params.timeout ? params.timeout * 1000 : undefined;
@@ -500,23 +492,19 @@ export default function (pi: ExtensionAPI) {
           }
           if (!text) text = "(no output)";
 
+          if (exitCode !== 0) {
+            throw new Error(`Command exited with code ${exitCode}:\n${text}`);
+          }
+
           return {
             content: [{ type: "text", text }],
             details: { command: params.command, exitCode, cwd: ctx.cwd },
-            isError: exitCode !== 0,
           };
-        } catch (err) {
+        } catch (error: unknown) {
           await resetAll();
-          return {
-            content: [
-              {
-                type: "text",
-                text: `tmux-mirror error: ${err instanceof Error ? err.message : String(err)}`,
-              },
-            ],
-            details: { command: params.command, exitCode: 1, cwd: ctx.cwd },
-            isError: true,
-          };
+          const message =
+            error instanceof Error ? error.message : String(error);
+          throw new Error(`tmux-mirror error: ${message}`);
         }
       },
     });
@@ -534,12 +522,7 @@ export default function (pi: ExtensionAPI) {
       }),
       async execute(_id, params) {
         if (!(await backend.ensurePane())) {
-          return {
-            content: [
-              { type: "text", text: "Error: terminal pane not available" },
-            ],
-            isError: true,
-          };
+          throw new Error("Terminal pane not available");
         }
         const text = (await backend.capturePane(params.lines || 200)).trim();
         return {

@@ -64,30 +64,11 @@ export default function question(pi: ExtensionAPI) {
     async execute(_toolCallId, params, _signal, _onUpdate, ctx) {
       // Custom components are only available in TUI mode.
       if (ctx.mode !== "tui") {
-        return {
-          content: [
-            {
-              type: "text",
-              text: "Error: UI not available (running in non-interactive mode)",
-            },
-          ],
-          details: {
-            question: params.question,
-            options: params.options.map((o) => o.label),
-            answer: null,
-          } as QuestionDetails,
-        };
+        throw new Error("UI not available (running in non-interactive mode)");
       }
 
       if (params.options.length === 0) {
-        return {
-          content: [{ type: "text", text: "Error: No options provided" }],
-          details: {
-            question: params.question,
-            options: [],
-            answer: null,
-          } as QuestionDetails,
-        };
+        throw new Error("No options provided");
       }
 
       /* ---------- custom UI --------------------------------------- */

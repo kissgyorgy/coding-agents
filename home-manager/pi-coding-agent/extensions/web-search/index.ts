@@ -28,7 +28,6 @@ import {
 import {
   Container,
   fuzzyFilter,
-  getKeybindings,
   Input,
   Spacer,
   Text,
@@ -46,10 +45,7 @@ import { anthropic } from "./anthropic";
 // ---------------------------------------------------------------------------
 
 type BackendType =
-  | "openai"
-  | "openrouter"
-  | "openai-subscription"
-  | "anthropic";
+  "openai" | "openrouter" | "openai-subscription" | "anthropic";
 
 interface WebSearchSettings {
   backend: BackendType;
@@ -186,7 +182,7 @@ export default function (pi: ExtensionAPI) {
         });
 
       const choice = await ctx.ui.custom<ModelItem | null>(
-        (tui, theme, _kb, done) => {
+        (tui, theme, keybindings, done) => {
           let filteredModels = allModels;
           let selectedIndex = 0;
 
@@ -332,9 +328,7 @@ export default function (pi: ExtensionAPI) {
             render: (w: number) => container.render(w),
             invalidate: () => container.invalidate(),
             handleInput: (data: string) => {
-              const kb = getKeybindings();
-
-              if (kb.matches(data, "tui.select.up")) {
+              if (keybindings.matches(data, "tui.select.up")) {
                 if (filteredModels.length === 0) return;
                 selectedIndex =
                   selectedIndex === 0
@@ -342,7 +336,7 @@ export default function (pi: ExtensionAPI) {
                     : selectedIndex - 1;
                 updateList();
                 tui.requestRender();
-              } else if (kb.matches(data, "tui.select.down")) {
+              } else if (keybindings.matches(data, "tui.select.down")) {
                 if (filteredModels.length === 0) return;
                 selectedIndex =
                   selectedIndex === filteredModels.length - 1
@@ -350,10 +344,10 @@ export default function (pi: ExtensionAPI) {
                     : selectedIndex + 1;
                 updateList();
                 tui.requestRender();
-              } else if (kb.matches(data, "tui.select.confirm")) {
+              } else if (keybindings.matches(data, "tui.select.confirm")) {
                 const selected = filteredModels[selectedIndex];
                 if (selected) done(selected);
-              } else if (kb.matches(data, "tui.select.cancel")) {
+              } else if (keybindings.matches(data, "tui.select.cancel")) {
                 done(null);
               } else {
                 searchInput.handleInput(data);
@@ -430,15 +424,7 @@ export default function (pi: ExtensionAPI) {
     async execute(toolCallId, params, signal, onUpdate, ctx) {
       const auth = await backend.getAuth(ctx);
       if (!auth) {
-        return {
-          content: [
-            {
-              type: "text",
-              text: `Error: No API key found for ${backend.name}.`,
-            },
-          ],
-          isError: true,
-        };
+        throw new Error(`No API key found for ${backend.name}.`);
       }
 
       const req = backend.buildRequest(
@@ -448,14 +434,12 @@ export default function (pi: ExtensionAPI) {
         ctx,
       );
       if ("error" in req) {
-        return {
-          content: [{ type: "text", text: `Error: ${req.error}` }],
-          isError: true,
-        };
+        throw new Error(req.error);
       }
 
       onUpdate?.({
         content: [{ type: "text", text: `Searching: ${params.query}...` }],
+        details: {},
       });
 
       try {
@@ -468,38 +452,33 @@ export default function (pi: ExtensionAPI) {
 
         if (!response.ok) {
           const errorText = await response.text();
+          let parsed: any;
           try {
-            const parsed = JSON.parse(errorText);
-            const err = parsed?.error;
-            if (err?.code?.includes("usage_limit") || response.status === 429) {
-              const plan = err.plan_type
-                ? ` (${err.plan_type.toLowerCase()} plan)`
-                : "";
-              const mins = err.resets_at
-                ? Math.max(
-                    0,
-                    Math.round((err.resets_at * 1000 - Date.now()) / 60000),
-                  )
-                : undefined;
-              const when =
-                mins !== undefined ? ` Try again in ~${mins} min.` : "";
-              return {
-                content: [
-                  { type: "text", text: `Usage limit reached${plan}.${when}` },
-                ],
-                isError: true,
-              };
-            }
-          } catch {}
-          return {
-            content: [
-              {
-                type: "text",
-                text: `Search API error (${response.status}): ${errorText}`,
-              },
-            ],
-            isError: true,
-          };
+            parsed = JSON.parse(errorText);
+          } catch {
+            // Preserve the raw response text below when the body is not JSON.
+          }
+          const apiError = parsed?.error;
+          if (
+            apiError?.code?.includes("usage_limit") ||
+            response.status === 429
+          ) {
+            const plan = apiError?.plan_type
+              ? ` (${apiError.plan_type.toLowerCase()} plan)`
+              : "";
+            const mins = apiError?.resets_at
+              ? Math.max(
+                  0,
+                  Math.round((apiError.resets_at * 1000 - Date.now()) / 60000),
+                )
+              : undefined;
+            const when =
+              mins !== undefined ? ` Try again in ~${mins} min.` : "";
+            throw new Error(`Usage limit reached${plan}.${when}`);
+          }
+          throw new Error(
+            `Search API error (${response.status}): ${errorText}`,
+          );
         }
 
         // Use backend-specific parser if provided, otherwise default Responses API parser
@@ -533,17 +512,16 @@ export default function (pi: ExtensionAPI) {
           content: [{ type: "text", text: finalOutput }],
           details: { query: params.query, searchQueries },
         };
-      } catch (err: any) {
+      } catch (error: unknown) {
         if (
-          err.name === "AbortError" ||
-          err.message === "Request was aborted"
+          error instanceof Error &&
+          (error.name === "AbortError" ||
+            error.message === "Request was aborted")
         ) {
-          return { content: [{ type: "text", text: "Search cancelled." }] };
+          throw new Error("Search cancelled.");
         }
-        return {
-          content: [{ type: "text", text: `Search error: ${err.message}` }],
-          isError: true,
-        };
+        const message = error instanceof Error ? error.message : String(error);
+        throw new Error(`Search error: ${message}`);
       }
     },
   });

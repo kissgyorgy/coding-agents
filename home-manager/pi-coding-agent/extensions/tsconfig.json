@@ -6,11 +6,15 @@
     "strict": true,
     "noEmit": true,
     "skipLibCheck": true,
-    "baseUrl": ".",
+    "allowImportingTsExtensions": true,
+    "preserveSymlinks": true,
     "typeRoots": [
       "/run/current-system/sw/lib/pi-coding-agent/node_modules/@types"
     ],
     "paths": {
+      "@earendil-works/pi-agent-core": [
+        "/run/current-system/sw/lib/pi-coding-agent/node_modules/@earendil-works/pi-agent-core/dist/index.d.ts"
+      ],
       "@earendil-works/pi-ai": [
         "/run/current-system/sw/lib/pi-coding-agent/node_modules/@earendil-works/pi-ai/dist/index.d.ts"
       ],

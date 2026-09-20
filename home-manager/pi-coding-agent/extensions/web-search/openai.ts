@@ -1,6 +1,7 @@
 /**
  * OpenAI API backend — direct Responses API with OPENAI_API_KEY or provider key.
  */
+import { requestHeaders } from "./types";
 import type { AuthResult, SearchBackend } from "./types";
 
 const OPENAI_BASE_URL = "https://api.openai.com/v1";
@@ -17,13 +18,18 @@ export function openai(model: string): SearchBackend {
       const resolved = ctx.modelRegistry.find(provider, model);
       if (resolved) {
         const auth = await ctx.modelRegistry.getApiKeyAndHeaders(resolved);
-        if (auth.ok) return { apiKey: auth.apiKey, headers: auth.headers };
+        if (auth.ok && auth.apiKey) {
+          return { apiKey: auth.apiKey, headers: auth.headers };
+        }
       }
 
-      const key = await (ctx.modelRegistry as any).getApiKeyForProvider?.(
-        provider,
-      );
-      if (key) return { apiKey: key };
+      const providerAuth = await ctx.modelRegistry.getProviderAuth(provider);
+      if (providerAuth?.auth.apiKey) {
+        return {
+          apiKey: providerAuth.auth.apiKey,
+          headers: providerAuth.auth.headers,
+        };
+      }
       return undefined;
     },
 
@@ -31,7 +37,7 @@ export function openai(model: string): SearchBackend {
       return {
         url: `${OPENAI_BASE_URL}/responses`,
         headers: {
-          ...auth.headers,
+          ...requestHeaders(auth.headers),
           Authorization: `Bearer ${auth.apiKey}`,
           Accept: "text/event-stream",
           "Content-Type": "application/json",
