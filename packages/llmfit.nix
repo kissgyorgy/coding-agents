@@ -27,7 +27,7 @@ rustPlatform.buildRustPackage rec {
   buildAndTestSubdir = "llmfit-tui";
 
   # JSON serialization changes the final bit of the expected f64 on x86_64.
-  cargoTestFlags = [
+  checkFlags = [
     "--skip"
     "plan_json_reports_disk_size_at_the_requested_quant"
   ];
