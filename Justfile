@@ -164,8 +164,10 @@ _pi-post-update:
     pkg_dir="packages/pi-coding-agent"
     pkg_file="$pkg_dir/default.nix"
     src=$(nix build .#pi-coding-agent.src --no-link --print-out-paths)
+    cp "$src/packages/coding-agent/install-lock/package.json" \
+        "$pkg_dir/package.json"
     cp "$src/packages/coding-agent/install-lock/package-lock.json" \
-        "$pkg_dir/package-lock.generated.json"
+        "$pkg_dir/package-lock.json"
 
     sed -i 's/npmDepsHash = "sha256-[^"]*";/npmDepsHash = lib.fakeHash;/' "$pkg_file"
     set +e

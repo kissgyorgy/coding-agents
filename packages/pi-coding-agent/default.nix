@@ -1,4 +1,4 @@
-{ lib, buildNpmPackage, callPackage, fetchFromGitHub, nodejs_22, makeBinaryWrapper, autoPatchelfHook ? null, stdenv, libxcb }:
+{ lib, buildNpmPackage, callPackage, fetchFromGitHub, fetchNpmDeps, nodejs_22, makeBinaryWrapper, autoPatchelfHook ? null, stdenv, libxcb }:
 
 let
   version = "0.86.1";
@@ -20,15 +20,19 @@ buildNpmPackage rec {
 
   npmDepsFetcherVersion = 2;
   npmDepsHash = "sha256-CYpq0qC9dhhYXuQ3sARLgGV3K8ze2NbPg3bQqLJ9WSI=";
+  npmDeps = fetchNpmDeps {
+    src = ./.;
+    hash = npmDepsHash;
+    fetcherVersion = npmDepsFetcherVersion;
+  };
 
   # Use the installer's lockfile instead of the monorepo lockfile. It is the
   # upstream-tested, exact production dependency closure for this Pi release.
   # buildNpmPackage runs npmConfigHook in prePatch, so replace both files as
   # soon as the source is unpacked.
   postUnpack = ''
-    cp "$sourceRoot/packages/coding-agent/install-lock/package.json" \
-      "$sourceRoot/package.json"
-    cp ${./package-lock.generated.json} "$sourceRoot/package-lock.json"
+    cp ${./package.json} "$sourceRoot/package.json"
+    cp ${./package-lock.json} "$sourceRoot/package-lock.json"
   '';
 
   # Pi's published packages contain the release-built bundle, generated model
