@@ -163,13 +163,9 @@ _pi-post-update:
     set -euo pipefail
     pkg_dir="packages/pi-coding-agent"
     pkg_file="$pkg_dir/default.nix"
-    version=$(nix eval --raw .#pi-coding-agent.version)
-    pi_ai_url="https://registry.npmjs.org/@earendil-works/pi-ai/-/pi-ai-${version}.tgz"
-    pi_ai_hash=$(nix store prefetch-file --json "$pi_ai_url" | jq -r .hash)
-    sed -i '/piAiNpm = fetchurl {/,/};/ s|hash = ".*";|hash = "'"$pi_ai_hash"'";|' "$pkg_file"
-
     src=$(nix build .#pi-coding-agent.src --no-link --print-out-paths)
-    cp "$src/package-lock.json" "$pkg_dir/package-lock.generated.json"
+    cp "$src/packages/coding-agent/install-lock/package-lock.json" \
+        "$pkg_dir/package-lock.generated.json"
 
     sed -i 's/npmDepsHash = "sha256-[^"]*";/npmDepsHash = lib.fakeHash;/' "$pkg_file"
     set +e

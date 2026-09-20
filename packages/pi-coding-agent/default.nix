@@ -1,12 +1,8 @@
-{ lib, buildNpmPackage, callPackage, fetchFromGitHub, fetchurl, nodejs_22, makeBinaryWrapper, autoPatchelfHook ? null, stdenv, libcap_ng }:
+{ lib, buildNpmPackage, callPackage, fetchFromGitHub, nodejs_22, makeBinaryWrapper, autoPatchelfHook ? null, stdenv, libxcb }:
 
 let
   version = "0.86.1";
   fetchExtensionDeps = callPackage ./fetch-extension-deps.nix { };
-  piAiNpm = fetchurl {
-    url = "https://registry.npmjs.org/@earendil-works/pi-ai/-/pi-ai-${version}.tgz";
-    hash = "sha256-88Nb88YGsJ9iupLSx8ieY+DKGAdUcBAtVWVoTFJLfv0=";
-  };
 in
 
 buildNpmPackage rec {
@@ -25,95 +21,39 @@ buildNpmPackage rec {
   npmDepsFetcherVersion = 2;
   npmDepsHash = "sha256-CYpq0qC9dhhYXuQ3sARLgGV3K8ze2NbPg3bQqLJ9WSI=";
 
-  # Skip native addon compilation (canvas etc.) — koffi/clipboard ship pre-built binaries
-  npmFlags = [ "--ignore-scripts" ];
+  # Use the installer's lockfile instead of the monorepo lockfile. It is the
+  # upstream-tested, exact production dependency closure for this Pi release.
+  # buildNpmPackage runs npmConfigHook in prePatch, so replace both files as
+  # soon as the source is unpacked.
+  postUnpack = ''
+    cp "$sourceRoot/packages/coding-agent/install-lock/package.json" \
+      "$sourceRoot/package.json"
+    cp ${./package-lock.generated.json} "$sourceRoot/package-lock.json"
+  '';
 
-  # Native addons (koffi, clipboard) need patching on Linux; tsgo is statically linked
+  # Pi's published packages contain the release-built bundle, generated model
+  # catalogs, documentation, assets, and native TUI helpers. Lifecycle scripts
+  # are neither needed nor safe in the sandbox for a release installation.
+  npmFlags = [ "--ignore-scripts" ];
+  dontNpmBuild = true;
+
   nativeBuildInputs = [ makeBinaryWrapper ]
     ++ lib.optionals stdenv.hostPlatform.isLinux [ autoPatchelfHook ];
-  buildInputs = lib.optionals stdenv.hostPlatform.isLinux [ stdenv.cc.cc.lib libcap_ng ];
+  buildInputs = lib.optionals stdenv.hostPlatform.isLinux [ libxcb ];
 
-  # buildNpmPackage runs npmConfigHook in prePatch, so replace the lockfile
-  # immediately after unpacking, before the hook validates and installs deps.
-  postUnpack = ''
-    cp ${./package-lock.generated.json} $sourceRoot/package-lock.json
-
-    # Provider model data is generated during release and excluded from Git.
-    # Restore the matching snapshot from the published pi-ai package so the
-    # build stays offline and deterministic.
-    mkdir -p "$sourceRoot/packages/ai/src/providers/data"
-    tar -xzf ${piAiNpm} \
-      --strip-components=4 \
-      -C "$sourceRoot/packages/ai/src/providers/data" \
-      package/dist/providers/data
-  '';
-
-  # Build workspace packages in dependency order: tui/telemetry/chord -> ai/agent,
-  # protocol -> client/server, then coding-agent.
-  npmBuildScript = "none";
-  buildPhase = ''
-    runHook preBuild
-
-    for pkg in tui telemetry chord ai agent protocol client server coding-agent; do
-      echo "Building packages/$pkg..."
-      npx tsgo -p packages/$pkg/tsconfig.build.json
-    done
-
-    # coding-agent post-build: make cli.js executable and copy assets
-    chmod +x packages/coding-agent/dist/cli.js
-
-    mkdir -p packages/coding-agent/dist/modes/interactive/theme
-    cp packages/coding-agent/src/modes/interactive/theme/*.json \
-       packages/coding-agent/dist/modes/interactive/theme/
-
-    mkdir -p packages/coding-agent/dist/modes/interactive/assets
-    cp packages/coding-agent/src/modes/interactive/assets/*.png \
-       packages/coding-agent/dist/modes/interactive/assets/
-
-    mkdir -p packages/coding-agent/dist/core/export-html/vendor
-    cp packages/coding-agent/src/core/export-html/template.html \
-       packages/coding-agent/src/core/export-html/template.css \
-       packages/coding-agent/src/core/export-html/template.js \
-       packages/coding-agent/dist/core/export-html/
-    cp packages/coding-agent/src/core/export-html/vendor/*.js \
-       packages/coding-agent/dist/core/export-html/vendor/
-
-    runHook postBuild
-  '';
-
-  # Install the coding-agent package with its workspace dependencies
   installPhase = ''
     runHook preInstall
 
     local pkgDir="$out/lib/pi-coding-agent"
-    mkdir -p "$pkgDir" "$out/bin"
+    mkdir -p "$out/lib" "$out/bin"
 
-    # Copy the built coding-agent package
-    cp -r packages/coding-agent/dist "$pkgDir/"
-    cp packages/coding-agent/package.json "$pkgDir/"
-    cp packages/coding-agent/README.md "$pkgDir/"
-    cp packages/coding-agent/CHANGELOG.md "$pkgDir/"
-    cp -r packages/coding-agent/docs "$pkgDir/"
-    cp -r packages/coding-agent/examples "$pkgDir/"
-
-    # Copy node_modules (production deps installed by npmConfigHook)
+    # Keep Pi's conventional package layout while retaining npm's hoisted,
+    # lockfile-complete runtime dependency tree beside the package itself.
+    mv node_modules/@earendil-works/pi-coding-agent "$pkgDir"
     cp -r node_modules "$pkgDir/"
 
-    # Workspace packages are symlinked in node_modules — replace with built copies
-    for pkg_entry in tui:pi-tui telemetry:pi-telemetry chord:chord ai:pi-ai agent:pi-agent-core protocol:pi-protocol client:pi-client server:pi-server; do
-      local dir="''${pkg_entry%%:*}"
-      local name="''${pkg_entry##*:}"
-      rm -rf "$pkgDir/node_modules/@earendil-works/$name"
-      mkdir -p "$pkgDir/node_modules/@earendil-works/$name"
-      cp -r "packages/$dir/dist" "$pkgDir/node_modules/@earendil-works/$name/"
-      cp "packages/$dir/package.json" "$pkgDir/node_modules/@earendil-works/$name/"
-      # Copy root-level compiled files referenced by package.json exports
-      cp -f packages/$dir/*.js packages/$dir/*.d.ts "$pkgDir/node_modules/@earendil-works/$name/" 2>/dev/null || true
-    done
-
-    # Create the pi wrapper
-    makeBinaryWrapper ${nodejs_22}/bin/node $out/bin/pi \
-      --add-flags "$pkgDir/dist/cli.js" \
+    makeBinaryWrapper ${nodejs_22}/bin/node "$out/bin/pi" \
+      --add-flags "$pkgDir/dist/bundle/cli.js" \
       --set PI_PACKAGE_DIR "$pkgDir" \
       --set PI_TELEMETRY "0" \
       --prefix NODE_PATH : "${fetchExtensionDeps}/node_modules"
@@ -121,32 +61,27 @@ buildNpmPackage rec {
     runHook postInstall
   '';
 
-  # Remove native binaries for platforms we don't need.
-  # The monorepo node_modules includes deps from all workspace packages (web-ui etc.)
-  # with native binaries for platforms we don't need.
+  # The TUI package ships prebuilt helpers for every supported OS and CPU.
+  # Retain only the target helper so autoPatchelf processes the correct binary.
   preFixup = ''
-    local pkgDir="$out/lib/pi-coding-agent"
-  '' + lib.optionalString stdenv.hostPlatform.isLinux ''
-    find "$pkgDir/node_modules" -maxdepth 3 -type d -name "*-musl*" -exec rm -rf {} + 2>/dev/null || true
+    local nativeDir="$out/lib/pi-coding-agent/node_modules/@earendil-works/pi-tui/native"
   '' + lib.optionalString (stdenv.hostPlatform.system == "x86_64-linux") ''
-    if [ -d "$pkgDir/node_modules/koffi/build/koffi" ]; then
-      for dir in "$pkgDir/node_modules/koffi/build/koffi"/*; do
-        [ -d "$dir" ] || continue
-        [ "$(basename "$dir")" = linux_x64 ] || rm -rf "$dir"
-      done
-    fi
+    rm -rf "$nativeDir/darwin" "$nativeDir/win32" \
+      "$nativeDir/linux/prebuilds/linux-arm64"
   '' + lib.optionalString (stdenv.hostPlatform.system == "aarch64-darwin") ''
-    if [ -d "$pkgDir/node_modules/koffi/build/koffi" ]; then
-      for dir in "$pkgDir/node_modules/koffi/build/koffi"/*; do
-        [ -d "$dir" ] || continue
-        [ "$(basename "$dir")" = darwin_arm64 ] || rm -rf "$dir"
-      done
-    fi
-  '' + ''
-    rm -rf "$pkgDir/node_modules/@biomejs"
-    rm -rf "$pkgDir/node_modules/@tailwindcss"
+    rm -rf "$nativeDir/linux" "$nativeDir/win32" \
+      "$nativeDir/darwin/prebuilds/darwin-x64"
+  '';
 
-    find "$pkgDir/node_modules" -type l -exec sh -c 'for link do [ -e "$link" ] || rm "$link"; done' sh {} + 2>/dev/null || true
+  doInstallCheck = true;
+  installCheckPhase = ''
+    export HOME="$TMPDIR/home"
+    export PI_OFFLINE=1
+    mkdir -p "$HOME"
+
+    test "$("$out/bin/pi" --version)" = "$version"
+    "$out/bin/pi" --help >/dev/null
+    "$out/bin/pi" --list-models >/dev/null
   '';
 
   meta = {
