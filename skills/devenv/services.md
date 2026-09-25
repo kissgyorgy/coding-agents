@@ -1,4 +1,4 @@
-# Services and Processes Configuration (devenv 2.0)
+# Services and Processes Configuration
 
 ## Basic configuration
 
@@ -96,8 +96,8 @@ devenv 2.0 supports readiness probes that dependencies wait for:
 }
 ```
 
-When `listen` sockets or allocated `ports` are configured and no explicit probe is set,
-a TCP connectivity check is used automatically.
+When `listen` sockets or allocated `ports` are configured and no explicit probe
+is set, a TCP connectivity check is used automatically.
 
 ## Restart Policies
 

@@ -3,7 +3,6 @@
 ```bash
 devenv init
 ```
-
 This creates:
 - `devenv.yaml` - Input configuration
 - `devenv.nix` - Environment definition (where you configure everything)
@@ -11,9 +10,6 @@ This creates:
 - `.gitignore` - Ignores devenv artifacts
 
 Remove comments from .gitignore after init.
-
-
-## Use nixpkgs-unstable Instead of devenv-rolling
 
 Edit `devenv.yaml` and replace the inputs section:
 
@@ -24,6 +20,7 @@ inputs:
 ```
 
 This gives access to the latest packages from nixpkgs.
+
 
 ## Update Lock File
 
@@ -36,19 +33,71 @@ devenv update
 This updates `devenv.lock` with pinned versions.
 
 
-## Python and uv Setup
+## Adding Nix Packages
 
-Configure in `devenv.nix`:
+Add system packages to your environment:
 
 ```nix
 { pkgs, ... }: {
-  languages.python = {
-    enable = true;
-    venv.enable = true;  # uv will use the activated virtualenv
-    uv = {
-      enable = true;
-      sync.enable = true;  # Auto-sync pyproject.toml on shell entry
-    };
-  };
+  packages = with pkgs; [
+    just        # always add this
+    postgresql  # For psql CLI
+    redis       # For redis-cli
+  ];
 }
 ```
+
+Search for packages:
+
+```bash
+devenv search <package-name>
+```
+
+Only works after `devenv init`
+
+## Set up git-hooks
+
+Add the git-hooks input: `devenv inputs add git-hooks github:cachix/git-hooks.nix`
+After that, `devenv.yaml` should contain the git-hooks input:
+```yaml
+inputs:
+  git-hooks:
+    url: github:cachix/git-hooks.nix
+```
+
+Always add these common hooks to `devenv.nix`:
+
+```nix
+  git-hooks.hooks = {
+    check-added-large-files.enable = true;
+    check-json.enable = true;
+    check-toml.enable = true;
+    check-yaml.enable = true;
+    trim-trailing-whitespace = {
+      enable = true;
+      excludes = [ ".*.md$" ];
+    };
+    end-of-file-fixer.enable = true;
+  }
+```
+
+Add ruff hooks for Python projects only:
+```nix
+  git-hooks.hooks = {
+    ruff = {
+      enable = true;
+      args = [ "--config" "${rootDir}/pyproject.toml"];
+    };
+    ruff-format.enable = true;
+  }
+```
+
+## Update Lock File
+
+After changing inputs:
+
+```bash
+devenv update
+```
+
+This updates `devenv.lock` with pinned versions.

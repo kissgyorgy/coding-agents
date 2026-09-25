@@ -6,93 +6,20 @@ description: Use this when working in a project with devenv.nix, or when devenv.
 # devenv.sh Development Environments
 
 Create fast, declarative, reproducible development environments using devenv.sh powered by Nix.
-Official docs: https://devenv.sh
 
 For setting up specific programming languages, services, package managers, see:
+- [Initialize a new project](setup.md) - For new projects or when no devenv.nix exists or the user asks for devenv setup.
+- [Detailed Python/uv configuration](python-uv.md)
+- [Complete services configuration guide](services.md)
+- [Django project setup and patterns](django.md)
+- [Troubleshooting devenv issues](troubleshooting.md)
 
-- **[python-uv.md](python-uv.md)** - Detailed Python/uv configuration
-- **[services.md](services.md)** - Complete services configuration guide
-- **[django.md](django.md)** - Django project setup and patterns
-
-## Initialize a New Environment
-
-```bash
-devenv init
-```
-
-This creates:
-
-- `devenv.yaml` - Input configuration
-- `devenv.nix` - Environment definition (where you configure everything)
-- `.envrc` - direnv integration
-- `.gitignore` - Ignores devenv artifacts
-
-Remove comments from .gitignore after init.
-
-The generated `.envrc` from `devenv init` works as-is now; you no longer need
-the old task-running workaround.
-
-Edit `devenv.yaml` and replace the inputs section:
-
-```yaml
-inputs:
-  nixpkgs:
-    url: github:NixOS/nixpkgs/nixpkgs-unstable
-```
-
-This gives access to the latest packages from nixpkgs.
-
-## Adding Nix Packages
-
-Add system packages to your environment:
-
-```nix
-{ pkgs, ... }: {
-  packages = with pkgs; [
-    just        # always add this
-    postgresql  # For psql CLI
-    redis       # For redis-cli
-  ];
-}
-```
-
-Search for packages:
-
-```bash
-devenv search <package-name>
-```
-
-Only works after `devenv init`
-
-## Update Lock File
-
-After changing inputs:
-
-```bash
-devenv update
-```
-
-This updates `devenv.lock` with pinned versions.
-
-IMPORTANT: ALWAYS run `devenv build` after editing `devenv.nix` to make sure the configuration is working.
-Fix any problems that occurs during build.
-
-## Environment Variables
-
-```nix
-{
-  env = {
-    MY_VAR = "value";
-    PYTHONUNBUFFERED = "1";
-  };
-}
-```
+Official documentation: https://devenv.sh
+Only look this up for specific settings or when you need something which is not included in this skill.
 
 ## Common Commands
 
 - `devenv init` - Initialize new environment
-- `devenv shell` - Enter development shell
-- `devenv up` - Start services and processes (foreground)
 - `devenv up -d` - Start services in background
 - `devenv processes stop` - Stop all processes
 - `devenv test` - Run tests
@@ -143,7 +70,7 @@ Key files devenv manages:
     redis
   ];
 
-  # Environment
+  # Environment variables
   env = {
     DATABASE_URL = "postgresql://localhost/app";
     REDIS_URL = "redis://localhost:6379";
@@ -178,31 +105,5 @@ Key files devenv manages:
 }
 ```
 
-## Troubleshooting
-
-### Issue: Package not found
-
-Search for it:
-
-```bash
-devenv search <package>
-```
-
-Ensure using nixpkgs-unstable in `devenv.yaml`.
-
-### Issue: Python virtualenv is not activated
-
-For Python projects using uv, set both `languages.python.uv.sync.enable = true` and `languages.python.venv.enable = true`. `uv.sync` installs dependencies; `venv.enable` activates the virtualenv so `python` and console scripts come from the project environment.
-
-### Issue: Python package won't install
-
-Add native dependencies to `languages.python.libraries`:
-
-```nix
-{
-  languages.python.libraries = with pkgs; [
-    postgresql  # For psycopg2
-    stdenv.cc.cc.lib
-  ];
-}
-```
+ALWAYS run `devenv build` after editing `devenv.nix` to make sure the
+configuration is working. Fix any problems that occurs during build.
