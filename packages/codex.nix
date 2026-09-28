@@ -12,20 +12,20 @@ let
   sources = {
     x86_64-linux = {
       target = "x86_64-unknown-linux-musl";
-      hash = "sha256-6YwejgKOgTf6LSQVyC7Fjns3AaYn41VKrOWzyjFFSvI=";
-      codeModeHostHash = "sha256-NRb5uLvmvAbue9uSspOhfqsZSz8QubnqEMW4Oely1/w=";
+      hash = "sha256-r59apuZmKsz51wfO8NnKCDiAoXOpwrbCKUftt4MOV3g=";
+      codeModeHostHash = "sha256-VFXGS+S6NxREcQiVr/bXTWU5haO/xFSot/5C1ubRHj0=";
     };
     aarch64-darwin = {
       target = "aarch64-apple-darwin";
-      hash = "sha256-PEWxYrenb1EyUBWx0KgRLHMhm3qbWc1XYsN8m6VYlPo=";
-      codeModeHostHash = "sha256-KIMy0slw31xhyPvf6sZKi/cvsawZRZQtpFN+z2MTgxQ=";
+      hash = "sha256-NBxKCPnOGTWzAHN23Co9UKCokRKTDppHSuYTZyGPboo=";
+      codeModeHostHash = "sha256-GTY5GNp19dK4Bbb/+v2E6jyJduA+dRGSwErqW9cNSrQ=";
     };
   };
   source = sources.${stdenv.hostPlatform.system} or (throw "codex is not supported on ${stdenv.hostPlatform.system}");
 in
 stdenv.mkDerivation rec {
   pname = "codex";
-  version = "rust-v0.157.1";
+  version = "rust-v0.158.0";
 
   src = fetchurl {
     url = "https://github.com/openai/codex/releases/download/${version}/codex-${source.target}.tar.gz";
