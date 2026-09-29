@@ -17,26 +17,57 @@ interface ActiveResponse {
  *
  * This is client-observed streaming throughput, not server-side decode timing:
  * chunk buffering/network stalls and hidden reasoning can distort the estimate.
- * A single-chunk response has no measurable interval and is omitted entirely.
+ * Average wait measures the pre-send request event to the first output delta,
+ * not the invisible start of server-side generation. Each successful response
+ * gets equal weight. Single-chunk responses count for wait, but not throughput.
  */
 export default function (pi: ExtensionAPI) {
   let outputTokens = 0;
   let outputDurationMs = 0;
+  let totalWaitMs = 0;
+  let waitSamples = 0;
+  let awaitingResponse = false;
+  let requestStartedAtMs: number | null = null;
   let activeResponse: ActiveResponse | null = null;
+
+  const resetResponse = () => {
+    awaitingResponse = false;
+    requestStartedAtMs = null;
+    activeResponse = null;
+  };
 
   const updateStatus = (ctx: ExtensionContext) => {
     const rate =
       outputDurationMs > 0
         ? ((outputTokens * 1000) / outputDurationMs).toFixed(1)
         : "--";
-    ctx.ui.setStatus(STATUS_KEY, ctx.ui.theme.fg("dim", `out ${rate} tok/s`));
+    const wait =
+      waitSamples > 0 ? (totalWaitMs / waitSamples / 1000).toFixed(1) : "--";
+    ctx.ui.setStatus(
+      STATUS_KEY,
+      ctx.ui.theme.fg("dim", `out ${rate} tok/s · wait ${wait}s avg`),
+    );
   };
 
   pi.on("session_start", (_event, ctx) => {
     outputTokens = 0;
     outputDurationMs = 0;
-    activeResponse = null;
+    totalWaitMs = 0;
+    waitSamples = 0;
+    resetResponse();
     updateStatus(ctx);
+  });
+
+  pi.on("turn_start", () => {
+    resetResponse();
+    awaitingResponse = true;
+  });
+
+  pi.on("before_provider_request", () => {
+    // message_start may arrive only after the network request has completed.
+    // Ignore background requests outside this turn's pre-output phase, and
+    // preserve the original timestamp if the provider retries before output.
+    if (awaitingResponse) requestStartedAtMs ??= performance.now();
   });
 
   pi.on("message_start", (event) => {
@@ -58,6 +89,7 @@ export default function (pi: ExtensionAPI) {
 
     // A monotonic clock avoids wall-clock adjustments changing the rate.
     const now = performance.now();
+    awaitingResponse = false;
     activeResponse.firstOutputAtMs ??= now;
     activeResponse.lastOutputAtMs = now;
   });
@@ -65,7 +97,8 @@ export default function (pi: ExtensionAPI) {
   pi.on("message_end", (event, ctx) => {
     if (event.message.role !== "assistant") return;
     const response = activeResponse;
-    activeResponse = null;
+    const startedAtMs = requestStartedAtMs;
+    resetResponse();
 
     const message = event.message;
     if (
@@ -79,23 +112,29 @@ export default function (pi: ExtensionAPI) {
       return;
     }
 
+    // Wait is measurable even without token usage or multiple output chunks.
+    // Without a request event, omit the sample rather than underreporting wait
+    // by falling back to the potentially much later message_start event.
+    if (startedAtMs !== null && response.firstOutputAtMs >= startedAtMs) {
+      totalWaitMs += response.firstOutputAtMs - startedAtMs;
+      waitSamples += 1;
+    }
+
     const durationMs = response.lastOutputAtMs - response.firstOutputAtMs;
     const tokens = message.usage.output;
-    if (durationMs <= 0 || !Number.isFinite(tokens) || tokens <= 0) return;
-
-    // Weight the session average by streaming duration, not by response count.
-    // Successful tool-call responses count even if a later request is aborted.
-    outputTokens += tokens;
-    outputDurationMs += durationMs;
+    if (durationMs > 0 && Number.isFinite(tokens) && tokens > 0) {
+      // Weight throughput by streaming duration, not by response count.
+      // Successful tool-call responses count even if a later request is aborted.
+      outputTokens += tokens;
+      outputDurationMs += durationMs;
+    }
     updateStatus(ctx);
   });
 
-  pi.on("agent_end", () => {
-    activeResponse = null;
-  });
+  pi.on("agent_end", resetResponse);
 
   pi.on("session_shutdown", (_event, ctx) => {
-    activeResponse = null;
+    resetResponse();
     ctx.ui.setStatus(STATUS_KEY, undefined);
   });
 }
