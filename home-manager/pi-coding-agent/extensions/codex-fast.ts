@@ -9,9 +9,7 @@ import type { AutocompleteSuggestions } from "@earendil-works/pi-tui";
 
 const STATE_ENTRY = "codex-fast";
 const SETTINGS_PATH = join(getAgentDir(), "codex-fast.json");
-const FAST_MODEL_LABEL = "GPT-5.5/5.6 Codex and GPT-6 Astra/Sol/Luna";
-const FAST_MODEL_HINT =
-  "openai-codex/gpt-5.5, openai-codex/gpt-5.6-*, or openai-codex/gpt-6-{astra,sol,luna}";
+const FAST_MODEL_HINT = "GPT-5 or GPT-6 family models";
 
 interface FastState {
   enabled: boolean;
@@ -66,20 +64,12 @@ function readEntryFastState(
   );
 }
 
-function isFastCodexModelId(modelId: unknown): modelId is string {
-  return (
-    modelId === "gpt-5.5" ||
-    modelId === "gpt-5.6" ||
-    modelId === "gpt-6-astra" ||
-    modelId === "gpt-6-sol" ||
-    modelId === "gpt-6-luna" ||
-    (typeof modelId === "string" && modelId.startsWith("gpt-5.6-"))
-  );
-}
-
 function isFastCodexModel(ctx: Pick<ExtensionContext, "model">): boolean {
+  const model = ctx.model;
+  if (!model) return false;
   return (
-    ctx.model?.provider === "openai-codex" && isFastCodexModelId(ctx.model.id)
+    model.provider === "openai" &&
+    (model.id.startsWith("gpt-5") || model.id.startsWith("gpt-6"))
   );
 }
 
@@ -121,7 +111,7 @@ export default function codexFastExtension(pi: ExtensionAPI): void {
   }
 
   pi.registerCommand("fast", {
-    description: `Toggle ${FAST_MODEL_LABEL} Fast mode (priority service tier)`,
+    description: `Toggle Fast mode (priority service tier)`,
     handler: async (_args, ctx) => {
       updateStatus(ctx);
 
@@ -137,7 +127,7 @@ export default function codexFastExtension(pi: ExtensionAPI): void {
       persistState();
       updateStatus(ctx);
       ctx.ui.notify(
-        `${FAST_MODEL_LABEL} Fast mode ${fastEnabled ? "enabled" : "disabled"}`,
+        `Fast mode ${fastEnabled ? "enabled" : "disabled"}`,
         "info",
       );
     },
