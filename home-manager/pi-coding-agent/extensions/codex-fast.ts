@@ -64,13 +64,17 @@ function readEntryFastState(
   );
 }
 
+function isFastCodexModelId(modelId: unknown): modelId is string {
+  return (
+    typeof modelId === "string" &&
+    (modelId.startsWith("gpt-5") || modelId.startsWith("gpt-6"))
+  );
+}
+
 function isFastCodexModel(ctx: Pick<ExtensionContext, "model">): boolean {
   const model = ctx.model;
   if (!model) return false;
-  return (
-    model.provider === "openai" &&
-    (model.id.startsWith("gpt-5") || model.id.startsWith("gpt-6"))
-  );
+  return model.provider === "openai" && isFastCodexModelId(model.id);
 }
 
 function filterFastCommandSuggestions(
