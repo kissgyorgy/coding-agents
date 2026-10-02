@@ -16,27 +16,27 @@ description: Write clean, readable Pythonic code. Use this skill any time you wr
 
 # Type hints
 
-- ALWAYS type hint every function and method signature precisely even in tests.
-- NEVER write "-> None" type hint for return values, they are not necessary.
+- ALWAYS type hint every function and method signature precisely even in tests, except for the return value `None`,
+  they are not necessary (`-> None:`)
 - No need to type hint variables from functions call return values inside function bodies, they are inferred from the method return type,
   except extreme cases when the type is a huge help or a generic and it's concrete type cannot be determined.
 - Only use APIs, class names, variables or objects which you already read or know exist for sure.
 - Use the new pipe operator for `Optional` variables like this: `value | None`
-- Use `Any` for "all types" instead of `object`.
+- When necessary, use `Any` for "all types" instead of `object`, but only as a last resort or when that's the actual type used.
 
 # Testing
 
 - ALWAYS use `pytest` for all tests
-- ALWAYS assert on whole ouptut or full results in tests, not just tiny parts
+- ALWAYS assert on whole ouptut or full results in tests, not just tiny parts.
 - For mocking, use pytest `monkeypatch` fixture, NEVER `unittest.mock` and NEVER
   any of the `Mock` classes or `patch` function
 - IMPORTANT: NEVER import from `conftest.py`
-- ALWAYS type hint test function parameters correctly.
+- ALWAYS type hint test function parameters correctly, except for `-> None:`.
 - Don't make a test class with only one function, a module-level test function is enough
-- NEVER use `unittest.mock` or any of the `Mock` classes or `patch` function, never assert on method calls,
-  use real objects and assert on full results. When absolutely necessary and can't be avoided, use `pytest.monkeypatch`,
-  when the test setup would be too difficult or the code have side effects, but consider writing a fake.
-- ALWAYS assert on the full result of the function call, never just list lengths or containment, except where that's the point.
+- Don't assert on method calls, use real objects and assert on full results. When this is absolutely necessary and can't be avoided,
+  use `pytest.monkeypatch`, when the test setup would be too difficult or the code have side effects, but consider writing a fake.
+- Never just list lengths or containment, except where that's the point.
+- Don't put if statements in tests dependding on test case, those are probably belong to two separate test cases.
 
 # Managing dependencies
 
