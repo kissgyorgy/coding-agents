@@ -27,6 +27,9 @@ Packages are automatically updated every hour via GitHub Actions.
 Supported flake systems are `x86_64-linux` and `aarch64-darwin`. `llmfit`,
 `llmserve`, `playwright-cli`, and `vibe-kanban` are currently Linux-only.
 
+`pi-coding-agent` installs the published npm release with a pinned dependency
+lockfile. Its `npmDepsHash` must be refreshed whenever the lockfile changes.
+
 ## Skills
 
 [Agent Skills](https://agentskills.io) get installed into each agent's config
