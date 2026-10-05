@@ -139,3 +139,11 @@ integration.
 - **`enable`** — Install Pi, ImageMagick, `nil`, `basedpyright`, `typescript-language-server`, `typescript`, `gopls`, `go`, and link shared skills and extensions
 - **`extensionsDir`** — Path to a custom extensions directory
   (defaults to built-in extensions including tmux-mirror, plan-mode, and more)
+
+The built-in extensions directory includes vendored
+[`pi-openai-usage`](https://github.com/studioarray/pi-openai-usage) 0.1.4, which
+shows OpenAI Codex subscription usage in the status line. Pi discovers it
+without a launcher flag or `pi install`. It uses your existing OpenAI Codex OAuth
+login and provides `/openai-usage-settings`. Run `/reload` to load it when using
+the live extensions-directory symlink. Source provenance and the upstream MIT
+license are retained in `home-manager/pi-coding-agent/extensions/pi-openai-usage/`.

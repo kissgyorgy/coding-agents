@@ -1,0 +1,47 @@
+{
+  "name": "pi-openai-usage",
+  "version": "0.1.4",
+  "description": "Focused Pi extension package for showing OpenAI Codex subscription usage in the status line.",
+  "type": "module",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/studioarray/pi-openai-usage.git"
+  },
+  "keywords": [
+    "pi-package",
+    "pi-extension",
+    "openai",
+    "codex",
+    "usage"
+  ],
+  "main": "index.ts",
+  "types": "index.ts",
+  "files": [
+    "README.md",
+    "LICENSE",
+    "index.ts",
+    "src"
+  ],
+  "pi": {
+    "extensions": [
+      "./index.ts"
+    ]
+  },
+  "scripts": {
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit",
+    "check": "npm run typecheck && npm test"
+  },
+  "peerDependencies": {
+    "@earendil-works/pi-coding-agent": "*",
+    "@earendil-works/pi-tui": "*"
+  },
+  "devDependencies": {
+    "@earendil-works/pi-coding-agent": "^0.75.4",
+    "@earendil-works/pi-tui": "^0.75.4",
+    "@types/node": "^24.0.0",
+    "typescript": "^5.9.0",
+    "vitest": "^4.1.0"
+  }
+}
