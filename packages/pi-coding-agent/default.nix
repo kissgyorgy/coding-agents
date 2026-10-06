@@ -1,7 +1,7 @@
 { lib, buildNpmPackage, callPackage, fetchNpmDeps, nodejs_22, makeBinaryWrapper, autoPatchelfHook ? null, stdenv, libxcb }:
 
 let
-  version = "1.0.3";
+  version = "1.0.4";
   fetchExtensionDeps = callPackage ./fetch-extension-deps.nix { };
 in
 
@@ -14,7 +14,7 @@ buildNpmPackage rec {
   nodejs = nodejs_22;
 
   npmDepsFetcherVersion = 2;
-  npmDepsHash = "sha256-rUmotjmLJakSwZV8QqqgTl+FA27hRuN3F0CfoiTXxxk=";
+  npmDepsHash = "sha256-rlN3juTiQXcaYiFeY83EiOfupntrmAddOBxVj5Amf2Y=";
   npmDeps = fetchNpmDeps {
     src = ./.;
     hash = npmDepsHash;
