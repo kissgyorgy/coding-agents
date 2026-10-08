@@ -74,7 +74,10 @@ function isFastCodexModelId(modelId: unknown): modelId is string {
 function isFastCodexModel(ctx: Pick<ExtensionContext, "model">): boolean {
   const model = ctx.model;
   if (!model) return false;
-  return model.provider === "openai" && isFastCodexModelId(model.id);
+  return (
+    (model.provider === "openai" || model.provider === "openai-codex") &&
+    isFastCodexModelId(model.id)
+  );
 }
 
 function filterFastCommandSuggestions(
