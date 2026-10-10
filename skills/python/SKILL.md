@@ -1,6 +1,6 @@
 ---
 name: python
-description: Write clean, readable Pythonic code. Use this skill any time you write or change a Python file.
+description: Write clean, readable Pythonic code. Use this skill when writing or changing a Python file.
 ---
 
 # General guidelines
@@ -37,6 +37,7 @@ description: Write clean, readable Pythonic code. Use this skill any time you wr
   use `pytest.monkeypatch`, when the test setup would be too difficult or the code have side effects, but consider writing a fake.
 - Never just list lengths or containment, except where that's the point.
 - Don't put if statements in tests dependding on test case, those are probably belong to two separate test cases.
+- Don't write regression tests when asked for a feature removal, just delete the feature and related tests.
 
 # Managing dependencies
 
