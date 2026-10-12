@@ -38,6 +38,7 @@ stdenv.mkDerivation rec {
     # Voice tries native ALSA, arecord, then SoX rec. SoX includes the
     # PulseAudio backend needed on WSLg and PipeWire/PulseAudio desktops.
     wrapProgram $out/bin/claude \
+      --set DISABLE_AUTOUPDATER 1 \
       --prefix LD_LIBRARY_PATH : ${lib.makeLibraryPath [ alsa-lib ]} \
       --prefix PATH : ${lib.makeBinPath [ alsa-utils sox ]}
   '';

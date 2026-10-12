@@ -29,9 +29,10 @@ Supported flake systems are `x86_64-linux` and `aarch64-darwin`. `llmfit`,
 
 On Linux, `claude-code` bundles the runtime dependencies for `/voice`: the
 ALSA library, `arecord`, and SoX (`sox`/`rec`) with PulseAudio support, including
-WSLg audio. No separate audio-package installation is needed. A working host
-microphone/audio server and a Claude account eligible for voice mode are still
-required.
+WSLg audio. No separate audio-package installation is needed. The Linux wrapper
+disables Claude's self-updater so updates stay managed by Nix and retain these
+dependencies. A working host microphone/audio server and a Claude account
+eligible for voice mode are still required.
 
 `pi-coding-agent` installs the published npm release with a pinned dependency
 lockfile. Its `npmDepsHash` must be refreshed whenever the lockfile changes.
