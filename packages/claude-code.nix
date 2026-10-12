@@ -1,4 +1,4 @@
-{ lib, stdenv, fetchurl, glibc ? null }:
+{ lib, stdenv, fetchurl, glibc ? null, makeBinaryWrapper, alsa-lib, alsa-utils, sox }:
 
 let
   sources = {
@@ -22,6 +22,8 @@ stdenv.mkDerivation rec {
     hash = source.hash;
   };
 
+  nativeBuildInputs = lib.optionals stdenv.hostPlatform.isLinux [ makeBinaryWrapper ];
+
   dontUnpack = true;
   dontPatchELF = true;
   dontStrip = true;
@@ -32,6 +34,12 @@ stdenv.mkDerivation rec {
     chmod u+w,+x $out/bin/claude
   '' + lib.optionalString stdenv.hostPlatform.isLinux ''
     patchelf --set-interpreter ${glibc}/lib/ld-linux-x86-64.so.2 $out/bin/claude
+
+    # Voice tries native ALSA, arecord, then SoX rec. SoX includes the
+    # PulseAudio backend needed on WSLg and PipeWire/PulseAudio desktops.
+    wrapProgram $out/bin/claude \
+      --prefix LD_LIBRARY_PATH : ${lib.makeLibraryPath [ alsa-lib ]} \
+      --prefix PATH : ${lib.makeBinPath [ alsa-utils sox ]}
   '';
 
   meta = {

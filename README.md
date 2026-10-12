@@ -27,6 +27,12 @@ Packages are automatically updated every hour via GitHub Actions.
 Supported flake systems are `x86_64-linux` and `aarch64-darwin`. `llmfit`,
 `llmserve`, `playwright-cli`, and `vibe-kanban` are currently Linux-only.
 
+On Linux, `claude-code` bundles the runtime dependencies for `/voice`: the
+ALSA library, `arecord`, and SoX (`sox`/`rec`) with PulseAudio support, including
+WSLg audio. No separate audio-package installation is needed. A working host
+microphone/audio server and a Claude account eligible for voice mode are still
+required.
+
 `pi-coding-agent` installs the published npm release with a pinned dependency
 lockfile. Its `npmDepsHash` must be refreshed whenever the lockfile changes.
 
