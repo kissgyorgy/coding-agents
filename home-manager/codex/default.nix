@@ -8,10 +8,16 @@ in
 {
   options.coding-agents.codex.enable = lib.mkEnableOption "OpenAI Codex";
   config = lib.mkIf cfg.enable {
+
     home.file.".agents/skills".source =
       if skillsDir != null then symlink skillsDir else ../../skills;
     home.file.".codex/AGENTS.md".source =
       if agentsMdPath != null then symlink agentsMdPath else ../global-agents.md;
+
     home.packages = [ pkgs.codex ];
+
+    programs.zsh.shellAliases = {
+      codex = "${pkgs.codex} --no-daemon";
+    };
   };
 }
