@@ -4,18 +4,18 @@ let
   sources = {
     x86_64-linux = {
       platform = "linux-x64";
-      hash = "sha256-JJcuO8hZ+rK0btTB5R99YTDwbTvVUIEaEUZA3jNw0N4=";
+      hash = "sha256-LYlKSxv6qpqrcq7/eAPjxzvCUQ8nmhcfa49Z9y0X0Hc=";
     };
     aarch64-darwin = {
       platform = "darwin-arm64";
-      hash = "sha256-ybU0Fje+y9Qj3f/FslSvtkVoKjhoy3CLvGzA57tBmTc=";
+      hash = "sha256-ulq3uMGV+gOrjVvzkVx2FTtXaixA55pcRuJl5+2XRLM=";
     };
   };
   source = sources.${stdenv.hostPlatform.system} or (throw "claude-code is not supported on ${stdenv.hostPlatform.system}");
 in
 stdenv.mkDerivation rec {
   pname = "claude-code";
-  version = "2.1.296";
+  version = "2.1.299";
 
   src = fetchurl {
     url = "https://storage.googleapis.com/claude-code-dist-86c565f3-f756-42ad-8dfa-d59b1c096819/claude-code-releases/${version}/${source.platform}/claude";
