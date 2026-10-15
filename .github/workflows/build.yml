@@ -8,7 +8,7 @@ on:
 jobs:
   aarch64-darwin:
     name: Build aarch64-darwin packages
-    runs-on: macos-15
+    runs-on: macos-26
     steps:
       - uses: actions/checkout@v6
 
