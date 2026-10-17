@@ -5,22 +5,22 @@ All agents and aliases are configured with yolo mode by default. (e.g. `--danger
 
 ## Packages
 
-| Package             | Description                                                                                                     |
-| ------------------- | --------------------------------------------------------------------------------------------------------------- |
-| **aichat**          | [AIChat](https://github.com/sigoden/aichat) — All-in-one LLM CLI tool                                           |
-| **claude-code**     | [Claude Code](https://github.com/anthropics/claude-code) — Anthropic's CLI coding agent                         |
-| **claude-code-ui**  | [Claude Code UI](https://github.com/siteboon/claudecodeui) — Web UI for Claude Code                             |
-| **codex**           | [Codex](https://github.com/openai/codex) — OpenAI's CLI coding agent                                            |
-| **crush**           | [Crush](https://github.com/charmbracelet/crush) — Charm's glamorous terminal coding agent                       |
-| **gemini-cli**      | [Gemini CLI](https://github.com/google-gemini/gemini-cli) — Google's CLI coding agent                           |
-| **hermes-agent**    | [Hermes Agent](https://github.com/NousResearch/hermes-agent) — Nous Research's self-improving AI agent          |
-| **llmfit**          | [llmfit](https://github.com/AlexsJones/llmfit) — Right-size LLM models to your system hardware                  |
-| **llmserve**        | [llmserve](https://github.com/AlexsJones/llmserve) — TUI for serving local LLM models                           |
-| **openclaude**      | [OpenClaude](https://github.com/Gitlawb/openclaude) — Coding-agent CLI for cloud and local model providers      |
-| **pi-coding-agent** | [Pi](https://github.com/earendil-works/pi) — The minimal coding agent with extensions, skills, and TUI          |
-| **vibe-kanban**     | [Vibe Kanban](https://github.com/BloopAI/vibe-kanban) — Kanban-style orchestration surface for AI coding agents |
-| **whichllm**        | [whichllm](https://github.com/Andyyyy64/whichllm) — Find the best local LLM that runs on your hardware          |
-| **ccusage**         | [ccusage](https://www.npmjs.com/package/ccusage) — Track Claude Code token usage and costs                      |
+| Package            | Description                                                                                                     |
+| ------------------ | --------------------------------------------------------------------------------------------------------------- |
+| **aichat**         | [AIChat](https://github.com/sigoden/aichat) — All-in-one LLM CLI tool                                           |
+| **claude-code**    | [Claude Code](https://github.com/anthropics/claude-code) — Anthropic's CLI coding agent                         |
+| **claude-code-ui** | [Claude Code UI](https://github.com/siteboon/claudecodeui) — Web UI for Claude Code                             |
+| **codex**          | [Codex](https://github.com/openai/codex) — OpenAI's CLI coding agent                                            |
+| **crush**          | [Crush](https://github.com/charmbracelet/crush) — Charm's glamorous terminal coding agent                       |
+| **gemini-cli**     | [Gemini CLI](https://github.com/google-gemini/gemini-cli) — Google's CLI coding agent                           |
+| **hermes-agent**   | [Hermes Agent](https://github.com/NousResearch/hermes-agent) — Nous Research's self-improving AI agent          |
+| **llmfit**         | [llmfit](https://github.com/AlexsJones/llmfit) — Right-size LLM models to your system hardware                  |
+| **llmserve**       | [llmserve](https://github.com/AlexsJones/llmserve) — TUI for serving local LLM models                           |
+| **openclaude**     | [OpenClaude](https://github.com/Gitlawb/openclaude) — Coding-agent CLI for cloud and local model providers      |
+| **pi**             | [Pi](https://github.com/earendil-works/pi) — The minimal coding agent with extensions, skills, and TUI          |
+| **vibe-kanban**    | [Vibe Kanban](https://github.com/BloopAI/vibe-kanban) — Kanban-style orchestration surface for AI coding agents |
+| **whichllm**       | [whichllm](https://github.com/Andyyyy64/whichllm) — Find the best local LLM that runs on your hardware          |
+| **ccusage**        | [ccusage](https://www.npmjs.com/package/ccusage) — Track Claude Code token usage and costs                      |
 
 Packages are automatically updated every hour via GitHub Actions.
 
@@ -34,8 +34,13 @@ disables Claude's self-updater so updates stay managed by Nix and retain these
 dependencies. A working host microphone/audio server and a Claude account
 eligible for voice mode are still required.
 
-`pi-coding-agent` installs the published npm release with a pinned dependency
-lockfile. Its `npmDepsHash` must be refreshed whenever the lockfile changes.
+`pi` uses the official Pi flake's `stable` branch, pinned in
+`flake.lock`, with upstream's source build and runtime dependencies on `PATH`.
+A local override disables telemetry (`PI_TELEMETRY=0`) and adds the fetch
+extension's dependencies to `NODE_PATH`. Update Pi with
+`just update-pi`; no local Pi npm lockfile or dependency hash is
+needed. Pi retains its upstream nixpkgs inputs rather than following this
+flake's nixpkgs.
 
 ## Skills
 
@@ -62,7 +67,7 @@ nix run github:kissgyorgy/coding-agents#crush
 nix run github:kissgyorgy/coding-agents#gemini-cli
 nix run github:kissgyorgy/coding-agents#hermes-agent
 nix run github:kissgyorgy/coding-agents#openclaude
-nix run github:kissgyorgy/coding-agents#pi-coding-agent
+nix run github:kissgyorgy/coding-agents#pi
 nix run github:kissgyorgy/coding-agents#vibe-kanban
 nix run github:kissgyorgy/coding-agents#whichllm
 ```
@@ -98,7 +103,7 @@ Import the module and apply the overlay:
     crush.enable = true;
     gemini-cli.enable = true;
     hermes-agent.enable = true;
-    pi-coding-agent.enable = true;
+    pi.enable = true;
   };
 }
 ```
@@ -141,7 +146,7 @@ integration.
 
 - **`enable`** — Install Hermes Agent
 
-#### `coding-agents.pi-coding-agent`
+#### `coding-agents.pi`
 
 - **`enable`** — Install Pi, ImageMagick, `nil`, `basedpyright`, `typescript-language-server`, `typescript`, `gopls`, `go`, and link shared skills and extensions
 - **`extensionsDir`** — Path to a custom extensions directory

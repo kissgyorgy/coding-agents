@@ -2,7 +2,7 @@
 build *args:
     #!/usr/bin/env bash
     set -euo pipefail
-    all="aichat claude-code claude-code-ui gemini-cli ccusage codex crush hermes-agent pi-coding-agent whichllm llmfit llmserve"
+    all="aichat claude-code claude-code-ui gemini-cli ccusage codex crush hermes-agent pi whichllm llmfit llmserve"
     requested="{{args}}"
     attrs=""
     for pkg in ${requested:-$all}; do
@@ -19,7 +19,7 @@ update:
     #!/usr/bin/env bash
     set -uo pipefail
     failed=()
-    for pkg in aichat claude-code codex gemini-cli crush hermes-agent pi-coding-agent whichllm llmfit llmserve; do
+    for pkg in aichat claude-code codex gemini-cli crush hermes-agent pi whichllm llmfit llmserve; do
         echo "==> Updating $pkg"
         if ! just update-"$pkg"; then
             echo "==> FAILED: $pkg"
@@ -148,49 +148,8 @@ update-whichllm: (_update-pkg "whichllm" "Andyyyy64/whichllm")
 update-llmfit: (_update-pkg "llmfit" "AlexsJones/llmfit")
 update-llmserve: (_update-pkg "llmserve" "AlexsJones/llmserve")
 
-update-pi-coding-agent:
-    #!/usr/bin/env bash
-    set -euo pipefail
-    pkg="pi-coding-agent"
-    repo="earendil-works/pi"
-    tag=$(gh release list --repo "$repo" --exclude-pre-releases --limit 1 --json tagName -q '.[0].tagName')
-    latest=${tag#v}
-    current=$(nix eval --raw .#"$pkg".version)
-    if [[ "$current" == "$latest" ]]; then
-        echo "$pkg: already at $current"
-        exit 0
-    fi
-
-    pkg_dir="packages/$pkg"
-    pkg_file="$pkg_dir/default.nix"
-    sed -i 's/version = "'"$current"'";/version = "'"$latest"'";/' "$pkg_file"
-    sed -i 's/"version": "[^"]*"/"version": "'"$latest"'"/' \
-        "$pkg_dir/package.json"
-    sed -i 's/"@earendil-works\/pi-coding-agent": "[^"]*"/"@earendil-works\/pi-coding-agent": "'"$latest"'"/' \
-        "$pkg_dir/package.json"
-    npm install --prefix "$pkg_dir" --package-lock-only --ignore-scripts \
-        --no-audit --no-fund
-    node scripts/fill-pi-lock-integrities.mjs "$pkg_dir/package-lock.json"
-
-    sed -i 's/npmDepsHash = "sha256-[^"]*";/npmDepsHash = lib.fakeHash;/' "$pkg_file"
-    set +e
-    build_output=$(nix build .#pi-coding-agent 2>&1)
-    build_status=$?
-    set -e
-    if [[ $build_status -eq 0 ]]; then
-        echo "pi-coding-agent: expected fake npmDepsHash to fail, but build succeeded" >&2
-        exit 1
-    fi
-    npm_deps_hash=$(awk '/got:[[:space:]]*sha256-/ { print $2; exit }' <<<"$build_output")
-    if [[ -z "$npm_deps_hash" ]]; then
-        echo "$build_output" >&2
-        echo "pi-coding-agent: failed to extract npmDepsHash from nix build output" >&2
-        exit 1
-    fi
-    sed -i 's|npmDepsHash = lib\.fakeHash;|npmDepsHash = "'"$npm_deps_hash"'";|' "$pkg_file"
-
-    git add -- packages/"$pkg"*
-    git commit -m "$pkg: $current -> $latest"
+update-pi:
+    nix flake update pi
 
 _update-pkg pkg repo check_assets="":
     #!/usr/bin/env bash

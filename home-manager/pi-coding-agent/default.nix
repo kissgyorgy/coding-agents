@@ -1,12 +1,12 @@
 { config, lib, pkgs, ... }:
 let
-  cfg = config.coding-agents.pi-coding-agent;
+  cfg = config.coding-agents.pi;
   skillsDir = config.coding-agents.skillsDir;
   agentsMdPath = config.coding-agents.agentsMdPath;
   symlink = config.lib.file.mkOutOfStoreSymlink;
 in
 {
-  options.coding-agents.pi-coding-agent = {
+  options.coding-agents.pi = {
     enable = lib.mkEnableOption "Pi coding agent";
     extensionsDir = lib.mkOption {
       type = lib.types.nullOr lib.types.str;
@@ -29,7 +29,7 @@ in
     home.file.".pi/agent/skills".source =
       if skillsDir != null then symlink skillsDir else ../../skills;
     home.packages = with pkgs; [
-      pi-coding-agent
+      pi
       imagemagick
       nil
       pyright

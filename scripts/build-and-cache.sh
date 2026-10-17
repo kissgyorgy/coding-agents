@@ -9,7 +9,7 @@ packages=(
 	gemini-cli
 	ccusage
 	codex
-	pi-coding-agent
+	pi
 )
 failed=()
 

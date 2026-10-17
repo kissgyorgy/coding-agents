@@ -3,13 +3,14 @@
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
+    pi.url = "github:earendil-works/pi/stable";
     hermes-agent = {
       url = "github:NousResearch/hermes-agent/v2026.4.30";
       inputs.nixpkgs.follows = "nixpkgs";
     };
   };
 
-  outputs = { self, nixpkgs, hermes-agent }:
+  outputs = { self, nixpkgs, hermes-agent, pi }:
     let
       lib = nixpkgs.lib;
       systems = [ "x86_64-linux" "aarch64-darwin" ];
@@ -23,7 +24,7 @@
         "crush"
         "hermes-agent"
         "openclaude"
-        "pi-coding-agent"
+        "pi"
         "whichllm"
       ];
       linuxOnlyPackageNames = [
@@ -53,7 +54,9 @@
         crush = final.callPackage ./packages/crush.nix { };
         hermes-agent = hermes-agent.packages.${final.stdenv.hostPlatform.system}.default;
         openclaude = final.callPackage ./packages/openclaude.nix { };
-        pi-coding-agent = final.callPackage ./packages/pi-coding-agent { };
+        pi = final.callPackage ./packages/pi {
+          pi = pi.packages.${final.stdenv.hostPlatform.system}.default;
+        };
         whichllm = final.callPackage ./packages/whichllm.nix { };
         llmfit = final.callPackage ./packages/llmfit.nix { };
         llmserve = final.callPackage ./packages/llmserve.nix { };
@@ -72,7 +75,7 @@
         gemini-cli = import ./home-manager/gemini-cli;
         crush = import ./home-manager/crush;
         hermes-agent = import ./home-manager/hermes-agent;
-        pi-coding-agent = import ./home-manager/pi-coding-agent;
+        pi = import ./home-manager/pi-coding-agent;
         default = { lib, ... }: {
           imports = [
             self.homeManagerModules.claude-code
@@ -80,7 +83,7 @@
             self.homeManagerModules.crush
             self.homeManagerModules.gemini-cli
             self.homeManagerModules.hermes-agent
-            self.homeManagerModules.pi-coding-agent
+            self.homeManagerModules.pi
           ];
           options.coding-agents.skillsDir = lib.mkOption {
             type = lib.types.nullOr lib.types.str;
