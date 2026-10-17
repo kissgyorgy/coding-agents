@@ -12,6 +12,11 @@
   Use command line programs help, manual pages or source code to look things up
   locally instead.
 
+- When changing or refactoring code and schema, don't keep backward
+  compatibility unless explicitly asked. Just make the change and if necessary
+  write data migrations to the new schema.
+
+
 # Running commands
 
 - Use ripgrep (`rg` command) instead of `grep`. It's much faster, respects gitignore and
