@@ -1,3 +1,6 @@
+help:
+    @{{ just_executable() }} --list
+
 # Build packages (all by default, or specify names: just build claude-code codex)
 build *args:
     #!/usr/bin/env bash
