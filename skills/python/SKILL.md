@@ -3,8 +3,6 @@ name: python
 description: Write clean, readable Pythonic code. Use this skill when writing or changing a Python file.
 ---
 
-# General guidelines
-
 # Coding Style
 
 - Always write clean, readable, well separated, well organized, Pythonic code.
