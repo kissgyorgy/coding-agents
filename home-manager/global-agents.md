@@ -16,6 +16,8 @@
   compatibility unless explicitly asked. Just make the change and if necessary
   write data migrations to the new schema.
 
+- Never write subheadings in any kind of software, they are not helpful.
+
 
 # Running commands
 
@@ -25,10 +27,14 @@
 - NEVER run find on big directories like `/` or `/nix` or `~`!
   It would never complete and might even crash the terminal you are running in.
 
-- Linting, formatting or type and syntax checking, will run automatically,
-  no need to run them.
+- Linting, formatting or type and syntax checking will run automatically,
+  don't run them, you will be automatically notified about the problems.
 
-- Never write subheadings on any kind of software, they are not helpful.
+
+# Using skills
+
+When you already read a SKILL, don't read it again in the same conversation.
+
 
 # Temporary files
 
@@ -58,29 +64,28 @@
 
 # Git
 
+- ALWAYS use git. If the directory is empty, run `git init` first.
+
 - NEVER modify previous commits, reset or run desctructive git operations, only
   when explicitly asked by the user.
 
-- When making commits, explain in details **WHY** you did what you did. What was
-  the problem you solved, why a specific design decision was made. Everything
-  that you know but cannot seen in the code. Make sure the most important
-  details are explained in the commit message.
+- Be consice, but clear and precise in commit messages.
 
-- Group logical changes in commits and explain the changes as instructed
-  in the previous point.
+- In commit message body, explain the **WHY** of what you did. What was the
+  problem you solved, why a specific design decision was made. Information that
+  cannot be seen in the code.
 
-- Commit these changes as you go.
+- Group logical changes in separate commits. Adding a new dependency always go to a separate commit.
 
-- ALWAYS use git. If the directory is empty, run `git init` first.
-
-- No need to write in the commit message what tests were you running or the thing
-  "works", that should be the default.
+- Don't write in the commit message what you did, what tests were you running or
+  the thing "works" or anything that can be seen in the code, only the short summary
+  in the subject and the explanation in the body as instructed above.
 
 
 # External project discovery and source code
 
 When a user asks about how an external project works, implements something, it's
-source code or similar questions, you can find checked out upstream git repos in
-~/Upstream folder. You can use the existing repositories or even clone new repos you
-need to inspect. Make sure the repo is updated and the right version is checked
-out.
+source code or similar questions, you can find checked out upstream git repos
+in `~/Upstream` folder. You can use the existing repositories or even clone new
+repos you need to inspect. Make sure the repo is updated and the right version
+is checked out.
