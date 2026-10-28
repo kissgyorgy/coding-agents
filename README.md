@@ -152,6 +152,18 @@ integration.
 - **`extensionsDir`** — Path to a custom extensions directory
   (defaults to built-in extensions including tmux-mirror, plan-mode, and more)
 
+The built-in `lmstudio` extension discovers available chat models from LM Studio
+at `http://127.0.0.1:1234` whenever `/model` refreshes, without model entries in
+`models.json`. Use `/login lmstudio` to save a server URL and optional API key in
+Pi's `auth.json`; the connection is validated before saving. Server URLs may
+include or omit `/v1`. Saved settings take precedence over `LMSTUDIO_BASE_URL`
+and `LMSTUDIO_API_KEY`, and apply to both discovery and inference. Leaving the
+key blank explicitly selects keyless access. Selecting LM Studio in `/logout`
+removes the saved connection and restores environment settings or the keyless
+localhost default. It reads context sizes and vision support from LM Studio's native
+`/api/v1/models` catalog and excludes embedding models. Run `/reload` to activate
+it through the live extensions symlink.
+
 The built-in extensions directory includes vendored
 [`pi-openai-usage`](https://github.com/studioarray/pi-openai-usage) 0.1.4, which
 shows OpenAI Codex subscription usage in the status line. Pi discovers it
