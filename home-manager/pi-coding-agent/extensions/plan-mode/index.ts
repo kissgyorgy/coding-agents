@@ -16,22 +16,19 @@ import {
   CustomEditor,
   DynamicBorder,
   getAgentDir,
-  getMarkdownTheme,
   type ExtensionAPI,
   type ExtensionContext,
 } from "@earendil-works/pi-coding-agent";
 import {
   Container,
   Key,
-  Markdown,
   type SelectItem,
   SelectList,
   Text,
   matchesKey,
-  truncateToWidth,
-  visibleWidth,
 } from "@earendil-works/pi-tui";
 import { handleReloadShortcut } from "../reload-shortcut/editor.js";
+import { showMarkdownViewModal } from "../lib/markdown-viewer.js";
 import {
   extractDoneSteps,
   extractTodoItems,
@@ -91,182 +88,7 @@ async function showPlanViewModal(
     return;
   }
 
-  const planRelative = relative(ctx.cwd, filePath);
-
-  await ctx.ui.custom<void>(
-    (tui, theme, _kb, done) => {
-      const mdTheme = getMarkdownTheme();
-      const md = new Markdown(content, 1, 0, mdTheme);
-      let offset = 0;
-      let renderedLines: string[] = [];
-      let cachedWidth = 0;
-
-      function getTerminalRows(): number {
-        const maybeTui = tui as unknown as {
-          rows?: number;
-          height?: number;
-          getHeight?: () => number;
-          getDimensions?: () => { height?: number };
-          terminal?: { rows?: number; height?: number };
-        };
-        const byMethod =
-          typeof maybeTui.getHeight === "function"
-            ? maybeTui.getHeight()
-            : undefined;
-        const byDimensions =
-          typeof maybeTui.getDimensions === "function"
-            ? maybeTui.getDimensions()?.height
-            : undefined;
-
-        return (
-          byMethod ??
-          byDimensions ??
-          maybeTui.rows ??
-          maybeTui.height ??
-          maybeTui.terminal?.rows ??
-          maybeTui.terminal?.height ??
-          process.stdout.rows ??
-          24
-        );
-      }
-
-      function getViewportHeight(): number {
-        // Reserve rows for top/bottom status UI + modal chrome.
-        // This avoids clipping the top border in smaller terminals.
-        return Math.max(getTerminalRows() - 8, 5);
-      }
-
-      function getMaxOffset(): number {
-        return Math.max(0, renderedLines.length - getViewportHeight());
-      }
-
-      return {
-        render(width: number): string[] {
-          const innerWidth = Math.max(1, width - 2);
-          if (width !== cachedWidth) {
-            renderedLines = md.render(innerWidth);
-            cachedWidth = width;
-          }
-
-          const vh = getViewportHeight();
-          const maxOff = getMaxOffset();
-          if (offset > maxOff) offset = maxOff;
-
-          const visible = renderedLines.slice(offset, offset + vh);
-          const scrollable = renderedLines.length > vh;
-
-          // Top border with title and scroll position (width-safe on narrow terminals)
-          const rawTitleText = ` 📋 ${planRelative} `;
-          const rawScrollText = scrollable
-            ? ` ${offset + 1}–${Math.min(offset + vh, renderedLines.length)}/${renderedLines.length} `
-            : "";
-          const scrollText = truncateToWidth(
-            rawScrollText,
-            Math.max(0, Math.floor(innerWidth * 0.4)),
-            "…",
-          );
-          const titleText = truncateToWidth(
-            rawTitleText,
-            Math.max(0, innerWidth - visibleWidth(scrollText)),
-            "…",
-          );
-          const topFill = Math.max(
-            0,
-            innerWidth - visibleWidth(titleText) - visibleWidth(scrollText),
-          );
-          const topBorder =
-            theme.fg("accent", "╭") +
-            theme.fg("accent", theme.bold(titleText)) +
-            theme.fg("accent", "─".repeat(topFill)) +
-            theme.fg("dim", scrollText) +
-            theme.fg("accent", "╮");
-
-          // Content lines with side borders
-          const contentLines = visible.map((line) => {
-            const rendered = truncateToWidth(line, innerWidth);
-            const pad = Math.max(0, innerWidth - visibleWidth(rendered));
-            return (
-              theme.fg("accent", "│") +
-              rendered +
-              " ".repeat(pad) +
-              theme.fg("accent", "│")
-            );
-          });
-
-          // Pad remaining viewport with empty lines
-          for (let i = visible.length; i < vh; i++) {
-            contentLines.push(
-              theme.fg("accent", "│") +
-                " ".repeat(innerWidth) +
-                theme.fg("accent", "│"),
-            );
-          }
-
-          // Bottom border with help text (width-safe on narrow terminals)
-          const helpText = truncateToWidth(
-            " ↑↓ scroll • PgUp/PgDn page • Home/End jump • Esc close ",
-            innerWidth,
-            "…",
-          );
-          const botFill = Math.max(0, innerWidth - visibleWidth(helpText));
-          const botBorder =
-            theme.fg("accent", "╰") +
-            theme.fg("dim", helpText) +
-            theme.fg("accent", "─".repeat(botFill)) +
-            theme.fg("accent", "╯");
-
-          return [topBorder, ...contentLines, botBorder];
-        },
-
-        invalidate(): void {
-          cachedWidth = 0;
-        },
-
-        handleInput(data: string): void {
-          const vh = getViewportHeight();
-          const maxOff = getMaxOffset();
-
-          if (matchesKey(data, Key.escape) || matchesKey(data, Key.enter)) {
-            done();
-          } else if (matchesKey(data, Key.up)) {
-            if (offset > 0) {
-              offset--;
-              tui.requestRender();
-            }
-          } else if (matchesKey(data, Key.down)) {
-            if (offset < maxOff) {
-              offset++;
-              tui.requestRender();
-            }
-          } else if (matchesKey(data, Key.pageUp)) {
-            offset = Math.max(0, offset - vh);
-            tui.requestRender();
-          } else if (matchesKey(data, Key.pageDown)) {
-            offset = Math.min(maxOff, offset + vh);
-            tui.requestRender();
-          } else if (matchesKey(data, Key.home)) {
-            if (offset !== 0) {
-              offset = 0;
-              tui.requestRender();
-            }
-          } else if (matchesKey(data, Key.end)) {
-            if (offset !== maxOff) {
-              offset = maxOff;
-              tui.requestRender();
-            }
-          }
-        },
-      };
-    },
-    {
-      overlay: true,
-      overlayOptions: {
-        anchor: "center",
-        width: "95%",
-        maxHeight: "90%",
-      },
-    },
-  );
+  await showMarkdownViewModal(ctx, relative(ctx.cwd, filePath), content);
 }
 
 export default function planModeExtension(pi: ExtensionAPI): void {
