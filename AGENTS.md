@@ -34,9 +34,9 @@ that list (e.g. `playwright-cli`, `vibe-kanban`), use `nix build .#<name>`.
 
 **`flake.nix`** — Entry point. Defines:
 
-- An **overlay** that adds all packages to nixpkgs (each calls `callPackage` on `packages/<name>.nix`)
+- An **overlay**, imported from `overlay.nix`, that adds all packages to nixpkgs (each calls `callPackage` on `packages/<name>.nix`). It can also be imported without the flake by supplying the `hermes-agent` and `pi` inputs.
 - **`packages.x86_64-linux`** — Exposes the packages for direct `nix build`/`nix run`
-- **`homeManagerModules`** — Per-agent Home Manager modules plus a `default` that imports all of them and defines the shared `coding-agents.skillsDir` option
+- **`homeManagerModules`** — Per-agent Home Manager modules plus a `default` imported from `home-manager/default.nix`. The combined module imports all agents and defines the shared `coding-agents.skillsDir` and `coding-agents.agentsMdPath` options; it can also be imported directly without the flake.
 
 ### Packages (`packages/`)
 

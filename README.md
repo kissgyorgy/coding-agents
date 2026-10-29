@@ -58,6 +58,17 @@ directory, so every agent has access to the same domain knowledge.
 
 ## Installation
 
+The package overlay and combined Home Manager module can also be imported
+without using this directory as a flake:
+
+```nix
+# Supply the upstream Hermes and Pi flake inputs to the overlay.
+import ./coding-agents/overlay.nix { inherit hermes-agent pi; }
+
+# In a Home Manager module:
+imports = [ ./coding-agents/home-manager ];
+```
+
 ### Flake packages (ad-hoc usage)
 
 Run any package directly:
