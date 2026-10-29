@@ -18,6 +18,9 @@
 
 - Never write subheadings in any kind of software, they are not helpful.
 
+- When you want only simple edits, write, running bash commands either simply
+  or in parallel, prefer the direct tool calls instead of bash commands, scripts
+  or codemode.
 
 # Running commands
 
