@@ -64,9 +64,10 @@ async function createHarness() {
   };
 }
 
-test("registers the available inspect commands", async () => {
+test("registers only the three inspect commands", async () => {
   const h = await createHarness();
   assert.deepEqual([...h.commands.keys()].sort(), [
+    "inspect:skills",
     "inspect:systemprompt",
     "inspect:tools",
   ]);
@@ -235,3 +236,36 @@ test("shows the system prompt verbatim and warns when absent", async () => {
   ]);
 });
 
+test("lists current skills alphabetically with descriptions, excluding other commands", async () => {
+  const h = await createHarness();
+  await h.run("inspect:skills");
+  assert.deepEqual(h.views[0], {
+    title: "Skills (0)",
+    content: "No skills available.",
+  });
+  h.setCommands(
+    Object.freeze([
+      { name: "inspect:tools", source: "extension" },
+      {
+        name: "skill:zebra",
+        source: "skill",
+        description: "Zebra.\nMore detail.",
+      },
+      { name: "example", source: "prompt" },
+      { name: "skill:alpha", source: "skill", description: "Alpha." },
+      { name: "skill:missing-description", source: "skill" },
+    ]),
+  );
+  await h.run("inspect:skills");
+  assert.deepEqual(h.views[1], {
+    title: "Skills (3)",
+    content: [
+      "- `/skill:alpha`",
+      "  Alpha.",
+      "- `/skill:missing-description`",
+      "- `/skill:zebra`",
+      "  Zebra.",
+      "  More detail.",
+    ].join("\n"),
+  });
+});
