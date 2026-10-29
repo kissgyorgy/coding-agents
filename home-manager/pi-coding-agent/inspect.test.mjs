@@ -67,6 +67,7 @@ async function createHarness() {
 test("registers the available inspect commands", async () => {
   const h = await createHarness();
   assert.deepEqual([...h.commands.keys()].sort(), [
+    "inspect:systemprompt",
     "inspect:tools",
   ]);
 });
@@ -217,5 +218,20 @@ test("reads the current tool registry and active set on every invocation", async
   assert.equal(h.views[2].title, "Active tools (0)");
   assert.match(h.views[2].content, /No active tools\./);
   assert.doesNotMatch(h.views[2].content, /late_tool/);
+});
+
+test("shows the system prompt verbatim and warns when absent", async () => {
+  const h = await createHarness();
+  await h.run("inspect:systemprompt");
+  assert.deepEqual(h.views[0], {
+    title: "System prompt",
+    content: "System prompt\nverbatim.",
+  });
+  h.ctx.getSystemPrompt = () => "";
+  await h.run("inspect:systemprompt");
+  assert.equal(h.views.length, 1);
+  assert.deepEqual(h.notifications, [
+    { message: "No system prompt loaded.", level: "warning" },
+  ]);
 });
 
