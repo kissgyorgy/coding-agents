@@ -27,6 +27,9 @@ Packages are automatically updated every hour via GitHub Actions.
 Supported flake systems are `x86_64-linux` and `aarch64-darwin`. `llmfit`,
 `llmserve`, `playwright-cli`, and `vibe-kanban` are currently Linux-only.
 
+`playwright-cli` uses Chrome in headless mode by default. Set
+`PLAYWRIGHT_MCP_HEADLESS=false` to override the wrapper default.
+
 On Linux, `claude-code` bundles the runtime dependencies for `/voice`: the
 ALSA library, `arecord`, and SoX (`sox`/`rec`) with PulseAudio support, including
 WSLg audio. No separate audio-package installation is needed. The Linux wrapper

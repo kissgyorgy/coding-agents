@@ -21,7 +21,7 @@ buildNpmPackage rec {
     wrapProgram $out/bin/playwright-cli \
       --set-default PLAYWRIGHT_MCP_EXECUTABLE_PATH ${google-chrome}/bin/google-chrome-stable \
       --set-default PLAYWRIGHT_MCP_BROWSER chrome \
-      --set-default PLAYWRIGHT_MCP_HEADLESS false
+      --set-default PLAYWRIGHT_MCP_HEADLESS true
   '';
 
   meta = {
