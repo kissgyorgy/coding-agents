@@ -32,6 +32,7 @@
         "whichllm"
       ];
       linuxOnlyPackageNames = [
+        "herdr-app"
         "herdr-core"
         "llmfit"
         "llmserve"

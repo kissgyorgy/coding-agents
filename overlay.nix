@@ -8,6 +8,7 @@ final: prev: {
   ccusage = final.callPackage ./packages/ccusage.nix { };
   codex = final.callPackage ./packages/codex.nix { };
   crush = final.callPackage ./packages/crush.nix { };
+  herdr-app = final.callPackage ./packages/herdr-app.nix { };
   herdr-core = final.callPackage ./packages/herdr-core.nix { };
   hermes-agent = hermes-agent.packages.${final.stdenv.hostPlatform.system}.default;
   openclaude = final.callPackage ./packages/openclaude.nix { };

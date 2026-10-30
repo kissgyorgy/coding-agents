@@ -5,7 +5,7 @@ help:
 build *args:
     #!/usr/bin/env bash
     set -euo pipefail
-    all="aichat claude-code claude-code-ui gemini-cli ccusage codex crush herdr-core hermes-agent pi whichllm llmfit llmserve"
+    all="aichat claude-code claude-code-ui gemini-cli ccusage codex crush herdr-app herdr-core hermes-agent pi whichllm llmfit llmserve"
     requested="{{args}}"
     attrs=""
     for pkg in ${requested:-$all}; do

@@ -13,6 +13,7 @@ All agents and aliases are configured with yolo mode by default. (e.g. `--danger
 | **codex**          | [Codex](https://github.com/openai/codex) — OpenAI's CLI coding agent                                            |
 | **crush**          | [Crush](https://github.com/charmbracelet/crush) — Charm's glamorous terminal coding agent                       |
 | **gemini-cli**     | [Gemini CLI](https://github.com/google-gemini/gemini-cli) — Google's CLI coding agent                           |
+| **herdr-app**      | [Herdr](https://github.com/herdrdev/herdr-app) — Native desktop app for persistent terminals and coding agents  |
 | **herdr-core**     | [Herdr Core](https://github.com/herdrdev/herdr-core) — Persistent terminal runtime for coding agents (`hc`)     |
 | **hermes-agent**   | [Hermes Agent](https://github.com/NousResearch/hermes-agent) — Nous Research's self-improving AI agent          |
 | **llmfit**         | [llmfit](https://github.com/AlexsJones/llmfit) — Right-size LLM models to your system hardware                  |
@@ -25,8 +26,15 @@ All agents and aliases are configured with yolo mode by default. (e.g. `--danger
 
 Packages are automatically updated every hour via GitHub Actions.
 
-Supported flake systems are `x86_64-linux` and `aarch64-darwin`. `herdr-core`,
-`llmfit`, `llmserve`, `playwright-cli`, and `vibe-kanban` are currently Linux-only.
+Supported flake systems are `x86_64-linux` and `aarch64-darwin`. `herdr-app`,
+`herdr-core`, `llmfit`, `llmserve`, `playwright-cli`, and `vibe-kanban` are currently
+Linux-only.
+
+`herdr-app` includes a desktop launcher and icon, Linux display/graphics runtime
+libraries, and `herdr-core` on its PATH. It needs a working graphical session
+and Vulkan driver (including when launched through WSLg). App updates stay
+managed by Nix rather than the upstream self-updater. These packages are the
+new Herdr app/core, not the older Herdr TUI and its separate server.
 
 `herdr-core` installs both `herdr-core` and its `hc` alias, with SSH and shell
 runtime dependencies. It can run headlessly in WSL2 and be added as an SSH
@@ -92,6 +100,7 @@ nix run github:kissgyorgy/coding-agents#claude-code
 nix run github:kissgyorgy/coding-agents#codex
 nix run github:kissgyorgy/coding-agents#crush
 nix run github:kissgyorgy/coding-agents#gemini-cli
+nix run github:kissgyorgy/coding-agents#herdr-app
 nix run github:kissgyorgy/coding-agents#herdr-core -- --help
 nix run github:kissgyorgy/coding-agents#hermes-agent
 nix run github:kissgyorgy/coding-agents#openclaude
