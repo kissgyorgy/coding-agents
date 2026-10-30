@@ -32,6 +32,7 @@
         "whichllm"
       ];
       linuxOnlyPackageNames = [
+        "herdr-core"
         "llmfit"
         "llmserve"
         "playwright-cli"

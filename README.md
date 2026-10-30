@@ -13,6 +13,7 @@ All agents and aliases are configured with yolo mode by default. (e.g. `--danger
 | **codex**          | [Codex](https://github.com/openai/codex) — OpenAI's CLI coding agent                                            |
 | **crush**          | [Crush](https://github.com/charmbracelet/crush) — Charm's glamorous terminal coding agent                       |
 | **gemini-cli**     | [Gemini CLI](https://github.com/google-gemini/gemini-cli) — Google's CLI coding agent                           |
+| **herdr-core**     | [Herdr Core](https://github.com/herdrdev/herdr-core) — Persistent terminal runtime for coding agents (`hc`)     |
 | **hermes-agent**   | [Hermes Agent](https://github.com/NousResearch/hermes-agent) — Nous Research's self-improving AI agent          |
 | **llmfit**         | [llmfit](https://github.com/AlexsJones/llmfit) — Right-size LLM models to your system hardware                  |
 | **llmserve**       | [llmserve](https://github.com/AlexsJones/llmserve) — TUI for serving local LLM models                           |
@@ -24,8 +25,13 @@ All agents and aliases are configured with yolo mode by default. (e.g. `--danger
 
 Packages are automatically updated every hour via GitHub Actions.
 
-Supported flake systems are `x86_64-linux` and `aarch64-darwin`. `llmfit`,
-`llmserve`, `playwright-cli`, and `vibe-kanban` are currently Linux-only.
+Supported flake systems are `x86_64-linux` and `aarch64-darwin`. `herdr-core`,
+`llmfit`, `llmserve`, `playwright-cli`, and `vibe-kanban` are currently Linux-only.
+
+`herdr-core` installs both `herdr-core` and its `hc` alias, with SSH and shell
+runtime dependencies. It can run headlessly in WSL2 and be added as an SSH
+machine from the Windows Herdr app. Its built-in updater recognizes the Nix
+installation and leaves updates to Nix.
 
 `playwright-cli` uses Chrome in headless mode by default. Set
 `PLAYWRIGHT_MCP_HEADLESS=false` to override the wrapper default.
@@ -86,6 +92,7 @@ nix run github:kissgyorgy/coding-agents#claude-code
 nix run github:kissgyorgy/coding-agents#codex
 nix run github:kissgyorgy/coding-agents#crush
 nix run github:kissgyorgy/coding-agents#gemini-cli
+nix run github:kissgyorgy/coding-agents#herdr-core -- --help
 nix run github:kissgyorgy/coding-agents#hermes-agent
 nix run github:kissgyorgy/coding-agents#openclaude
 nix run github:kissgyorgy/coding-agents#pi
