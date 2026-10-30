@@ -35,7 +35,7 @@ that list (e.g. `playwright-cli`, `vibe-kanban`), use `nix build .#<name>`.
 **`flake.nix`** — Entry point. Defines:
 
 - An **overlay**, imported from `overlay.nix`, that adds all packages to nixpkgs (each calls `callPackage` on `packages/<name>.nix`).
-- **`default.nix`** — Non-flake entry point using pinned `flake-compat` and this repository's `flake.lock`. Consumers can use `(import ./coding-agents).overlays.default` without declaring their own Pi or Hermes inputs.
+- **`overlay.nix`** — Can also be imported directly by vendored consumers with `{ inherit hermes-agent pi; }`, using upstream inputs from the consumer's flake. Home Manager modules can be imported directly from `home-manager/`; the subtree does not need to be a flake input.
 - **`packages.x86_64-linux`** — Exposes the packages for direct `nix build`/`nix run`
 - **`homeManagerModules`** — Per-agent Home Manager modules plus a `default` imported from `home-manager/default.nix`. The combined module imports all agents and defines the shared `coding-agents.skillsDir` and `coding-agents.agentsMdPath` options; it can also be imported directly without the flake.
 

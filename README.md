@@ -72,23 +72,41 @@ directory, so every agent has access to the same domain knowledge.
 
 ## Installation
 
-Import `default.nix` to use the packages and modules without adding this
-directory as a flake input. It uses pinned `flake-compat` to resolve this
-repository's own `flake.lock`, including the upstream Pi and Hermes inputs.
-Consumers do not need to declare or pin those inputs themselves.
+When vendoring this directory, import `overlay.nix` and `home-manager/`
+directly. Declare the upstream Pi and Hermes inputs in the consuming flake;
+there is no need to add `coding-agents` itself as a flake input or use a
+compatibility layer.
 
 ```nix
-let
-  coding-agents = import ./coding-agents;
-in
 {
-  nixpkgs.overlays = [ coding-agents.overlays.default ];
-  imports = [ coding-agents.homeManagerModules.default ];
+  inputs = {
+    nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";
+    pi.url = "github:earendil-works/pi/stable";
+    hermes-agent = {
+      url = "github:NousResearch/hermes-agent/v2026.4.30";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+  };
+
+  outputs = { nixpkgs, pi, hermes-agent, ... }: {
+    legacyPackages.x86_64-linux = import nixpkgs {
+      system = "x86_64-linux";
+      config.allowUnfree = true;
+      overlays = [
+        (import ./coding-agents/overlay.nix { inherit hermes-agent pi; })
+      ];
+    };
+  };
 }
 ```
 
-Home Manager modules can also be imported directly with
+In the Home Manager configuration, use
 `imports = [ ./coding-agents/home-manager ];`.
+
+The consuming flake's lock file pins Pi and Hermes for this setup; update those
+inputs there. This directory's `flake.nix`, `flake.lock`, and agent update
+recipes remain available for standalone use, but are not evaluated by direct
+imports.
 
 ### Flake packages (ad-hoc usage)
 
