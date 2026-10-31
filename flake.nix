@@ -3,6 +3,10 @@
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
+    flake-compat = {
+      url = "github:edolstra/flake-compat";
+      flake = false;
+    };
     pi.url = "github:earendil-works/pi/stable";
     hermes-agent = {
       url = "github:NousResearch/hermes-agent/v2026.4.30";

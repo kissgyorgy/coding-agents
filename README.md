@@ -44,6 +44,9 @@ installation and leaves updates to Nix.
 `playwright-cli` uses Chrome in headless mode by default. Set
 `PLAYWRIGHT_MCP_HEADLESS=false` to override the wrapper default.
 
+`playwright-cli` uses Chrome in headless mode by default. Set
+`PLAYWRIGHT_MCP_HEADLESS=false` to override the wrapper default.
+
 On Linux, `claude-code` bundles the runtime dependencies for `/voice`: the
 ALSA library, `arecord`, and SoX (`sox`/`rec`) with PulseAudio support, including
 WSLg audio. No separate audio-package installation is needed. The Linux wrapper
@@ -71,6 +74,24 @@ directory, so every agent has access to the same domain knowledge.
 | **hn-sentiment-analysis** | Manual Hacker News thread sentiment analysis from a provided HN URL, with Algolia download and preparation scripts                            |
 
 ## Installation
+
+Import `default.nix` to use the packages and modules without adding this
+directory as a flake input. It uses pinned `flake-compat` to resolve this
+repository's own `flake.lock`, including the upstream Pi and Hermes inputs.
+Consumers do not need to declare or pin those inputs themselves.
+
+```nix
+let
+  coding-agents = import ./coding-agents;
+in
+{
+  nixpkgs.overlays = [ coding-agents.overlays.default ];
+  imports = [ coding-agents.homeManagerModules.default ];
+}
+```
+
+Home Manager modules can also be imported directly with
+`imports = [ ./coding-agents/home-manager ];`.
 
 When vendoring this directory, import `overlay.nix` and `home-manager/`
 directly. Declare the upstream Pi and Hermes inputs in the consuming flake;
@@ -206,14 +227,6 @@ integration.
 - **`enable`** — Install Pi, ImageMagick, `nil`, `basedpyright`, `typescript-language-server`, `typescript`, `gopls`, `go`, and link shared skills and extensions
 - **`extensionsDir`** — Path to a custom extensions directory
   (defaults to built-in extensions including tmux-mirror, plan-mode, and more)
-
-The experimental [`anthropic-omp` extension](home-manager/pi-coding-agent/extensions/anthropic-omp/README.md)
-adds a separate Anthropic (OMP-style) provider without replacing the built-in
-Anthropic login. Run `/login anthropic-omp`, choose its models in `/model`, and
-use `/anthropic-usage` for subscription counters and extra-usage spending.
-OMP-style request compatibility does not guarantee included subscription
-billing; check Claude's usage settings and disable extra usage there to avoid
-overage charges. Run `/reload` to load it through the live extensions symlink.
 
 The built-in `lmstudio` extension discovers available chat models from LM Studio
 at `http://127.0.0.1:1234` whenever `/model` refreshes, without model entries in
