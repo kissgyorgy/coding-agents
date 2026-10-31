@@ -207,6 +207,14 @@ integration.
 - **`extensionsDir`** — Path to a custom extensions directory
   (defaults to built-in extensions including tmux-mirror, plan-mode, and more)
 
+The experimental [`anthropic-omp` extension](home-manager/pi-coding-agent/extensions/anthropic-omp/README.md)
+adds a separate Anthropic (OMP-style) provider without replacing the built-in
+Anthropic login. Run `/login anthropic-omp`, choose its models in `/model`, and
+use `/anthropic-usage` for subscription counters and extra-usage spending.
+OMP-style request compatibility does not guarantee included subscription
+billing; check Claude's usage settings and disable extra usage there to avoid
+overage charges. Run `/reload` to load it through the live extensions symlink.
+
 The built-in `lmstudio` extension discovers available chat models from LM Studio
 at `http://127.0.0.1:1234` whenever `/model` refreshes, without model entries in
 `models.json`. Use `/login lmstudio` to save a server URL and optional API key in
