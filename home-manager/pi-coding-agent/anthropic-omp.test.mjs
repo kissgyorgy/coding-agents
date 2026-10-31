@@ -38,6 +38,18 @@ const model = {
   compat: { forceAdaptiveThinking: true },
 };
 
+// Pi 1.4's generated documentation block; paths are intentionally fixture values.
+const piDocs = `<docs>
+Pi documentation (read only when the user asks about pi itself, its SDK, extensions, themes, skills, or TUI):
+- Main documentation: /installed/pi/README.md
+- Additional docs: /installed/pi/docs
+- Examples: /installed/pi/examples (extensions, custom tools, SDK)
+- When reading pi docs or examples, resolve docs/... under Additional docs and examples/... under Examples, not the current working directory
+- When asked about: extensions (docs/extensions.md, examples/extensions/), themes (docs/themes.md), skills (docs/skills.md), prompt templates (docs/prompt-templates.md), TUI components (docs/tui.md), keybindings (docs/keybindings.md), SDK integrations (docs/sdk.md), custom providers (docs/custom-provider.md), adding models (docs/models.md), pi packages (docs/packages.md), environment variables (docs/environment-variables.md), MCP servers (docs/mcp.md), codemode scripts and non-LLM models such as classifiers and image models (docs/codemode.md)
+- When working on pi topics, read the docs and examples, and follow .md cross-references before implementing
+- Always read pi .md files completely and follow links to related docs (e.g., tui.md for TUI API details)
+</docs>`;
+
 async function harness({ env = {}, api: suppliedApi } = {}) {
   const providers = [];
   const commands = new Map();
@@ -429,6 +441,93 @@ test("attests final UTF-8 bytes without changing lookalikes in user content", as
     new TextDecoder().decode(h.transport.adaptPayload(changed, identity)),
   );
   assert.notEqual(next.system[0].text.match(/cch=(\w+)/)[1], cch);
+});
+
+test("rewrites generated Pi docs only in system instructions and attests the rewritten body", async () => {
+  const h = await harness();
+  const project =
+    "<project_context>Keep every project instruction 🌍</project_context>";
+  for (const newline of ["\n", "\r\n"]) {
+    const docs = piDocs.replaceAll("\n", newline);
+    const prompt = `Keep the coding preamble\n\n${docs}\n\n${project}`;
+    const body = payload();
+    body.system = [
+      { type: "text", text: prompt, cache_control: { type: "ephemeral" } },
+    ];
+    body.messages.push(
+      { role: "system", content: docs },
+      { role: "system", content: [{ type: "text", text: docs }] },
+      { role: "user", content: docs },
+      { role: "assistant", content: [{ type: "text", text: docs }] },
+      {
+        role: "assistant",
+        content: [
+          { type: "tool_use", name: "Read", input: { documentation: docs } },
+        ],
+      },
+    );
+    const serialized = new TextDecoder().decode(
+      h.transport.adaptPayload(body, identity),
+    );
+    const result = JSON.parse(serialized);
+    const rewritten = result.system[2].text;
+    assert.ok(rewritten.startsWith("Keep the coding preamble\n\n<docs>\n"));
+    assert.ok(rewritten.endsWith(project));
+    assert.match(rewritten, /Overview: \/installed\/pi\/README\.md/);
+    assert.match(rewritten, /Guide directory: \/installed\/pi\/docs/);
+    assert.match(rewritten, /Example directory: \/installed\/pi\/examples/);
+    assert.match(
+      rewritten,
+      /Read relevant Markdown files completely and follow their cross-references/,
+    );
+    assert.match(rewritten, /codemode\.md/);
+    assert.doesNotMatch(rewritten, /Pi documentation \(read only/);
+    assert.deepEqual(result.system[2].cache_control, { type: "ephemeral" });
+    assert.match(result.messages[1].content, /For Pi-specific questions/);
+    assert.match(
+      result.messages[2].content[0].text,
+      /For Pi-specific questions/,
+    );
+    assert.equal(result.messages[3].content, docs);
+    assert.equal(result.messages[4].content[0].text, docs);
+    assert.equal(result.messages[5].content[0].input.documentation, docs);
+
+    const billing = result.system[0].text;
+    const cch = billing.match(/cch=([0-9a-f]{5})/)[1];
+    const zeroed = serialized.replace(
+      billing,
+      billing.replace(`cch=${cch}`, "cch=00000"),
+    );
+    assert.equal(
+      (
+        h.hash.xxhash64(new TextEncoder().encode(zeroed), 0x4d659218e32a3268n) &
+        0xfffffn
+      )
+        .toString(16)
+        .padStart(5, "0"),
+      cch,
+    );
+  }
+});
+
+test("leaves custom, modified and incomplete documentation sections unchanged", async () => {
+  const h = await harness();
+  for (const docs of [
+    "<docs>My project's documentation policy</docs>",
+    piDocs.replace("</docs>", "- Keep this custom requirement\n</docs>"),
+    piDocs.replace(
+      "- Always read pi .md files completely and follow links to related docs (e.g., tui.md for TUI API details)",
+      "- Use my custom reading policy",
+    ),
+    piDocs.replace("- Additional docs: /installed/pi/docs\n", ""),
+  ]) {
+    const body = payload();
+    body.system = docs;
+    const result = JSON.parse(
+      new TextDecoder().decode(h.transport.adaptPayload(body, identity)),
+    );
+    assert.equal(result.system[2].text, docs);
+  }
 });
 
 test("prefixes tool definitions, history, references and choices but not schemas or inputs", async () => {
@@ -913,8 +1012,16 @@ test(
     const seen = [];
     const responseHeaders = [];
     h.setFetch(async () => sseResponse(toolEvents(), { chunkSize: 3 }));
+    const { buildSystemPrompt } = await import(
+      pathToFileURL(`${piPackage}/dist/core/system-prompt.js`).href
+    );
+    const stockPrompt = buildSystemPrompt({
+      cwd: process.cwd(),
+      contextFiles: [],
+      skills: [],
+    });
     const context = ai.normalizeContext({
-      systemPrompt: "Use tools carefully",
+      systemPrompt: `${stockPrompt}\n\nUse tools carefully`,
       tools: [
         {
           name: "bash",
@@ -961,7 +1068,13 @@ test(
     assert.equal(request.max_tokens, 1234);
     assert.equal(request.tools[0].name, "_Bash");
     assert.match(request.system[0].text, /x-anthropic-billing-header:/);
-    assert.equal(request.system[2].text, "Use tools carefully");
+    assert.ok(request.system[2].text.endsWith("Use tools carefully"));
+    assert.match(request.system[2].text, /For Pi-specific questions/);
+    assert.doesNotMatch(request.system[2].text, /Pi documentation \(read only/);
+    assert.match(
+      request.system[2].text,
+      /You are an expert coding assistant operating inside pi/,
+    );
 
     const followUp = {
       messages: [

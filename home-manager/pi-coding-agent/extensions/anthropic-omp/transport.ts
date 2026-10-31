@@ -1,6 +1,7 @@
 // Adapted from can1357/oh-my-pi at 35c5fc5f9a; see LICENSE and README.md.
 import { createHash } from "node:crypto";
 import type { FetchFunction } from "@earendil-works/pi-ai";
+import { rewritePiDocumentation } from "./system-prompt.ts";
 import { xxhash64 } from "./xxhash.ts";
 
 export const API_ORIGIN = "https://api.anthropic.com";
@@ -102,6 +103,17 @@ function prefixContent(content: unknown): void {
   }
 }
 
+function adaptSystemBlock(block: unknown): unknown {
+  if (
+    isRecord(block) &&
+    block.type === "text" &&
+    typeof block.text === "string"
+  ) {
+    return { ...block, text: rewritePiDocumentation(block.text) };
+  }
+  return block;
+}
+
 function firstUserText(messages: unknown[]): string {
   for (const message of messages) {
     if (!isRecord(message) || message.role !== "user") continue;
@@ -161,12 +173,14 @@ export function adaptPayload(
         ? { cache_control: existingIdentity.cache_control }
         : {}),
     },
-    ...system.filter(
-      (block) =>
-        !isRecord(block) ||
-        typeof block.text !== "string" ||
-        (block.text !== IDENTITY && !block.text.startsWith(BILLING_PREFIX)),
-    ),
+    ...system
+      .filter(
+        (block) =>
+          !isRecord(block) ||
+          typeof block.text !== "string" ||
+          (block.text !== IDENTITY && !block.text.startsWith(BILLING_PREFIX)),
+      )
+      .map(adaptSystemBlock),
   ];
   payload.metadata = {
     ...(isRecord(payload.metadata) ? payload.metadata : {}),
@@ -178,7 +192,15 @@ export function adaptPayload(
   };
   if (Array.isArray(payload.tools)) payload.tools.forEach(prefixDefinition);
   for (const message of payload.messages) {
-    if (isRecord(message)) prefixContent(message.content);
+    if (!isRecord(message)) continue;
+    if (message.role === "system") {
+      if (typeof message.content === "string") {
+        message.content = rewritePiDocumentation(message.content);
+      } else if (Array.isArray(message.content)) {
+        message.content = message.content.map(adaptSystemBlock);
+      }
+    }
+    prefixContent(message.content);
   }
   if (
     isRecord(payload.tool_choice) &&

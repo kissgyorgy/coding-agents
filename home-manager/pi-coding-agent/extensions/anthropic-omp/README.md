@@ -27,6 +27,23 @@ proxy endpoint overrides, and injected SDK clients are rejected. Custom fetch
 implementations remain trusted code. Existing Pi request hooks still execute;
 the wire adapter runs after payload hooks so their final output is attested.
 
+The adapter also rewords Pi 1.4's recognized, stock `<docs>` system section.
+It retains the documentation paths, guide topics, and complete-reading policy;
+the coding preamble, project instructions, skills, user messages, and tool
+inputs are not rewritten. The same adaptation applies to native mid-conversation
+system updates, and the checksum is calculated afterward. Custom or modified
+documentation sections are left alone. These changes are wire-only and confined
+to this provider, so no re-login or global Pi prompt change is required.
+
+Live A/B checks on 2026-10-31 reproduced the extra-usage HTTP 400 with Pi's
+stock documentation wording, while identity-only, generic, and short coding
+prompts succeeded. The stock coding preamble alone succeeded too. Keeping the
+full project instructions and a tool declaration but rewording only the generated
+documentation section succeeded with Sonnet 4.6 and Opus 4.8. Extra usage was
+disabled throughout, and the usage endpoint continued to report $0.00 extra
+spending. This is evidence for these requests, not a permanent billing guarantee
+or proof of Anthropic's internal classification rules.
+
 Compatibility details are adapted from
 [oh-my-pi commit 35c5fc5f9a](https://github.com/can1357/oh-my-pi/tree/35c5fc5f9a),
 particularly `packages/ai/src/providers/anthropic.ts`, `anthropic-identity.ts`,
